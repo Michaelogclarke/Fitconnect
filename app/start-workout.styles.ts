@@ -7,7 +7,7 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
 
-  // Top bar
+  // ── Top bar ────────────────────────────────────────────────────────────────
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -49,10 +49,10 @@ export const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
 
-  // Progress strip
+  // ── Progress strip ─────────────────────────────────────────────────────────
   progressStrip: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   progressRow: {
     flexDirection: 'row',
@@ -80,19 +80,28 @@ export const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
 
-  // Exercise card
-  exerciseCard: {
-    marginHorizontal: Spacing.lg,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.surfaceContainerHigh,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
+  // ── Scroll content ─────────────────────────────────────────────────────────
+  scrollContent: {
+    paddingBottom: 100,
   },
-  exerciseMuscleRow: {
+
+  // ── Exercise section ───────────────────────────────────────────────────────
+  exerciseSection: {
+    marginBottom: Spacing.sm,
+  },
+  exerciseSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.sm,
     gap: Spacing.sm,
-    marginBottom: Spacing.sm,
+  },
+  exerciseNameInput: {
+    ...Typography.headlineMd,
+    color: Colors.onSurface,
+    flex: 1,
+    padding: 0,
   },
   muscleChip: {
     paddingHorizontal: Spacing.sm,
@@ -104,53 +113,35 @@ export const styles = StyleSheet.create({
     ...Typography.labelMd,
     color: Colors.primary,
   },
-  primaryBadge: {
+  sectionProgressBadge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: Radius.full,
     backgroundColor: Colors.surfaceContainerHighest,
-  },
-  primaryBadgeText: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
-  },
-  exerciseName: {
-    ...Typography.displayMd,
-    color: Colors.onSurface,
-    marginBottom: Spacing.sm,
-  },
-  exerciseTargetRow: {
     flexDirection: 'row',
-    gap: Spacing.xl,
-    marginTop: Spacing.xs,
-  },
-  exerciseTarget: {
     alignItems: 'center',
+    gap: 4,
   },
-  exerciseTargetValue: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
+  sectionProgressBadgeDone: {
+    backgroundColor: Colors.primary + '22',
   },
-  exerciseTargetLabel: {
+  sectionProgressText: {
     ...Typography.labelMd,
     color: Colors.onSurfaceVariant,
-    marginTop: 2,
   },
-  targetDivider: {
-    width: 1,
-    backgroundColor: Colors.outlineVariant,
-    alignSelf: 'stretch',
-    marginVertical: Spacing.xs,
+  sectionProgressTextDone: {
+    color: Colors.primary,
   },
 
-  // Sets table
+  // ── Sets table ─────────────────────────────────────────────────────────────
   setsSection: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
+    marginBottom: 4,
   },
   setsHeader: {
     flexDirection: 'row',
-    paddingHorizontal: Spacing.md,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.sm,
     marginBottom: Spacing.xs,
   },
   setHeaderCell: {
@@ -158,42 +149,47 @@ export const styles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
     textTransform: 'uppercase',
   },
-  colSet: { width: 32 },
-  colWeight: { flex: 1 },
-  colReps: { width: 60, alignItems: 'center' as const },
-  colDone: { width: 44, alignItems: 'center' as const },
+  colSet: { width: 28 },
+  colWeight: { flex: 1.2 },
+  colReps: { flex: 1 },
+  colDone: { width: 40 },
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 7,
     borderRadius: Radius.md,
-    marginBottom: 4,
+    marginBottom: 3,
     backgroundColor: Colors.surfaceContainer,
   },
-  setRowActive: {
+  setRowNext: {
     backgroundColor: Colors.surfaceContainerHigh,
     borderWidth: 1,
     borderColor: Colors.primary + '44',
   },
   setRowDone: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   setNumber: {
-    ...Typography.titleMd,
+    ...Typography.labelLg,
     color: Colors.onSurfaceVariant,
-    width: 32,
+    width: 28,
   },
-  setWeight: {
+  setInput: {
     ...Typography.titleMd,
     color: Colors.onSurface,
+    padding: 0,
+    paddingVertical: 2,
+  },
+  setInputWeight: {
+    flex: 1.2,
+  },
+  setInputReps: {
     flex: 1,
-  },
-  setReps: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-    width: 60,
     textAlign: 'center',
+  },
+  setInputReadOnly: {
+    color: Colors.onSurfaceVariant,
   },
   checkCircle: {
     width: 28,
@@ -208,14 +204,74 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  checkCircleActive: {
+  checkCircleNext: {
     borderColor: Colors.primary,
   },
 
-  // Rest timer overlay
+  // ── Add / remove set row ───────────────────────────────────────────────────
+  setActionsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    marginTop: 4,
+    gap: Spacing.sm,
+  },
+  addSetBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 36,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.primary + '55',
+    gap: Spacing.xs,
+  },
+  addSetBtnText: {
+    ...Typography.labelLg,
+    color: Colors.primary,
+  },
+  removeSetBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.error + '18',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Divider between sections ───────────────────────────────────────────────
+  sectionDivider: {
+    height: 1,
+    backgroundColor: Colors.outlineVariant,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+  },
+
+  // ── Add exercise button ────────────────────────────────────────────────────
+  addExerciseSection: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.xl,
+  },
+  addExerciseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: Colors.primary + '55',
+    gap: Spacing.sm,
+  },
+  addExerciseBtnText: {
+    ...Typography.titleMd,
+    color: Colors.primary,
+  },
+
+  // ── Rest timer overlay ─────────────────────────────────────────────────────
   restOverlay: {
     flex: 1,
-    backgroundColor: Colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
@@ -240,67 +296,6 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     marginBottom: Spacing.xxxl,
   },
-  restRing: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 4,
-    borderColor: Colors.primary + '33',
-  },
-  restRingActive: {
-    borderTopColor: Colors.primary,
-  },
-
-  // Bottom controls
-  bottomBar: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
-    paddingTop: Spacing.md,
-    gap: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.outlineVariant,
-    backgroundColor: Colors.background,
-  },
-  btnRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  btnSkip: {
-    flex: 1,
-    height: 50,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceContainerHighest,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnSkipText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
-  },
-  btnComplete: {
-    flex: 2,
-    height: 50,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnCompleteText: {
-    ...Typography.titleLg,
-    color: Colors.background,
-  },
-  btnFinish: {
-    height: 50,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnFinishText: {
-    ...Typography.titleLg,
-    color: Colors.background,
-  },
   btnRestSkip: {
     paddingHorizontal: Spacing.xxl,
     height: 50,
@@ -312,5 +307,131 @@ export const styles = StyleSheet.create({
   btnRestSkipText: {
     ...Typography.titleMd,
     color: Colors.onSurface,
+  },
+
+  // ── Bottom bar ─────────────────────────────────────────────────────────────
+  bottomBar: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.outlineVariant,
+    backgroundColor: Colors.background,
+    gap: Spacing.xs,
+  },
+  bottomProgress: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.xs,
+  },
+  bottomProgressText: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+  },
+  bottomProgressCount: {
+    ...Typography.labelLg,
+    color: Colors.primary,
+  },
+  btnFinish: {
+    height: 52,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  btnFinishText: {
+    ...Typography.titleLg,
+    color: Colors.background,
+  },
+  btnFinishDimmed: {
+    height: 52,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceContainerHigh,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
+  btnFinishDimmedText: {
+    ...Typography.titleLg,
+    color: Colors.onSurfaceVariant,
+  },
+
+  // ── Add Exercise Modal ─────────────────────────────────────────────────────
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    paddingTop: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxxl,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.outlineVariant,
+    alignSelf: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modalTitle: {
+    ...Typography.headlineMd,
+    color: Colors.onSurface,
+    marginBottom: Spacing.lg,
+  },
+  fieldLabel: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+    marginBottom: Spacing.xs,
+    marginTop: Spacing.md,
+  },
+  fieldInput: {
+    backgroundColor: Colors.surfaceContainerHighest,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  fieldHalf: {
+    flex: 1,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.xl,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceContainerHighest,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    ...Typography.titleMd,
+    color: Colors.onSurfaceVariant,
+  },
+  modalAddBtn: {
+    flex: 2,
+    height: 50,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalAddText: {
+    ...Typography.titleLg,
+    color: Colors.background,
   },
 });
