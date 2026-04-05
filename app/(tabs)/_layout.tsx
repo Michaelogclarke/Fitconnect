@@ -25,51 +25,47 @@ export default function TabLayout() {
           fontWeight: '500',
         },
       }}>
+
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="chart.bar.fill" color={color} />
-          ),
+          title: 'Home',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="workouts"
+        name="plans"
         options={{
-          title: 'Workouts',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="dumbbell.fill" color={color} />
-          ),
+          title: 'Plans',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="list.bullet" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="clients"
+        name="history"
         options={{
-          title: 'Clients',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="person.2.fill" color={color} />
-          ),
+          title: 'History',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="clock.fill" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="progress"
         options={{
-          title: 'Chat',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="message.fill" color={color} />
-          ),
+          title: 'Progress',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="chart.bar.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={24} name="person.fill" color={color} />
-          ),
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
         }}
       />
+
+      {/* Hide legacy tabs from the bar */}
+      <Tabs.Screen name="workouts" options={{ href: null }} />
+      <Tabs.Screen name="clients"  options={{ href: null }} />
+      <Tabs.Screen name="chat"     options={{ href: null }} />
     </Tabs>
   );
 }

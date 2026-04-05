@@ -10,16 +10,16 @@ const MENU_SECTIONS = [
   {
     title: 'Fitness',
     items: [
-      { label: 'Progress Photos', icon: 'camera.fill' as const },
-      { label: 'Weight Tracking', icon: 'arrow.up.right' as const },
-      { label: 'Achievements', icon: 'checkmark.circle.fill' as const },
+      { label: 'Progress Photos',  icon: 'camera.fill'    as const },
+      { label: 'Body Weight Log',  icon: 'scalemass.fill' as const },
+      { label: 'Achievements',     icon: 'trophy.fill'    as const },
     ],
   },
   {
     title: 'Account',
     items: [
-      { label: 'Edit Profile', icon: 'pencil' as const },
-      { label: 'Notifications', icon: 'bell.fill' as const },
+      { label: 'Edit Profile',       icon: 'pencil'    as const },
+      { label: 'Notifications',      icon: 'bell.fill' as const },
       { label: 'Privacy & Security', icon: 'lock.fill' as const },
     ],
   },
@@ -39,19 +39,19 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>AC</Text>
           </View>
           <Text style={styles.userName}>Alex Clarke</Text>
-          <Text style={styles.userRole}>Personal Trainer · Level 12</Text>
+          <Text style={styles.userRole}>Athlete · Level 12</Text>
           <View style={styles.statsRow}>
             <View style={styles.stat}>
               <Text style={styles.statValue}>247</Text>
               <Text style={styles.statLabel}>Workouts</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>5</Text>
-              <Text style={styles.statLabel}>Clients</Text>
-            </View>
-            <View style={styles.stat}>
               <Text style={styles.statValue}>18</Text>
               <Text style={styles.statLabel}>PRs</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statValue}>14</Text>
+              <Text style={styles.statLabel}>Streak</Text>
             </View>
           </View>
         </View>

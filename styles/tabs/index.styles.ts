@@ -2,258 +2,114 @@ import { StyleSheet } from 'react-native';
 import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
 
 export const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: Spacing.xxxl,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  scrollContent: { paddingBottom: Spacing.xxxl },
 
-  // Header
+  // ── Header ─────────────────────────────────────────────────────────────────
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.sm,
   },
-  brandText: {
-    ...Typography.headlineLg,
-    color: Colors.primary,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
+  greeting: { ...Typography.headlineLg, color: Colors.onSurface },
+  date:     { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginTop: 2 },
+  iconBtn: {
+    width: 40, height: 40, borderRadius: Radius.full,
     backgroundColor: Colors.surfaceContainer,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
 
-  // Performance Card
-  performanceCard: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.surfaceContainerHigh,
-    padding: Spacing.lg,
-    overflow: 'hidden',
+  // ── Streak ─────────────────────────────────────────────────────────────────
+  streakRow: { paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg },
+  streakBadge: {
+    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
+    gap: Spacing.xs,
+    backgroundColor: Colors.primary + '18',
+    borderRadius: Radius.full,
+    borderWidth: 1, borderColor: Colors.primary + '44',
+    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
   },
-  performanceLabel: {
+  streakText: { ...Typography.labelLg, color: Colors.primary },
+
+  // ── Section label ──────────────────────────────────────────────────────────
+  sectionLabel: {
     ...Typography.labelLg,
     color: Colors.onSurfaceVariant,
     textTransform: 'uppercase',
-    marginBottom: Spacing.xs,
+    letterSpacing: 1,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.lg,
   },
-  performanceGreeting: {
-    ...Typography.headlineLg,
-    color: Colors.onSurface,
+
+  // ── Today's workout card ───────────────────────────────────────────────────
+  todayCard: {
+    marginHorizontal: Spacing.lg,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.primary + '33',
+  },
+  todayHeader: {
+    flexDirection: 'row', alignItems: 'flex-start',
     marginBottom: Spacing.md,
   },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: Spacing.sm,
-  },
-  scoreNumber: {
-    fontSize: 56,
-    fontWeight: '700',
-    color: Colors.primary,
-    lineHeight: 60,
-  },
-  scoreSubtext: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.sm,
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.error + '22',
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    marginTop: Spacing.sm,
-    gap: Spacing.xs,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.error,
-  },
-  liveText: {
-    ...Typography.labelMd,
-    color: Colors.error,
-    textTransform: 'uppercase',
-  },
-
-  // Section
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-  },
-  sectionTitle: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
-  },
-  sectionLink: {
-    ...Typography.labelLg,
-    color: Colors.primary,
-  },
-
-  // Active Workout Card
-  workoutCard: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.surfaceContainer,
-    padding: Spacing.lg,
-  },
-  workoutTitle: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
-    marginBottom: Spacing.xs,
-  },
-  workoutDesc: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.lg,
-  },
-  workoutActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  btnPrimary: {
-    flex: 1,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnPrimaryText: {
-    ...Typography.titleMd,
-    color: Colors.background,
-  },
-  btnSecondary: {
-    flex: 1,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceContainerHighest,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnSecondaryText: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-  },
-
-  // Metrics Row
-  metricsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  metricCard: {
-    flex: 1,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.surfaceContainer,
-    padding: Spacing.md,
-    alignItems: 'center',
-  },
-  metricIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.full,
+  todayName: { ...Typography.headlineMd, color: Colors.onSurface },
+  todayMeta: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginTop: 2 },
+  todayBadge: {
     backgroundColor: Colors.primary + '22',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
-  },
-  metricValue: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
-  },
-  metricLabel: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
-    marginTop: 2,
-  },
-  metricSub: {
-    ...Typography.labelMd,
-    color: Colors.primary,
-    marginTop: 2,
-  },
-
-  // Progress bar
-  progressBarBg: {
-    height: 4,
     borderRadius: Radius.full,
-    backgroundColor: Colors.outlineVariant,
-    marginTop: Spacing.xs,
-    width: '100%',
+    paddingHorizontal: Spacing.sm, paddingVertical: 3,
+    marginLeft: Spacing.sm, marginTop: 2,
   },
-  progressBarFill: {
-    height: 4,
-    borderRadius: Radius.full,
+  todayBadgeText: { ...Typography.labelMd, color: Colors.primary },
+  exerciseList: { marginBottom: Spacing.lg, gap: 4 },
+  exerciseItem: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
+  exerciseMore: { ...Typography.labelLg, color: Colors.primary, marginTop: 2 },
+  startBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 46, borderRadius: Radius.md,
     backgroundColor: Colors.primary,
+    gap: Spacing.sm,
   },
+  startBtnText: { ...Typography.titleLg, color: Colors.background },
 
-  // Weight Trend Card
-  trendCard: {
+  // ── Quick stats ────────────────────────────────────────────────────────────
+  statsRow: {
+    flexDirection: 'row',
     marginHorizontal: Spacing.lg,
-    borderRadius: Radius.lg,
+    marginTop: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  statCard: {
+    flex: 1, alignItems: 'center',
     backgroundColor: Colors.surfaceContainer,
-    padding: Spacing.lg,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md,
   },
-  trendHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
+  statValue: { ...Typography.headlineMd, color: Colors.primary },
+  statLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginTop: 2 },
+
+  // ── Recent sessions ────────────────────────────────────────────────────────
+  recentCard: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: Spacing.lg, marginBottom: Spacing.sm,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    gap: Spacing.md,
   },
-  trendTitle: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
+  recentIconBox: {
+    width: 40, height: 40, borderRadius: Radius.md,
+    backgroundColor: Colors.primary + '22',
+    justifyContent: 'center', alignItems: 'center',
   },
-  trendValue: {
-    ...Typography.displayMd,
-    color: Colors.primary,
-  },
-  trendDays: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: Spacing.sm,
-  },
-  trendDay: {
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  trendDayLabel: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
-  },
-  trendDayBar: {
-    width: 8,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.primary + '44',
-  },
-  trendDayBarActive: {
-    backgroundColor: Colors.primary,
-  },
+  recentInfo: { flex: 1 },
+  recentName:   { ...Typography.titleMd, color: Colors.onSurface },
+  recentMeta:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  recentVolume: { ...Typography.labelLg, color: Colors.primary },
 });

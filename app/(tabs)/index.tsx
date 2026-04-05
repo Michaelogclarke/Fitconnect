@@ -7,122 +7,109 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/index.styles';
 
-const WEIGHT_DAYS = [
-  { label: 'Mon', height: 40, active: false },
-  { label: 'Tue', height: 48, active: false },
-  { label: 'Wed', height: 44, active: false },
-  { label: 'Thu', height: 52, active: false },
-  { label: 'Fri', height: 46, active: false },
-  { label: 'Sat', height: 50, active: false },
-  { label: 'Today', height: 54, active: true },
+const TODAY_WORKOUT = {
+  name: 'Push Day A',
+  plan: 'Push Pull Legs',
+  exercises: ['Flat Barbell Bench Press', 'Overhead Press', 'Incline DB Press', 'Lateral Raises', 'Tricep Pushdown'],
+  estimatedTime: '55 min',
+  totalSets: 16,
+};
+
+const RECENT_SESSIONS = [
+  { id: '1', name: 'Pull Day A',  date: 'Yesterday', duration: '48 min', sets: 14, volume: '4,200 kg' },
+  { id: '2', name: 'Legs A',      date: 'Monday',    duration: '62 min', sets: 16, volume: '6,800 kg' },
+  { id: '3', name: 'Push Day B',  date: 'Sunday',    duration: '51 min', sets: 15, volume: '3,900 kg' },
 ];
 
-export default function DashboardScreen() {
+export default function HomeScreen() {
   const router = useRouter();
+  const today = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.brandText}>FitConnect</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton}>
-              <IconSymbol name="bell.fill" size={20} color={Colors.onSurface} />
-            </TouchableOpacity>
+          <View>
+            <Text style={styles.greeting}>Let's get it, Alex</Text>
+            <Text style={styles.date}>{today}</Text>
           </View>
-        </View>
-
-        {/* Performance Card */}
-        <View style={styles.performanceCard}>
-          <Text style={styles.performanceLabel}>Daily Score</Text>
-          <Text style={styles.performanceGreeting}>Level Up, Alex</Text>
-          <View style={styles.scoreRow}>
-            <Text style={styles.scoreNumber}>78</Text>
-            <Text style={styles.scoreSubtext}>/ 100</Text>
-          </View>
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>Live Session</Text>
-          </View>
-        </View>
-
-        {/* Active Workout */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Active Workout</Text>
-          <TouchableOpacity>
-            <Text style={styles.sectionLink}>See all</Text>
+          <TouchableOpacity style={styles.iconBtn}>
+            <IconSymbol name="bell.fill" size={20} color={Colors.onSurface} />
           </TouchableOpacity>
         </View>
-        <View style={styles.workoutCard}>
-          <Text style={styles.workoutTitle}>Hypertrophy Phase II: Chest</Text>
-          <Text style={styles.workoutDesc}>
-            Focus on compound lifts with progressive overload. 4 sets x 8-12 reps.
-          </Text>
-          <View style={styles.workoutActions}>
-            <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push('/start-workout')}>
-              <Text style={styles.btnPrimaryText}>Start Workout</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.btnSecondary} onPress={() => router.push('/edit-routine')}>
-              <Text style={styles.btnSecondaryText}>Edit Routine</Text>
-            </TouchableOpacity>
+
+        {/* Streak */}
+        <View style={styles.streakRow}>
+          <View style={styles.streakBadge}>
+            <IconSymbol name="flame.fill" size={13} color={Colors.primary} />
+            <Text style={styles.streakText}>14-day streak</Text>
           </View>
         </View>
 
-        {/* Metrics */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Activity</Text>
-        </View>
-        <View style={styles.metricsRow}>
-          <View style={styles.metricCard}>
-            <View style={styles.metricIcon}>
-              <IconSymbol name="flame.fill" size={18} color={Colors.primary} />
+        {/* Today's workout */}
+        <Text style={styles.sectionLabel}>Today's Workout</Text>
+        <View style={styles.todayCard}>
+          <View style={styles.todayHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.todayName}>{TODAY_WORKOUT.name}</Text>
+              <Text style={styles.todayMeta}>
+                {TODAY_WORKOUT.plan} · {TODAY_WORKOUT.estimatedTime} · {TODAY_WORKOUT.totalSets} sets
+              </Text>
             </View>
-            <Text style={styles.metricValue}>420</Text>
-            <Text style={styles.metricLabel}>Calories</Text>
-            <Text style={styles.metricSub}>kcal burned</Text>
+            <View style={styles.todayBadge}>
+              <Text style={styles.todayBadgeText}>Today</Text>
+            </View>
           </View>
-          <View style={styles.metricCard}>
-            <View style={styles.metricIcon}>
-              <IconSymbol name="heart.fill" size={18} color={Colors.primary} />
-            </View>
-            <Text style={styles.metricValue}>8,420</Text>
-            <Text style={styles.metricLabel}>Steps</Text>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '84%' }]} />
-            </View>
-            <Text style={styles.metricSub}>10,000 goal</Text>
-          </View>
-        </View>
 
-        {/* Weight Trend */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Weight Trend</Text>
-        </View>
-        <View style={styles.trendCard}>
-          <View style={styles.trendHeader}>
-            <Text style={styles.trendTitle}>7-Day Progress</Text>
-            <Text style={styles.trendValue}>184.5 lbs</Text>
-          </View>
-          <View style={styles.trendDays}>
-            {WEIGHT_DAYS.map((day) => (
-              <View key={day.label} style={styles.trendDay}>
-                <View
-                  style={[
-                    styles.trendDayBar,
-                    { height: day.height },
-                    day.active && styles.trendDayBarActive,
-                  ]}
-                />
-                <Text style={styles.trendDayLabel}>{day.label}</Text>
-              </View>
+          <View style={styles.exerciseList}>
+            {TODAY_WORKOUT.exercises.slice(0, 4).map((ex, i) => (
+              <Text key={i} style={styles.exerciseItem}>· {ex}</Text>
             ))}
+            {TODAY_WORKOUT.exercises.length > 4 && (
+              <Text style={styles.exerciseMore}>+{TODAY_WORKOUT.exercises.length - 4} more</Text>
+            )}
+          </View>
+
+          <TouchableOpacity style={styles.startBtn} onPress={() => router.push('/start-workout')}>
+            <IconSymbol name="play.fill" size={15} color={Colors.background} />
+            <Text style={styles.startBtnText}>Start Workout</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>4</Text>
+            <Text style={styles.statLabel}>This week</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>14,200</Text>
+            <Text style={styles.statLabel}>kg lifted</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>247</Text>
+            <Text style={styles.statLabel}>All time</Text>
           </View>
         </View>
+
+        {/* Recent sessions */}
+        <Text style={styles.sectionLabel}>Recent Sessions</Text>
+        {RECENT_SESSIONS.map((s) => (
+          <View key={s.id} style={styles.recentCard}>
+            <View style={styles.recentIconBox}>
+              <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
+            </View>
+            <View style={styles.recentInfo}>
+              <Text style={styles.recentName}>{s.name}</Text>
+              <Text style={styles.recentMeta}>{s.date} · {s.duration} · {s.sets} sets</Text>
+            </View>
+            <Text style={styles.recentVolume}>{s.volume}</Text>
+          </View>
+        ))}
 
       </ScrollView>
     </SafeAreaView>
