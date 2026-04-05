@@ -1,7 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
 
-const DELETE_WIDTH = 72;
+export const DELETE_WIDTH = 72;
 
 export const styles = StyleSheet.create({
   container: {
@@ -26,17 +26,9 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  topBarCenter: {
-    flex: 1,
-  },
-  topBarTitle: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
-  },
-  topBarSub: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
-  },
+  topBarCenter: { flex: 1 },
+  topBarTitle: { ...Typography.titleLg, color: Colors.onSurface },
+  topBarSub: { ...Typography.labelMd, color: Colors.onSurfaceVariant },
   timerBadge: {
     backgroundColor: Colors.primary + '22',
     borderRadius: Radius.md,
@@ -62,14 +54,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.xs,
   },
-  progressLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-  },
-  progressCount: {
-    ...Typography.labelLg,
-    color: Colors.primary,
-  },
+  progressLabel: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  progressCount: { ...Typography.labelLg, color: Colors.primary },
   progressTrack: {
     height: 4,
     backgroundColor: Colors.outlineVariant,
@@ -82,15 +68,10 @@ export const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
 
-  // ── Scroll content ─────────────────────────────────────────────────────────
-  scrollContent: {
-    paddingBottom: 100,
-  },
+  scrollContent: { paddingBottom: 100 },
 
   // ── Exercise section ───────────────────────────────────────────────────────
-  exerciseSection: {
-    marginBottom: Spacing.sm,
-  },
+  exerciseSection: { marginBottom: Spacing.sm },
   exerciseSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -111,10 +92,7 @@ export const styles = StyleSheet.create({
     borderRadius: Radius.full,
     backgroundColor: Colors.primary + '22',
   },
-  muscleChipText: {
-    ...Typography.labelMd,
-    color: Colors.primary,
-  },
+  muscleChipText: { ...Typography.labelMd, color: Colors.primary },
   sectionProgressBadge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
@@ -124,22 +102,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  sectionProgressBadgeDone: {
-    backgroundColor: Colors.primary + '22',
-  },
-  sectionProgressText: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
-  },
-  sectionProgressTextDone: {
-    color: Colors.primary,
-  },
+  sectionProgressBadgeDone: { backgroundColor: Colors.primary + '22' },
+  sectionProgressText: { ...Typography.labelMd, color: Colors.onSurfaceVariant },
+  sectionProgressTextDone: { color: Colors.primary },
 
   // ── Sets table ─────────────────────────────────────────────────────────────
-  setsSection: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: 4,
-  },
+  setsSection: { paddingHorizontal: Spacing.lg, marginBottom: 4 },
   setsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -155,90 +123,110 @@ export const styles = StyleSheet.create({
   colWeight: { width: 72 },
   colUnit:   { width: 24, textAlign: 'center' as const },
   colReps:   { width: 52, textAlign: 'center' as const },
-  colDone:   { width: 36, alignItems: 'center' as const },
 
-  // Each row is wrapped by Swipeable — the row itself is the visible content
+  // ── Pill-shaped set row ────────────────────────────────────────────────────
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.xs,
-    paddingVertical: 7,
-    borderRadius: Radius.md,
-    marginBottom: 3,
+    paddingLeft: Spacing.md,
+    paddingRight: 4,           // tight right so checkmark hugs the edge
+    paddingVertical: 6,
+    borderRadius: Radius.lg,   // 12 — rounded but not full pill
+    marginBottom: 4,
     backgroundColor: Colors.surfaceContainer,
     gap: Spacing.xs,
   },
   setRowNext: {
     backgroundColor: Colors.surfaceContainerHigh,
     borderWidth: 1,
-    borderColor: Colors.primary + '44',
+    borderColor: Colors.primary + '55',
   },
-  setRowDone: {
-    opacity: 0.5,
-  },
+  setRowDone: { opacity: 0.5 },
   setNumber: {
     ...Typography.labelLg,
     color: Colors.onSurfaceVariant,
-    width: 24,
+    width: 20,
     textAlign: 'center',
   },
 
-  // ── Boxed input fields ─────────────────────────────────────────────────────
+  // ── Boxed inputs ───────────────────────────────────────────────────────────
   inputBox: {
     backgroundColor: Colors.surfaceContainerHighest,
     borderRadius: Radius.sm,
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 5,
+    paddingVertical: 4,
     justifyContent: 'center',
   },
-  inputBoxActive: {
-    borderColor: Colors.primary + '88',
-    backgroundColor: Colors.surfaceContainerHighest,
-  },
+  inputBoxActive: { borderColor: Colors.primary + '88' },
+  inputReadOnly: { borderColor: 'transparent', backgroundColor: 'transparent' },
   weightInput: {
     ...Typography.titleMd,
     color: Colors.onSurface,
-    width: 72,
+    width: 56,
     padding: 0,
     textAlign: 'center',
   },
   weightUnit: {
     ...Typography.labelLg,
     color: Colors.onSurfaceVariant,
-    width: 24,
+    width: 20,
     textAlign: 'center',
   },
   repsInput: {
     ...Typography.titleMd,
     color: Colors.onSurface,
-    width: 52,
+    width: 44,
     padding: 0,
     textAlign: 'center',
   },
-  inputReadOnly: {
-    color: Colors.onSurfaceVariant,
-    borderColor: 'transparent',
-    backgroundColor: 'transparent',
-  },
 
-  // ── Checkmark ──────────────────────────────────────────────────────────────
+  // ── Checkmark — flush at right end of pill ─────────────────────────────────
   checkCircle: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     borderRadius: Radius.full,
     borderWidth: 2,
     borderColor: Colors.outlineVariant,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 'auto',       // push to far right of pill
   },
   checkCircleDone: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  checkCircleNext: {
-    borderColor: Colors.primary,
+  checkCircleNext: { borderColor: Colors.primary },
+
+  // ── Inline rest timer chip (beside completed set) ──────────────────────────
+  restChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    marginRight: Spacing.lg,
+    marginTop: 2,
+    marginBottom: 4,
+    gap: 5,
+    backgroundColor: Colors.primary + '18',
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary + '44',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+  },
+  restChipText: {
+    ...Typography.labelLg,
+    color: Colors.primary,
+    fontVariant: ['tabular-nums'],
+  },
+  restChipDone: {
+    backgroundColor: Colors.success + '22',
+    borderColor: Colors.success + '55',
+  },
+  restChipDoneText: { color: Colors.success },
+  restChipSkip: {
+    paddingLeft: 4,
   },
 
   // ── Swipe-to-delete action ─────────────────────────────────────────────────
@@ -247,15 +235,15 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: DELETE_WIDTH,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
   },
   swipeDeleteText: {
-    ...Typography.labelLg,
+    ...Typography.labelMd,
     color: '#fff',
-    marginTop: 4,
+    marginTop: 3,
   },
 
-  // ── Add / remove set row ───────────────────────────────────────────────────
+  // ── Set action row (add set) ───────────────────────────────────────────────
   setActionsRow: {
     flexDirection: 'row',
     paddingHorizontal: Spacing.lg,
@@ -274,12 +262,8 @@ export const styles = StyleSheet.create({
     borderColor: Colors.primary + '55',
     gap: Spacing.xs,
   },
-  addSetBtnText: {
-    ...Typography.labelLg,
-    color: Colors.primary,
-  },
+  addSetBtnText: { ...Typography.labelLg, color: Colors.primary },
 
-  // ── Divider between sections ───────────────────────────────────────────────
   sectionDivider: {
     height: 1,
     backgroundColor: Colors.outlineVariant,
@@ -287,11 +271,7 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
 
-  // ── Add exercise button ────────────────────────────────────────────────────
-  addExerciseSection: {
-    marginHorizontal: Spacing.lg,
-    marginTop: Spacing.xl,
-  },
+  addExerciseSection: { marginHorizontal: Spacing.lg, marginTop: Spacing.xl },
   addExerciseBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -303,50 +283,7 @@ export const styles = StyleSheet.create({
     borderColor: Colors.primary + '55',
     gap: Spacing.sm,
   },
-  addExerciseBtnText: {
-    ...Typography.titleMd,
-    color: Colors.primary,
-  },
-
-  // ── Rest overlay ───────────────────────────────────────────────────────────
-  restOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-  },
-  restLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: Spacing.md,
-  },
-  restCount: {
-    fontSize: 88,
-    fontWeight: '700',
-    color: Colors.primary,
-    lineHeight: 96,
-    fontVariant: ['tabular-nums'],
-  },
-  restSub: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xxxl,
-  },
-  btnRestSkip: {
-    paddingHorizontal: Spacing.xxl,
-    height: 50,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceContainerHighest,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  btnRestSkipText: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-  },
+  addExerciseBtnText: { ...Typography.titleMd, color: Colors.primary },
 
   // ── Bottom bar ─────────────────────────────────────────────────────────────
   bottomBar: {
@@ -363,14 +300,8 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: Spacing.xs,
   },
-  bottomProgressText: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-  },
-  bottomProgressCount: {
-    ...Typography.labelLg,
-    color: Colors.primary,
-  },
+  bottomProgressText: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  bottomProgressCount: { ...Typography.labelLg, color: Colors.primary },
   btnFinish: {
     height: 52,
     borderRadius: Radius.md,
@@ -378,10 +309,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnFinishText: {
-    ...Typography.titleLg,
-    color: Colors.background,
-  },
+  btnFinishText: { ...Typography.titleLg, color: Colors.background },
   btnFinishDimmed: {
     height: 52,
     borderRadius: Radius.md,
@@ -391,10 +319,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.outlineVariant,
   },
-  btnFinishDimmedText: {
-    ...Typography.titleLg,
-    color: Colors.onSurfaceVariant,
-  },
+  btnFinishDimmedText: { ...Typography.titleLg, color: Colors.onSurfaceVariant },
 
   // ── Add Exercise Modal ─────────────────────────────────────────────────────
   modalBackdrop: {
@@ -418,11 +343,7 @@ export const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: Spacing.lg,
   },
-  modalTitle: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
-    marginBottom: Spacing.lg,
-  },
+  modalTitle: { ...Typography.headlineMd, color: Colors.onSurface, marginBottom: Spacing.lg },
   fieldLabel: {
     ...Typography.labelLg,
     color: Colors.onSurfaceVariant,
@@ -437,18 +358,9 @@ export const styles = StyleSheet.create({
     ...Typography.titleMd,
     color: Colors.onSurface,
   },
-  fieldRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  fieldHalf: {
-    flex: 1,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.xl,
-  },
+  fieldRow: { flexDirection: 'row', gap: Spacing.sm },
+  fieldHalf: { flex: 1 },
+  modalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xl },
   modalCancelBtn: {
     flex: 1,
     height: 50,
@@ -457,10 +369,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalCancelText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
-  },
+  modalCancelText: { ...Typography.titleMd, color: Colors.onSurfaceVariant },
   modalAddBtn: {
     flex: 2,
     height: 50,
@@ -469,8 +378,5 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalAddText: {
-    ...Typography.titleLg,
-    color: Colors.background,
-  },
+  modalAddText: { ...Typography.titleLg, color: Colors.background },
 });

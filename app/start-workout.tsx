@@ -13,15 +13,26 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { styles } from './start-workout.styles';
+import { DELETE_WIDTH, styles } from './start-workout.styles';
+
+// Show notification even when the app is in the foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SetRow = { weight: string; reps: string; done: boolean };
-type Exercise = { id: string; name: string; muscle: string; tag: string };
+type SetRow    = { weight: string; reps: string; done: boolean };
+type Exercise  = { id: string; name: string; muscle: string; tag: string };
+type ActiveRest = { exId: string; setIdx: number; remaining: number };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +41,7 @@ function uid() {
 }
 
 function formatTime(s: number) {
-  const m = Math.floor(s / 60).toString().padStart(2, '0');
+  const m   = Math.floor(s / 60).toString().padStart(2, '0');
   const sec = (s % 60).toString().padStart(2, '0');
   return `${m}:${sec}`;
 }
@@ -38,7 +49,7 @@ function formatTime(s: number) {
 // ─── Initial data ─────────────────────────────────────────────────────────────
 
 const INITIAL_EXERCISES: Exercise[] = [
-  { id: 'e1', name: 'Flat Barbell Bench Press', muscle: 'Chest', tag: 'Primary' },
+  { id: 'e1', name: 'Flat Barbell Bench Press', muscle: 'Chest', tag: 'Primary'   },
   { id: 'e2', name: 'Incline Dumbbell Press',   muscle: 'Chest', tag: 'Secondary' },
   { id: 'e3', name: 'Cable Chest Fly',           muscle: 'Chest', tag: 'Isolation' },
 ];
@@ -63,12 +74,10 @@ const INITIAL_SETS: Record<string, SetRow[]> = {
 };
 
 const REST_SECONDS = 90;
-const DELETE_WIDTH  = 72;
 
-// ─── SwipeableRow — pure Animated + PanResponder, no gesture handler ──────────
-// The delete button sits BESIDE the row (not behind it) so it never bleeds
-// through rounded corners. overflow:hidden on the container clips it until
-// the swipe translates the row far enough to reveal it.
+// ─── SwipeableRow — pure Animated + PanResponder ──────────────────────────────
+// Delete button sits BESIDE the row (flex-row) so it never bleeds through pill
+// corners. overflow:hidden clips it until the swipe reveals it.
 
 function SwipeableRow({
   children,
@@ -78,13 +87,13 @@ function SwipeableRow({
   onDelete: () => void;
 }) {
   const translateX = useRef(new Animated.Value(0)).current;
-  const isOpen = useRef(false);
+  const isOpen     = useRef(false);
   const [rowWidth, setRowWidth] = useState(0);
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) =>
-        Math.abs(gs.dx) > Math.abs(gs.dy) + 5 && gs.dx < 0,
+        Math.abs(gs.dx) > Math.abs(gs.dy) + 5 && (gs.dx < 0 || isOpen.current),
       onPanResponderMove: (_, gs) => {
         const base = isOpen.current ? -DELETE_WIDTH : 0;
         translateX.setValue(Math.max(-DELETE_WIDTH, Math.min(0, base + gs.dx)));
@@ -110,12 +119,6 @@ function SwipeableRow({
     <View
       style={{ overflow: 'hidden', marginBottom: 3 }}
       onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
-      {/*
-        Animated.View is a flex row: [row content | delete button].
-        The content is pinned to rowWidth so it always fills the container.
-        The delete button lives to its right, hidden by overflow:hidden until
-        the translate reveals it — no absolute positioning, no bleed-through.
-      */}
       <Animated.View
         style={{ flexDirection: 'row', transform: [{ translateX }] }}
         {...panResponder.panHandlers}>
@@ -154,17 +157,17 @@ function AddExerciseModal({
 
   function handleAdd() {
     if (!form.name.trim()) return;
-    const setCount = Math.max(1, parseInt(form.sets) || 3);
+    const setCount  = Math.max(1, parseInt(form.sets) || 3);
     const exercise: Exercise = {
-      id: uid(),
-      name: form.name.trim(),
+      id:     uid(),
+      name:   form.name.trim(),
       muscle: form.muscle.trim() || 'Custom',
-      tag: 'Custom',
+      tag:    'Custom',
     };
     const sets: SetRow[] = Array.from({ length: setCount }, () => ({
       weight: form.weight.trim() || '0',
-      reps: form.reps.trim() || '10',
-      done: false,
+      reps:   form.reps.trim() || '10',
+      done:   false,
     }));
     onAdd(exercise, sets);
     setForm({ name: '', muscle: '', sets: '3', reps: '10', weight: '' });
@@ -254,19 +257,22 @@ function AddExerciseModal({
 // ─── Exercise Section ─────────────────────────────────────────────────────────
 
 function ExerciseSection({
-  exercise, sets, onUpdateName, onUpdateSet, onToggleSet, onAddSet, onDeleteSet, isLast,
+  exercise, sets, activeRest,
+  onUpdateName, onUpdateSet, onToggleSet, onAddSet, onDeleteSet, onSkipRest, isLast,
 }: {
-  exercise: Exercise;
-  sets: SetRow[];
+  exercise:     Exercise;
+  sets:         SetRow[];
+  activeRest:   ActiveRest | null;
   onUpdateName: (name: string) => void;
-  onUpdateSet: (idx: number, field: 'weight' | 'reps', value: string) => void;
-  onToggleSet: (idx: number) => void;
-  onAddSet: () => void;
-  onDeleteSet: (idx: number) => void;
-  isLast: boolean;
+  onUpdateSet:  (idx: number, field: 'weight' | 'reps', value: string) => void;
+  onToggleSet:  (idx: number) => void;
+  onAddSet:     () => void;
+  onDeleteSet:  (idx: number) => void;
+  onSkipRest:   () => void;
+  isLast:       boolean;
 }) {
-  const doneCount = sets.filter((s) => s.done).length;
-  const allDone = doneCount === sets.length && sets.length > 0;
+  const doneCount  = sets.filter((s) => s.done).length;
+  const allDone    = doneCount === sets.length && sets.length > 0;
   const nextSetIdx = sets.findIndex((s) => !s.done);
 
   return (
@@ -305,71 +311,84 @@ function ExerciseSection({
         </View>
 
         {sets.map((s, i) => {
-          const isNext = i === nextSetIdx;
+          const isNext     = i === nextSetIdx;
+          const isResting  = activeRest?.exId === exercise.id && activeRest.setIdx === i;
+
           return (
-            <SwipeableRow key={i} onDelete={() => onDeleteSet(i)}>
-              <View
-                style={[
-                  styles.setRow,
-                  isNext && !s.done && styles.setRowNext,
-                  s.done && styles.setRowDone,
-                ]}>
-                <Text style={styles.setNumber}>{i + 1}</Text>
-
-                {/* Weight — numeric only, clearly boxed */}
-                <View style={[
-                  styles.inputBox,
-                  s.done && styles.inputReadOnly,
-                  isNext && !s.done && styles.inputBoxActive,
-                ]}>
-                  <TextInput
-                    style={styles.weightInput}
-                    value={s.weight}
-                    onChangeText={(v) => onUpdateSet(i, 'weight', v.replace(/[^0-9.]/g, ''))}
-                    editable={!s.done}
-                    keyboardType="decimal-pad"
-                    returnKeyType="done"
-                    placeholder="0"
-                    placeholderTextColor={Colors.onSurfaceVariant}
-                    selectTextOnFocus
-                  />
-                </View>
-
-                <Text style={styles.weightUnit}>kg</Text>
-
-                {/* Reps — text, boxed */}
-                <View style={[
-                  styles.inputBox,
-                  s.done && styles.inputReadOnly,
-                  isNext && !s.done && styles.inputBoxActive,
-                ]}>
-                  <TextInput
-                    style={styles.repsInput}
-                    value={s.reps}
-                    onChangeText={(v) => onUpdateSet(i, 'reps', v)}
-                    editable={!s.done}
-                    keyboardType="default"
-                    returnKeyType="done"
-                    placeholder="10"
-                    placeholderTextColor={Colors.onSurfaceVariant}
-                    selectTextOnFocus
-                  />
-                </View>
-
-                {/* Toggle checkmark — tap to complete or uncheck */}
-                <TouchableOpacity
+            <React.Fragment key={i}>
+              <SwipeableRow onDelete={() => onDeleteSet(i)}>
+                <View
                   style={[
-                    styles.checkCircle,
-                    s.done && styles.checkCircleDone,
-                    isNext && !s.done && styles.checkCircleNext,
-                  ]}
-                  onPress={() => onToggleSet(i)}>
-                  {s.done && (
-                    <IconSymbol name="checkmark.circle.fill" size={16} color={Colors.background} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </SwipeableRow>
+                    styles.setRow,
+                    isNext && !s.done && styles.setRowNext,
+                    s.done && styles.setRowDone,
+                  ]}>
+                  <Text style={styles.setNumber}>{i + 1}</Text>
+
+                  <View style={[
+                    styles.inputBox,
+                    s.done && styles.inputReadOnly,
+                    isNext && !s.done && styles.inputBoxActive,
+                  ]}>
+                    <TextInput
+                      style={styles.weightInput}
+                      value={s.weight}
+                      onChangeText={(v) => onUpdateSet(i, 'weight', v.replace(/[^0-9.]/g, ''))}
+                      editable={!s.done}
+                      keyboardType="decimal-pad"
+                      returnKeyType="done"
+                      placeholder="0"
+                      placeholderTextColor={Colors.onSurfaceVariant}
+                      selectTextOnFocus
+                    />
+                  </View>
+
+                  <Text style={styles.weightUnit}>kg</Text>
+
+                  <View style={[
+                    styles.inputBox,
+                    s.done && styles.inputReadOnly,
+                    isNext && !s.done && styles.inputBoxActive,
+                  ]}>
+                    <TextInput
+                      style={styles.repsInput}
+                      value={s.reps}
+                      onChangeText={(v) => onUpdateSet(i, 'reps', v)}
+                      editable={!s.done}
+                      keyboardType="default"
+                      returnKeyType="done"
+                      placeholder="10"
+                      placeholderTextColor={Colors.onSurfaceVariant}
+                      selectTextOnFocus
+                    />
+                  </View>
+
+                  {/* Checkmark — marginLeft auto pushes it to the far right of the pill */}
+                  <TouchableOpacity
+                    style={[
+                      styles.checkCircle,
+                      s.done    && styles.checkCircleDone,
+                      isNext && !s.done && styles.checkCircleNext,
+                    ]}
+                    onPress={() => onToggleSet(i)}>
+                    {s.done && (
+                      <IconSymbol name="checkmark" size={14} color={Colors.background} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </SwipeableRow>
+
+              {/* Inline rest chip — only shown while this set's rest is active */}
+              {isResting && (
+                <View style={styles.restChip}>
+                  <IconSymbol name="timer" size={13} color={Colors.primary} />
+                  <Text style={styles.restChipText}>{formatTime(activeRest!.remaining)}</Text>
+                  <TouchableOpacity style={styles.restChipSkip} onPress={onSkipRest}>
+                    <Text style={[styles.restChipText, { opacity: 0.6 }]}>Skip</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </React.Fragment>
           );
         })}
       </View>
@@ -392,54 +411,89 @@ function ExerciseSection({
 export default function StartWorkoutScreen() {
   const router = useRouter();
 
+  // Workout stopwatch
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES);
-  const [setsState, setSetsState] = useState<Record<string, SetRow[]>>(INITIAL_SETS);
-
-  const [resting, setResting] = useState(false);
-  const [restLeft, setRestLeft] = useState(REST_SECONDS);
-  const [restingFor, setRestingFor] = useState('');
-  const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  const [exercises, setExercises]   = useState<Exercise[]>(INITIAL_EXERCISES);
+  const [setsState, setSetsState]   = useState<Record<string, SetRow[]>>(INITIAL_SETS);
+  const [activeRest, setActiveRest] = useState<ActiveRest | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const notifIdRef   = useRef<string | null>(null);
+
+  // ── Request notification permissions on mount ──────────────────────────────
+
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+  }, []);
+
+  // ── Rest countdown ─────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!activeRest) return;
+
+    if (restTimerRef.current) clearInterval(restTimerRef.current);
+
+    restTimerRef.current = setInterval(() => {
+      setActiveRest((prev) => {
+        if (!prev) return null;
+        if (prev.remaining <= 1) {
+          clearInterval(restTimerRef.current!);
+          return null;            // chip disappears — notification fires separately
+        }
+        return { ...prev, remaining: prev.remaining - 1 };
+      });
+    }, 1000);
+
+    return () => {
+      if (restTimerRef.current) clearInterval(restTimerRef.current);
+    };
+  }, [activeRest?.exId, activeRest?.setIdx]);  // restart only when a new rest begins
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
-  const allSets = exercises.flatMap((e) => setsState[e.id] ?? []);
-  const totalSets = allSets.length;
-  const doneSets = allSets.filter((s) => s.done).length;
-  const allDone = totalSets > 0 && doneSets === totalSets;
+  const allSets        = exercises.flatMap((e) => setsState[e.id] ?? []);
+  const totalSets      = allSets.length;
+  const doneSets       = allSets.filter((s) => s.done).length;
+  const allDone        = totalSets > 0 && doneSets === totalSets;
   const progressFraction = totalSets > 0 ? doneSets / totalSets : 0;
 
-  // ── Rest timer ─────────────────────────────────────────────────────────────
+  // ── Rest helpers ───────────────────────────────────────────────────────────
 
-  const startRest = useCallback((exerciseName: string) => {
-    setRestingFor(exerciseName);
-    setResting(true);
-    setRestLeft(REST_SECONDS);
-    if (restRef.current) clearInterval(restRef.current);
-    restRef.current = setInterval(() => {
-      setRestLeft((r) => {
-        if (r <= 1) {
-          clearInterval(restRef.current!);
-          setResting(false);
-          return REST_SECONDS;
-        }
-        return r - 1;
-      });
-    }, 1000);
+  const scheduleRestNotification = useCallback(async (exerciseName: string) => {
+    // Cancel any previous pending notification
+    if (notifIdRef.current) {
+      await Notifications.cancelScheduledNotificationAsync(notifIdRef.current).catch(() => {});
+      notifIdRef.current = null;
+    }
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Rest complete!',
+        body:  `Time to hit the next set — ${exerciseName}`,
+        sound: true,
+      },
+      trigger: { seconds: REST_SECONDS, repeats: false },
+    });
+    notifIdRef.current = id;
+  }, []);
+
+  const cancelRestNotification = useCallback(async () => {
+    if (notifIdRef.current) {
+      await Notifications.cancelScheduledNotificationAsync(notifIdRef.current).catch(() => {});
+      notifIdRef.current = null;
+    }
   }, []);
 
   const skipRest = useCallback(() => {
-    if (restRef.current) clearInterval(restRef.current);
-    setResting(false);
-    setRestLeft(REST_SECONDS);
-  }, []);
+    if (restTimerRef.current) clearInterval(restTimerRef.current);
+    setActiveRest(null);
+    cancelRestNotification();
+  }, [cancelRestNotification]);
 
   // ── Set mutations ──────────────────────────────────────────────────────────
 
@@ -450,14 +504,24 @@ export default function StartWorkoutScreen() {
     }));
   }
 
-  // Completing fires rest timer; unchecking does not
   function toggleSet(exId: string, idx: number, exerciseName: string) {
     setSetsState((prev) => {
       const wasDone = prev[exId][idx].done;
       const updated = prev[exId].map((s, i) => (i === idx ? { ...s, done: !s.done } : s));
+
       if (!wasDone) {
-        setTimeout(() => startRest(exerciseName), 0);
+        // Completing a set → start rest
+        setTimeout(() => {
+          setActiveRest({ exId, setIdx: idx, remaining: REST_SECONDS });
+          scheduleRestNotification(exerciseName);
+        }, 0);
+      } else {
+        // Unchecking an active rest set → cancel rest
+        if (activeRest?.exId === exId && activeRest.setIdx === idx) {
+          setTimeout(skipRest, 0);
+        }
       }
+
       return { ...prev, [exId]: updated };
     });
   }
@@ -480,6 +544,10 @@ export default function StartWorkoutScreen() {
       if (prev[exId].length <= 1) return prev;
       return { ...prev, [exId]: prev[exId].filter((_, i) => i !== idx) };
     });
+    // If the deleted set was resting, cancel rest
+    if (activeRest?.exId === exId && activeRest.setIdx === idx) {
+      skipRest();
+    }
   }
 
   // ── Exercise mutations ─────────────────────────────────────────────────────
@@ -494,42 +562,14 @@ export default function StartWorkoutScreen() {
     setShowAddModal(false);
   }
 
-  // ── Rest overlay ───────────────────────────────────────────────────────────
-
-  if (resting) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.topBar}>
-          <TouchableOpacity style={styles.backBtn} onPress={skipRest}>
-            <IconSymbol name="xmark.circle.fill" size={20} color={Colors.onSurfaceVariant} />
-          </TouchableOpacity>
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topBarTitle}>{restingFor}</Text>
-            <Text style={styles.topBarSub}>Rest between sets</Text>
-          </View>
-          <View style={styles.timerBadge}>
-            <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
-          </View>
-        </View>
-        <View style={styles.restOverlay}>
-          <Text style={styles.restLabel}>Rest</Text>
-          <Text style={styles.restCount}>{formatTime(restLeft)}</Text>
-          <Text style={styles.restSub}>{doneSets} of {totalSets} sets done</Text>
-          <TouchableOpacity style={styles.btnRestSkip} onPress={skipRest}>
-            <Text style={styles.btnRestSkipText}>Skip Rest</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Main view ──────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      {/* Top bar */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <IconSymbol name="chevron.right" size={20} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={20} color={Colors.onSurface} />
         </TouchableOpacity>
         <View style={styles.topBarCenter}>
           <Text style={styles.topBarTitle}>Hypertrophy Phase II</Text>
@@ -540,6 +580,7 @@ export default function StartWorkoutScreen() {
         </View>
       </View>
 
+      {/* Progress strip */}
       <View style={styles.progressStrip}>
         <View style={styles.progressRow}>
           <Text style={styles.progressLabel}>{exercises.length} exercises</Text>
@@ -550,6 +591,7 @@ export default function StartWorkoutScreen() {
         </View>
       </View>
 
+      {/* Scrollable exercise list */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -560,11 +602,13 @@ export default function StartWorkoutScreen() {
             key={ex.id}
             exercise={ex}
             sets={setsState[ex.id] ?? []}
+            activeRest={activeRest}
             onUpdateName={(name) => updateExerciseName(ex.id, name)}
             onUpdateSet={(i, f, v) => updateSet(ex.id, i, f, v)}
             onToggleSet={(i) => toggleSet(ex.id, i, ex.name)}
             onAddSet={() => addSet(ex.id)}
             onDeleteSet={(i) => deleteSet(ex.id, i)}
+            onSkipRest={skipRest}
             isLast={idx === exercises.length - 1}
           />
         ))}
@@ -578,6 +622,7 @@ export default function StartWorkoutScreen() {
 
       </ScrollView>
 
+      {/* Bottom bar */}
       <View style={styles.bottomBar}>
         <View style={styles.bottomProgress}>
           <Text style={styles.bottomProgressText}>

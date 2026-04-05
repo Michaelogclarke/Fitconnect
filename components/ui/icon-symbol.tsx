@@ -19,6 +19,7 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'chevron.left': 'chevron-left',
   // FitConnect tabs
   'chart.bar.fill': 'dashboard',
   'dumbbell.fill': 'fitness-center',
@@ -33,6 +34,8 @@ const MAPPING = {
   'play.fill': 'play-arrow',
   'checkmark.circle.fill': 'check-circle',
   'xmark.circle.fill': 'cancel',
+  'checkmark': 'check',
+  'timer': 'timer',
   'arrow.up.right': 'trending-up',
   'flame.fill': 'local-fire-department',
   'heart.fill': 'favorite',
