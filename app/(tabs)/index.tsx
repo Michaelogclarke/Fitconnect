@@ -1,98 +1,130 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { styles } from './index.styles';
 
-export default function HomeScreen() {
+const WEIGHT_DAYS = [
+  { label: 'Mon', height: 40, active: false },
+  { label: 'Tue', height: 48, active: false },
+  { label: 'Wed', height: 44, active: false },
+  { label: 'Thu', height: 52, active: false },
+  { label: 'Fri', height: 46, active: false },
+  { label: 'Sat', height: 50, active: false },
+  { label: 'Today', height: 54, active: true },
+];
+
+export default function DashboardScreen() {
+  const router = useRouter();
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.brandText}>FitConnect</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.iconButton}>
+              <IconSymbol name="bell.fill" size={20} color={Colors.onSurface} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Performance Card */}
+        <View style={styles.performanceCard}>
+          <Text style={styles.performanceLabel}>Daily Score</Text>
+          <Text style={styles.performanceGreeting}>Level Up, Alex</Text>
+          <View style={styles.scoreRow}>
+            <Text style={styles.scoreNumber}>78</Text>
+            <Text style={styles.scoreSubtext}>/ 100</Text>
+          </View>
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>Live Session</Text>
+          </View>
+        </View>
+
+        {/* Active Workout */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Active Workout</Text>
+          <TouchableOpacity>
+            <Text style={styles.sectionLink}>See all</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.workoutCard}>
+          <Text style={styles.workoutTitle}>Hypertrophy Phase II: Chest</Text>
+          <Text style={styles.workoutDesc}>
+            Focus on compound lifts with progressive overload. 4 sets x 8-12 reps.
+          </Text>
+          <View style={styles.workoutActions}>
+            <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push('/start-workout')}>
+              <Text style={styles.btnPrimaryText}>Start Workout</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.btnSecondary} onPress={() => router.push('/edit-routine')}>
+              <Text style={styles.btnSecondaryText}>Edit Routine</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Metrics */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Today's Activity</Text>
+        </View>
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCard}>
+            <View style={styles.metricIcon}>
+              <IconSymbol name="flame.fill" size={18} color={Colors.primary} />
+            </View>
+            <Text style={styles.metricValue}>420</Text>
+            <Text style={styles.metricLabel}>Calories</Text>
+            <Text style={styles.metricSub}>kcal burned</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <View style={styles.metricIcon}>
+              <IconSymbol name="heart.fill" size={18} color={Colors.primary} />
+            </View>
+            <Text style={styles.metricValue}>8,420</Text>
+            <Text style={styles.metricLabel}>Steps</Text>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: '84%' }]} />
+            </View>
+            <Text style={styles.metricSub}>10,000 goal</Text>
+          </View>
+        </View>
+
+        {/* Weight Trend */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Weight Trend</Text>
+        </View>
+        <View style={styles.trendCard}>
+          <View style={styles.trendHeader}>
+            <Text style={styles.trendTitle}>7-Day Progress</Text>
+            <Text style={styles.trendValue}>184.5 lbs</Text>
+          </View>
+          <View style={styles.trendDays}>
+            {WEIGHT_DAYS.map((day) => (
+              <View key={day.label} style={styles.trendDay}>
+                <View
+                  style={[
+                    styles.trendDayBar,
+                    { height: day.height },
+                    day.active && styles.trendDayBarActive,
+                  ]}
+                />
+                <Text style={styles.trendDayLabel}>{day.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
