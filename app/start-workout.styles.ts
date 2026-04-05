@@ -1,6 +1,8 @@
 import { StyleSheet } from 'react-native';
 import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
 
+const DELETE_WIDTH = 72;
+
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -141,7 +143,7 @@ export const styles = StyleSheet.create({
   setsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
     marginBottom: Spacing.xs,
   },
   setHeaderCell: {
@@ -149,18 +151,22 @@ export const styles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
     textTransform: 'uppercase',
   },
-  colSet: { width: 28 },
-  colWeight: { flex: 1.2 },
-  colReps: { flex: 1 },
-  colDone: { width: 40 },
+  colSet:    { width: 24 },
+  colWeight: { width: 72 },
+  colUnit:   { width: 24, textAlign: 'center' as const },
+  colReps:   { width: 52, textAlign: 'center' as const },
+  colDone:   { width: 36, alignItems: 'center' as const },
+
+  // Each row is wrapped by Swipeable — the row itself is the visible content
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
     paddingVertical: 7,
     borderRadius: Radius.md,
     marginBottom: 3,
     backgroundColor: Colors.surfaceContainer,
+    gap: Spacing.xs,
   },
   setRowNext: {
     backgroundColor: Colors.surfaceContainerHigh,
@@ -173,24 +179,51 @@ export const styles = StyleSheet.create({
   setNumber: {
     ...Typography.labelLg,
     color: Colors.onSurfaceVariant,
-    width: 28,
-  },
-  setInput: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-    padding: 0,
-    paddingVertical: 2,
-  },
-  setInputWeight: {
-    flex: 1.2,
-  },
-  setInputReps: {
-    flex: 1,
+    width: 24,
     textAlign: 'center',
   },
-  setInputReadOnly: {
-    color: Colors.onSurfaceVariant,
+
+  // ── Boxed input fields ─────────────────────────────────────────────────────
+  inputBox: {
+    backgroundColor: Colors.surfaceContainerHighest,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 5,
+    justifyContent: 'center',
   },
+  inputBoxActive: {
+    borderColor: Colors.primary + '88',
+    backgroundColor: Colors.surfaceContainerHighest,
+  },
+  weightInput: {
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+    width: 72,
+    padding: 0,
+    textAlign: 'center',
+  },
+  weightUnit: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+    width: 24,
+    textAlign: 'center',
+  },
+  repsInput: {
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+    width: 52,
+    padding: 0,
+    textAlign: 'center',
+  },
+  inputReadOnly: {
+    color: Colors.onSurfaceVariant,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
+
+  // ── Checkmark ──────────────────────────────────────────────────────────────
   checkCircle: {
     width: 28,
     height: 28,
@@ -206,6 +239,20 @@ export const styles = StyleSheet.create({
   },
   checkCircleNext: {
     borderColor: Colors.primary,
+  },
+
+  // ── Swipe-to-delete action ─────────────────────────────────────────────────
+  swipeDeleteAction: {
+    backgroundColor: Colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: DELETE_WIDTH,
+    borderRadius: Radius.md,
+  },
+  swipeDeleteText: {
+    ...Typography.labelLg,
+    color: '#fff',
+    marginTop: 4,
   },
 
   // ── Add / remove set row ───────────────────────────────────────────────────
@@ -230,14 +277,6 @@ export const styles = StyleSheet.create({
   addSetBtnText: {
     ...Typography.labelLg,
     color: Colors.primary,
-  },
-  removeSetBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.error + '18',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   // ── Divider between sections ───────────────────────────────────────────────
@@ -269,7 +308,7 @@ export const styles = StyleSheet.create({
     color: Colors.primary,
   },
 
-  // ── Rest timer overlay ─────────────────────────────────────────────────────
+  // ── Rest overlay ───────────────────────────────────────────────────────────
   restOverlay: {
     flex: 1,
     justifyContent: 'center',

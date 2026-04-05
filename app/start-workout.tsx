@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   ScrollView,
   Text,
@@ -19,13 +21,7 @@ import { styles } from './start-workout.styles';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SetRow = { weight: string; reps: string; done: boolean };
-
-type Exercise = {
-  id: string;
-  name: string;
-  muscle: string;
-  tag: string;
-};
+type Exercise = { id: string; name: string; muscle: string; tag: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -49,39 +45,100 @@ const INITIAL_EXERCISES: Exercise[] = [
 
 const INITIAL_SETS: Record<string, SetRow[]> = {
   e1: [
-    { weight: '80 kg', reps: '10', done: false },
-    { weight: '80 kg', reps: '10', done: false },
-    { weight: '82.5 kg', reps: '8', done: false },
-    { weight: '82.5 kg', reps: '8', done: false },
+    { weight: '80',   reps: '10', done: false },
+    { weight: '80',   reps: '10', done: false },
+    { weight: '82.5', reps: '8',  done: false },
+    { weight: '82.5', reps: '8',  done: false },
   ],
   e2: [
-    { weight: '32 kg', reps: '12', done: false },
-    { weight: '32 kg', reps: '12', done: false },
-    { weight: '34 kg', reps: '10', done: false },
+    { weight: '32', reps: '12', done: false },
+    { weight: '32', reps: '12', done: false },
+    { weight: '34', reps: '10', done: false },
   ],
   e3: [
-    { weight: '15 kg', reps: '15', done: false },
-    { weight: '15 kg', reps: '15', done: false },
-    { weight: '17.5 kg', reps: '12', done: false },
+    { weight: '15',   reps: '15', done: false },
+    { weight: '15',   reps: '15', done: false },
+    { weight: '17.5', reps: '12', done: false },
   ],
 };
 
 const REST_SECONDS = 90;
+const DELETE_WIDTH  = 72;
+
+// ─── SwipeableRow — pure Animated + PanResponder, no gesture handler ──────────
+// The delete button sits BESIDE the row (not behind it) so it never bleeds
+// through rounded corners. overflow:hidden on the container clips it until
+// the swipe translates the row far enough to reveal it.
+
+function SwipeableRow({
+  children,
+  onDelete,
+}: {
+  children: React.ReactNode;
+  onDelete: () => void;
+}) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const isOpen = useRef(false);
+  const [rowWidth, setRowWidth] = useState(0);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > Math.abs(gs.dy) + 5 && gs.dx < 0,
+      onPanResponderMove: (_, gs) => {
+        const base = isOpen.current ? -DELETE_WIDTH : 0;
+        translateX.setValue(Math.max(-DELETE_WIDTH, Math.min(0, base + gs.dx)));
+      },
+      onPanResponderRelease: (_, gs) => {
+        const base = isOpen.current ? -DELETE_WIDTH : 0;
+        if (base + gs.dx < -DELETE_WIDTH / 2) {
+          Animated.spring(translateX, { toValue: -DELETE_WIDTH, useNativeDriver: true }).start();
+          isOpen.current = true;
+        } else {
+          close();
+        }
+      },
+    })
+  ).current;
+
+  function close() {
+    Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+    isOpen.current = false;
+  }
+
+  return (
+    <View
+      style={{ overflow: 'hidden', marginBottom: 3 }}
+      onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
+      {/*
+        Animated.View is a flex row: [row content | delete button].
+        The content is pinned to rowWidth so it always fills the container.
+        The delete button lives to its right, hidden by overflow:hidden until
+        the translate reveals it — no absolute positioning, no bleed-through.
+      */}
+      <Animated.View
+        style={{ flexDirection: 'row', transform: [{ translateX }] }}
+        {...panResponder.panHandlers}>
+        <View style={{ width: rowWidth }}>
+          {children}
+        </View>
+        <TouchableOpacity
+          style={[styles.swipeDeleteAction, { marginBottom: 0 }]}
+          onPress={() => { close(); onDelete(); }}>
+          <IconSymbol name="trash" size={18} color="#fff" />
+          <Text style={styles.swipeDeleteText}>Delete</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
 
 // ─── Add Exercise Modal ───────────────────────────────────────────────────────
 
-type NewExerciseForm = {
-  name: string;
-  muscle: string;
-  sets: string;
-  reps: string;
-  weight: string;
-};
+type NewExerciseForm = { name: string; muscle: string; sets: string; reps: string; weight: string };
 
 function AddExerciseModal({
-  visible,
-  onClose,
-  onAdd,
+  visible, onClose, onAdd,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -105,7 +162,7 @@ function AddExerciseModal({
       tag: 'Custom',
     };
     const sets: SetRow[] = Array.from({ length: setCount }, () => ({
-      weight: form.weight.trim() || '0 kg',
+      weight: form.weight.trim() || '0',
       reps: form.reps.trim() || '10',
       done: false,
     }));
@@ -163,13 +220,14 @@ function AddExerciseModal({
               />
             </View>
             <View style={styles.fieldHalf}>
-              <Text style={styles.fieldLabel}>Weight</Text>
+              <Text style={styles.fieldLabel}>Weight (kg)</Text>
               <TextInput
                 style={styles.fieldInput}
-                placeholder="60 kg"
+                placeholder="60"
                 placeholderTextColor={Colors.onSurfaceVariant}
                 value={form.weight}
                 onChangeText={(v) => field('weight', v)}
+                keyboardType="decimal-pad"
                 returnKeyType="done"
                 onSubmitEditing={handleAdd}
               />
@@ -196,27 +254,19 @@ function AddExerciseModal({
 // ─── Exercise Section ─────────────────────────────────────────────────────────
 
 function ExerciseSection({
-  exercise,
-  sets,
-  onUpdateName,
-  onUpdateSet,
-  onCompleteSet,
-  onAddSet,
-  onRemoveSet,
-  isLast,
+  exercise, sets, onUpdateName, onUpdateSet, onToggleSet, onAddSet, onDeleteSet, isLast,
 }: {
   exercise: Exercise;
   sets: SetRow[];
   onUpdateName: (name: string) => void;
   onUpdateSet: (idx: number, field: 'weight' | 'reps', value: string) => void;
-  onCompleteSet: (idx: number) => void;
+  onToggleSet: (idx: number) => void;
   onAddSet: () => void;
-  onRemoveSet: () => void;
+  onDeleteSet: (idx: number) => void;
   isLast: boolean;
 }) {
   const doneCount = sets.filter((s) => s.done).length;
-  const allDone = doneCount === sets.length;
-  // "next" set = first undone set in this exercise
+  const allDone = doneCount === sets.length && sets.length > 0;
   const nextSetIdx = sets.findIndex((s) => !s.done);
 
   return (
@@ -247,72 +297,91 @@ function ExerciseSection({
       {/* Sets table */}
       <View style={styles.setsSection}>
         <View style={styles.setsHeader}>
-          <Text style={[styles.setHeaderCell, styles.colSet]}>Set</Text>
-          <Text style={[styles.setHeaderCell, styles.colWeight]}>Weight</Text>
+          <Text style={[styles.setHeaderCell, styles.colSet]}>#</Text>
+          <Text style={[styles.setHeaderCell, styles.colWeight, { textAlign: 'center' }]}>Weight</Text>
+          <Text style={[styles.setHeaderCell, styles.colUnit]} />
           <Text style={[styles.setHeaderCell, styles.colReps, { textAlign: 'center' }]}>Reps</Text>
-          <Text style={[styles.setHeaderCell, styles.colDone, { textAlign: 'center' }]}>Done</Text>
+          <Text style={[styles.setHeaderCell, { flex: 1 }]} />
         </View>
 
         {sets.map((s, i) => {
           const isNext = i === nextSetIdx;
-          const editable = !s.done;
           return (
-            <View
-              key={i}
-              style={[
-                styles.setRow,
-                isNext && styles.setRowNext,
-                s.done && styles.setRowDone,
-              ]}>
-              <Text style={styles.setNumber}>{i + 1}</Text>
-
-              <TextInput
-                style={[styles.setInput, styles.setInputWeight, !editable && styles.setInputReadOnly]}
-                value={s.weight}
-                onChangeText={(v) => onUpdateSet(i, 'weight', v)}
-                editable={editable}
-                returnKeyType="done"
-                placeholderTextColor={Colors.onSurfaceVariant}
-              />
-
-              <TextInput
-                style={[styles.setInput, styles.setInputReps, !editable && styles.setInputReadOnly]}
-                value={s.reps}
-                onChangeText={(v) => onUpdateSet(i, 'reps', v)}
-                editable={editable}
-                returnKeyType="done"
-                placeholderTextColor={Colors.onSurfaceVariant}
-              />
-
-              <TouchableOpacity
+            <SwipeableRow key={i} onDelete={() => onDeleteSet(i)}>
+              <View
                 style={[
-                  styles.checkCircle,
-                  s.done && styles.checkCircleDone,
-                  isNext && !s.done && styles.checkCircleNext,
-                ]}
-                onPress={() => !s.done && onCompleteSet(i)}
-                disabled={s.done}>
-                {s.done && (
-                  <IconSymbol name="checkmark.circle.fill" size={16} color={Colors.background} />
-                )}
-              </TouchableOpacity>
-            </View>
+                  styles.setRow,
+                  isNext && !s.done && styles.setRowNext,
+                  s.done && styles.setRowDone,
+                ]}>
+                <Text style={styles.setNumber}>{i + 1}</Text>
+
+                {/* Weight — numeric only, clearly boxed */}
+                <View style={[
+                  styles.inputBox,
+                  s.done && styles.inputReadOnly,
+                  isNext && !s.done && styles.inputBoxActive,
+                ]}>
+                  <TextInput
+                    style={styles.weightInput}
+                    value={s.weight}
+                    onChangeText={(v) => onUpdateSet(i, 'weight', v.replace(/[^0-9.]/g, ''))}
+                    editable={!s.done}
+                    keyboardType="decimal-pad"
+                    returnKeyType="done"
+                    placeholder="0"
+                    placeholderTextColor={Colors.onSurfaceVariant}
+                    selectTextOnFocus
+                  />
+                </View>
+
+                <Text style={styles.weightUnit}>kg</Text>
+
+                {/* Reps — text, boxed */}
+                <View style={[
+                  styles.inputBox,
+                  s.done && styles.inputReadOnly,
+                  isNext && !s.done && styles.inputBoxActive,
+                ]}>
+                  <TextInput
+                    style={styles.repsInput}
+                    value={s.reps}
+                    onChangeText={(v) => onUpdateSet(i, 'reps', v)}
+                    editable={!s.done}
+                    keyboardType="default"
+                    returnKeyType="done"
+                    placeholder="10"
+                    placeholderTextColor={Colors.onSurfaceVariant}
+                    selectTextOnFocus
+                  />
+                </View>
+
+                {/* Toggle checkmark — tap to complete or uncheck */}
+                <TouchableOpacity
+                  style={[
+                    styles.checkCircle,
+                    s.done && styles.checkCircleDone,
+                    isNext && !s.done && styles.checkCircleNext,
+                  ]}
+                  onPress={() => onToggleSet(i)}>
+                  {s.done && (
+                    <IconSymbol name="checkmark.circle.fill" size={16} color={Colors.background} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </SwipeableRow>
           );
         })}
       </View>
 
-      {/* Add / remove set */}
+      {/* Add set */}
       <View style={styles.setActionsRow}>
         <TouchableOpacity style={styles.addSetBtn} onPress={onAddSet}>
           <IconSymbol name="plus.circle.fill" size={15} color={Colors.primary} />
           <Text style={styles.addSetBtnText}>Add Set</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.removeSetBtn} onPress={onRemoveSet}>
-          <IconSymbol name="trash" size={15} color={Colors.error} />
-        </TouchableOpacity>
       </View>
 
-      {/* Divider between exercises */}
       {!isLast && <View style={styles.sectionDivider} />}
     </View>
   );
@@ -323,27 +392,23 @@ function ExerciseSection({
 export default function StartWorkoutScreen() {
   const router = useRouter();
 
-  // Elapsed timer
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // All exercises visible at once
   const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES);
   const [setsState, setSetsState] = useState<Record<string, SetRow[]>>(INITIAL_SETS);
 
-  // Rest timer
   const [resting, setResting] = useState(false);
   const [restLeft, setRestLeft] = useState(REST_SECONDS);
   const [restingFor, setRestingFor] = useState('');
   const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Add exercise modal
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // ── Derived totals ─────────────────────────────────────────────────────────
+  // ── Derived ────────────────────────────────────────────────────────────────
 
   const allSets = exercises.flatMap((e) => setsState[e.id] ?? []);
   const totalSets = allSets.length;
@@ -351,42 +416,9 @@ export default function StartWorkoutScreen() {
   const allDone = totalSets > 0 && doneSets === totalSets;
   const progressFraction = totalSets > 0 ? doneSets / totalSets : 0;
 
-  // ── Set mutations ──────────────────────────────────────────────────────────
+  // ── Rest timer ─────────────────────────────────────────────────────────────
 
-  function updateSet(exId: string, idx: number, field: 'weight' | 'reps', value: string) {
-    setSetsState((prev) => ({
-      ...prev,
-      [exId]: prev[exId].map((s, i) => (i === idx ? { ...s, [field]: value } : s)),
-    }));
-  }
-
-  function addSet(exId: string) {
-    setSetsState((prev) => {
-      const last = prev[exId][prev[exId].length - 1];
-      return {
-        ...prev,
-        [exId]: [...prev[exId], { weight: last?.weight ?? '0 kg', reps: last?.reps ?? '10', done: false }],
-      };
-    });
-  }
-
-  function removeLastSet(exId: string) {
-    setSetsState((prev) => {
-      const current = prev[exId];
-      if (current.length <= 1) return prev;
-      const lastUndoneIdx = [...current].map((s, i) => (!s.done ? i : -1)).filter((i) => i !== -1).pop();
-      if (lastUndoneIdx === undefined) return prev;
-      return { ...prev, [exId]: current.filter((_, i) => i !== lastUndoneIdx) };
-    });
-  }
-
-  // ── Complete a set → start rest ────────────────────────────────────────────
-
-  const completeSet = useCallback((exId: string, setIdx: number, exerciseName: string) => {
-    setSetsState((prev) => ({
-      ...prev,
-      [exId]: prev[exId].map((s, i) => (i === setIdx ? { ...s, done: true } : s)),
-    }));
+  const startRest = useCallback((exerciseName: string) => {
     setRestingFor(exerciseName);
     setResting(true);
     setRestLeft(REST_SECONDS);
@@ -408,6 +440,47 @@ export default function StartWorkoutScreen() {
     setResting(false);
     setRestLeft(REST_SECONDS);
   }, []);
+
+  // ── Set mutations ──────────────────────────────────────────────────────────
+
+  function updateSet(exId: string, idx: number, field: 'weight' | 'reps', value: string) {
+    setSetsState((prev) => ({
+      ...prev,
+      [exId]: prev[exId].map((s, i) => (i === idx ? { ...s, [field]: value } : s)),
+    }));
+  }
+
+  // Completing fires rest timer; unchecking does not
+  function toggleSet(exId: string, idx: number, exerciseName: string) {
+    setSetsState((prev) => {
+      const wasDone = prev[exId][idx].done;
+      const updated = prev[exId].map((s, i) => (i === idx ? { ...s, done: !s.done } : s));
+      if (!wasDone) {
+        setTimeout(() => startRest(exerciseName), 0);
+      }
+      return { ...prev, [exId]: updated };
+    });
+  }
+
+  function addSet(exId: string) {
+    setSetsState((prev) => {
+      const last = prev[exId][prev[exId].length - 1];
+      return {
+        ...prev,
+        [exId]: [
+          ...prev[exId],
+          { weight: last?.weight ?? '0', reps: last?.reps ?? '10', done: false },
+        ],
+      };
+    });
+  }
+
+  function deleteSet(exId: string, idx: number) {
+    setSetsState((prev) => {
+      if (prev[exId].length <= 1) return prev;
+      return { ...prev, [exId]: prev[exId].filter((_, i) => i !== idx) };
+    });
+  }
 
   // ── Exercise mutations ─────────────────────────────────────────────────────
 
@@ -441,7 +514,7 @@ export default function StartWorkoutScreen() {
         <View style={styles.restOverlay}>
           <Text style={styles.restLabel}>Rest</Text>
           <Text style={styles.restCount}>{formatTime(restLeft)}</Text>
-          <Text style={styles.restSub}>{doneSets} of {totalSets} sets done across all exercises</Text>
+          <Text style={styles.restSub}>{doneSets} of {totalSets} sets done</Text>
           <TouchableOpacity style={styles.btnRestSkip} onPress={skipRest}>
             <Text style={styles.btnRestSkipText}>Skip Rest</Text>
           </TouchableOpacity>
@@ -454,8 +527,6 @@ export default function StartWorkoutScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-
-      {/* Top bar */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <IconSymbol name="chevron.right" size={20} color={Colors.onSurface} />
@@ -469,7 +540,6 @@ export default function StartWorkoutScreen() {
         </View>
       </View>
 
-      {/* Overall progress strip */}
       <View style={styles.progressStrip}>
         <View style={styles.progressRow}>
           <Text style={styles.progressLabel}>{exercises.length} exercises</Text>
@@ -480,7 +550,6 @@ export default function StartWorkoutScreen() {
         </View>
       </View>
 
-      {/* All exercises in one scroll */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -493,14 +562,13 @@ export default function StartWorkoutScreen() {
             sets={setsState[ex.id] ?? []}
             onUpdateName={(name) => updateExerciseName(ex.id, name)}
             onUpdateSet={(i, f, v) => updateSet(ex.id, i, f, v)}
-            onCompleteSet={(i) => completeSet(ex.id, i, ex.name)}
+            onToggleSet={(i) => toggleSet(ex.id, i, ex.name)}
             onAddSet={() => addSet(ex.id)}
-            onRemoveSet={() => removeLastSet(ex.id)}
+            onDeleteSet={(i) => deleteSet(ex.id, i)}
             isLast={idx === exercises.length - 1}
           />
         ))}
 
-        {/* Add custom exercise */}
         <View style={styles.addExerciseSection}>
           <TouchableOpacity style={styles.addExerciseBtn} onPress={() => setShowAddModal(true)}>
             <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
@@ -510,7 +578,6 @@ export default function StartWorkoutScreen() {
 
       </ScrollView>
 
-      {/* Bottom bar */}
       <View style={styles.bottomBar}>
         <View style={styles.bottomProgress}>
           <Text style={styles.bottomProgressText}>
@@ -532,7 +599,6 @@ export default function StartWorkoutScreen() {
         onClose={() => setShowAddModal(false)}
         onAdd={addCustomExercise}
       />
-
     </SafeAreaView>
   );
 }
