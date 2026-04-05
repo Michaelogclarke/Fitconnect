@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   Modal,
@@ -18,6 +19,7 @@ import * as Notifications from 'expo-notifications';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { DELETE_WIDTH, styles } from '@/styles/start-workout.styles';
+import { supabase } from '@/lib/supabase';
 
 // Show notification even when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -532,6 +534,10 @@ export default function StartWorkoutScreen() {
 
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const notifIdRef   = useRef<string | null>(null);
+  const startedAt    = useRef(new Date());
+
+  const [finishing,  setFinishing]  = useState(false);
+  const [saveError,  setSaveError]  = useState('');
 
   // ── Notification permissions ───────────────────────────────────────────────
 
@@ -689,6 +695,72 @@ export default function StartWorkoutScreen() {
     setShowAddModal(false);
   }
 
+  // ── Save workout to Supabase ───────────────────────────────────────────────
+
+  async function finishWorkout() {
+    setFinishing(true);
+    setSaveError('');
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not signed in');
+
+      // 1. Create the session record
+      const { data: session, error: sessionErr } = await supabase
+        .from('workout_sessions')
+        .insert({
+          user_id:          user.id,
+          name:             'Hypertrophy Phase II',
+          started_at:       startedAt.current.toISOString(),
+          finished_at:      new Date().toISOString(),
+          duration_seconds: elapsed,
+        })
+        .select('id')
+        .single();
+      if (sessionErr) throw sessionErr;
+
+      // 2. Insert each exercise + its sets
+      for (let i = 0; i < exercises.length; i++) {
+        const ex   = exercises[i];
+        const sets = setsState[ex.id] ?? [];
+
+        const { data: sessionEx, error: exErr } = await supabase
+          .from('session_exercises')
+          .insert({
+            session_id:    session.id,
+            exercise_name: ex.name,
+            muscle_group:  ex.muscle,
+            sort_order:    i,
+          })
+          .select('id')
+          .single();
+        if (exErr) throw exErr;
+
+        if (sets.length > 0) {
+          const { error: setsErr } = await supabase
+            .from('session_sets')
+            .insert(
+              sets.map((s, idx) => ({
+                session_exercise_id: sessionEx.id,
+                set_number:          idx + 1,
+                weight:              parseFloat(s.weight) || null,
+                reps:                parseInt(s.reps)    || null,
+                is_completed:        s.done,
+                completed_at:        s.done ? new Date().toISOString() : null,
+              }))
+            );
+          if (setsErr) throw setsErr;
+        }
+      }
+
+      // Success — go to history so they can see the saved session
+      router.replace('/(tabs)/history');
+    } catch (err: any) {
+      setSaveError(err?.message ?? 'Failed to save. Please try again.');
+      setFinishing(false);
+    }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -759,12 +831,23 @@ export default function StartWorkoutScreen() {
           </Text>
           <Text style={styles.bottomProgressCount}>{doneSets}/{totalSets}</Text>
         </View>
+        {saveError ? (
+          <Text style={styles.saveErrorText}>{saveError}</Text>
+        ) : null}
         <TouchableOpacity
-          style={allDone ? styles.btnFinish : styles.btnFinishDimmed}
-          onPress={() => router.back()}>
-          <Text style={allDone ? styles.btnFinishText : styles.btnFinishDimmedText}>
-            Finish Workout
-          </Text>
+          style={[
+            allDone ? styles.btnFinish : styles.btnFinishDimmed,
+            finishing && { opacity: 0.6 },
+          ]}
+          onPress={finishWorkout}
+          disabled={finishing}>
+          {finishing ? (
+            <ActivityIndicator color={allDone ? Colors.background : Colors.onSurfaceVariant} />
+          ) : (
+            <Text style={allDone ? styles.btnFinishText : styles.btnFinishDimmedText}>
+              {allDone ? 'Finish Workout' : 'Finish Early'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 

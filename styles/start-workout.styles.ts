@@ -320,6 +320,12 @@ export const styles = StyleSheet.create({
     borderColor: Colors.outlineVariant,
   },
   btnFinishDimmedText: { ...Typography.titleLg, color: Colors.onSurfaceVariant },
+  saveErrorText: {
+    ...Typography.labelLg,
+    color: Colors.error,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
 
   // ── Add Exercise Modal ─────────────────────────────────────────────────────
   modalBackdrop: {
