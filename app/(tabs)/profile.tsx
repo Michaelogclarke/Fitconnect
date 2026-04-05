@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { styles } from './profile.styles';
+import { styles } from '@/styles/tabs/profile.styles';
 
 const MENU_SECTIONS = [
   {

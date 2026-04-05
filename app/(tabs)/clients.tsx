@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { styles } from './clients.styles';
+import { styles } from '@/styles/tabs/clients.styles';
 
 const CLIENTS = [
   { id: '1', name: 'Sarah Johnson', meta: 'Weight Loss · 3 sessions/wk', active: true },

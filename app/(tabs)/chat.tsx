@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { styles } from './chat.styles';
+import { styles } from '@/styles/tabs/chat.styles';
 
 const THREADS = [
   { id: '1', name: 'Sarah Johnson', preview: 'How did the leg day go?', time: '2m', online: true, unread: 3 },

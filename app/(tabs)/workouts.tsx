@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { styles } from './workouts.styles';
+import { styles } from '@/styles/tabs/workouts.styles';
 
 const FILTERS = ['All', 'Chest', 'Back', 'Legs', 'Arms', 'Core'];
 

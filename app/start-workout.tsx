@@ -17,7 +17,7 @@ import * as Notifications from 'expo-notifications';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { DELETE_WIDTH, styles } from './start-workout.styles';
+import { DELETE_WIDTH, styles } from '@/styles/start-workout.styles';
 
 // Show notification even when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -30,9 +30,10 @@ Notifications.setNotificationHandler({
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SetRow    = { weight: string; reps: string; done: boolean };
-type Exercise  = { id: string; name: string; muscle: string; tag: string };
+type SetRow     = { weight: string; reps: string; done: boolean };
+type Exercise   = { id: string; name: string; muscle: string; tag: string };
 type ActiveRest = { exId: string; setIdx: number; remaining: number };
+type NumPadTarget = { exId: string; setIdx: number; field: 'weight' | 'reps' };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -75,9 +76,7 @@ const INITIAL_SETS: Record<string, SetRow[]> = {
 
 const REST_SECONDS = 90;
 
-// ─── SwipeableRow — pure Animated + PanResponder ──────────────────────────────
-// Delete button sits BESIDE the row (flex-row) so it never bleeds through pill
-// corners. overflow:hidden clips it until the swipe reveals it.
+// ─── SwipeableRow ─────────────────────────────────────────────────────────────
 
 function SwipeableRow({
   children,
@@ -133,6 +132,83 @@ function SwipeableRow({
         </TouchableOpacity>
       </Animated.View>
     </View>
+  );
+}
+
+// ─── NumPad ───────────────────────────────────────────────────────────────────
+
+function NumPad({
+  visible,
+  label,
+  value,
+  allowDecimal,
+  onChange,
+  onDone,
+  onClose,
+}: {
+  visible:      boolean;
+  label:        string;
+  value:        string;
+  allowDecimal: boolean;
+  onChange:     (v: string) => void;
+  onDone:       () => void;
+  onClose:      () => void;
+}) {
+  function press(key: string) {
+    if (key === '⌫') {
+      const next = value.slice(0, -1);
+      onChange(next === '' ? '0' : next);
+      return;
+    }
+    if (key === '.') {
+      if (!allowDecimal || value.includes('.')) return;
+      onChange(value + '.');
+      return;
+    }
+    onChange(value === '0' ? key : value + key);
+  }
+
+  const rows = [
+    ['7', '8', '9'],
+    ['4', '5', '6'],
+    ['1', '2', '3'],
+    ['.', '0', '⌫'],
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.numPadBackdrop} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+          <View style={styles.numPadSheet}>
+            <View style={styles.numPadHandle} />
+            <Text style={styles.numPadLabel}>{label}</Text>
+            <View style={styles.numPadDisplay}>
+              <Text style={styles.numPadDisplayText}>{value}</Text>
+            </View>
+            {rows.map((row, ri) => (
+              <View key={ri} style={styles.numPadRow}>
+                {row.map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      styles.numPadKey,
+                      (key === '.' || key === '⌫') && styles.numPadKeySpecial,
+                      key === '.' && !allowDecimal && { opacity: 0.3 },
+                    ]}
+                    onPress={() => press(key)}
+                    disabled={key === '.' && !allowDecimal}>
+                    <Text style={styles.numPadKeyText}>{key}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+            <TouchableOpacity style={styles.numPadDoneBtn} onPress={onDone}>
+              <Text style={styles.numPadDoneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
   );
 }
 
@@ -258,7 +334,8 @@ function AddExerciseModal({
 
 function ExerciseSection({
   exercise, sets, activeRest,
-  onUpdateName, onUpdateSet, onToggleSet, onAddSet, onDeleteSet, onSkipRest, isLast,
+  onUpdateName, onUpdateSet, onToggleSet, onAddSet, onDeleteSet,
+  onSkipRest, onAdjustRest, onOpenNumPad, isLast,
 }: {
   exercise:     Exercise;
   sets:         SetRow[];
@@ -269,11 +346,20 @@ function ExerciseSection({
   onAddSet:     () => void;
   onDeleteSet:  (idx: number) => void;
   onSkipRest:   () => void;
+  onAdjustRest: (delta: number) => void;
+  onOpenNumPad: (setIdx: number, field: 'weight' | 'reps', currentValue: string) => void;
   isLast:       boolean;
 }) {
   const doneCount  = sets.filter((s) => s.done).length;
   const allDone    = doneCount === sets.length && sets.length > 0;
   const nextSetIdx = sets.findIndex((s) => !s.done);
+
+  // Whether the rest chip is expanded to show +/- controls
+  const [restExpanded, setRestExpanded] = useState(false);
+  const isResting = activeRest?.exId === exercise.id;
+  useEffect(() => {
+    if (!isResting) setRestExpanded(false);
+  }, [isResting]);
 
   return (
     <View style={styles.exerciseSection}>
@@ -311,8 +397,8 @@ function ExerciseSection({
         </View>
 
         {sets.map((s, i) => {
-          const isNext     = i === nextSetIdx;
-          const isResting  = activeRest?.exId === exercise.id && activeRest.setIdx === i;
+          const isNext    = i === nextSetIdx;
+          const isResting = activeRest?.exId === exercise.id && activeRest.setIdx === i;
 
           return (
             <React.Fragment key={i}>
@@ -325,45 +411,35 @@ function ExerciseSection({
                   ]}>
                   <Text style={styles.setNumber}>{i + 1}</Text>
 
-                  <View style={[
-                    styles.inputBox,
-                    s.done && styles.inputReadOnly,
-                    isNext && !s.done && styles.inputBoxActive,
-                  ]}>
-                    <TextInput
-                      style={styles.weightInput}
-                      value={s.weight}
-                      onChangeText={(v) => onUpdateSet(i, 'weight', v.replace(/[^0-9.]/g, ''))}
-                      editable={!s.done}
-                      keyboardType="decimal-pad"
-                      returnKeyType="done"
-                      placeholder="0"
-                      placeholderTextColor={Colors.onSurfaceVariant}
-                      selectTextOnFocus
-                    />
-                  </View>
+                  {/* Weight — tapping opens the numpad */}
+                  <TouchableOpacity
+                    style={[
+                      styles.inputBox,
+                      s.done && styles.inputReadOnly,
+                      isNext && !s.done && styles.inputBoxActive,
+                    ]}
+                    onPress={() => !s.done && onOpenNumPad(i, 'weight', s.weight)}
+                    disabled={s.done}
+                    activeOpacity={0.7}>
+                    <Text style={styles.weightInput}>{s.weight || '0'}</Text>
+                  </TouchableOpacity>
 
                   <Text style={styles.weightUnit}>kg</Text>
 
-                  <View style={[
-                    styles.inputBox,
-                    s.done && styles.inputReadOnly,
-                    isNext && !s.done && styles.inputBoxActive,
-                  ]}>
-                    <TextInput
-                      style={styles.repsInput}
-                      value={s.reps}
-                      onChangeText={(v) => onUpdateSet(i, 'reps', v)}
-                      editable={!s.done}
-                      keyboardType="default"
-                      returnKeyType="done"
-                      placeholder="10"
-                      placeholderTextColor={Colors.onSurfaceVariant}
-                      selectTextOnFocus
-                    />
-                  </View>
+                  {/* Reps — tapping opens the numpad */}
+                  <TouchableOpacity
+                    style={[
+                      styles.inputBox,
+                      s.done && styles.inputReadOnly,
+                      isNext && !s.done && styles.inputBoxActive,
+                    ]}
+                    onPress={() => !s.done && onOpenNumPad(i, 'reps', s.reps)}
+                    disabled={s.done}
+                    activeOpacity={0.7}>
+                    <Text style={styles.repsInput}>{s.reps || '0'}</Text>
+                  </TouchableOpacity>
 
-                  {/* Checkmark — marginLeft auto pushes it to the far right of the pill */}
+                  {/* Checkmark */}
                   <TouchableOpacity
                     style={[
                       styles.checkCircle,
@@ -378,15 +454,42 @@ function ExerciseSection({
                 </View>
               </SwipeableRow>
 
-              {/* Inline rest chip — only shown while this set's rest is active */}
+              {/* Inline rest chip below this set */}
               {isResting && (
-                <View style={styles.restChip}>
+                <TouchableOpacity
+                  style={styles.restChip}
+                  onPress={() => setRestExpanded((e) => !e)}
+                  activeOpacity={0.8}>
                   <IconSymbol name="timer" size={13} color={Colors.primary} />
-                  <Text style={styles.restChipText}>{formatTime(activeRest!.remaining)}</Text>
-                  <TouchableOpacity style={styles.restChipSkip} onPress={onSkipRest}>
+
+                  {restExpanded ? (
+                    <>
+                      <TouchableOpacity
+                        style={styles.restAdjustBtn}
+                        onPress={(e) => { e.stopPropagation(); onAdjustRest(-15); }}>
+                        <Text style={styles.restAdjustBtnText}>−15</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.restChipText}>
+                        {formatTime(activeRest!.remaining)}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.restAdjustBtn}
+                        onPress={(e) => { e.stopPropagation(); onAdjustRest(+15); }}>
+                        <Text style={styles.restAdjustBtnText}>+15</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <Text style={styles.restChipText}>
+                      {formatTime(activeRest!.remaining)}
+                    </Text>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.restChipSkip}
+                    onPress={(e) => { e.stopPropagation(); onSkipRest(); }}>
                     <Text style={[styles.restChipText, { opacity: 0.6 }]}>Skip</Text>
                   </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               )}
             </React.Fragment>
           );
@@ -423,13 +526,17 @@ export default function StartWorkoutScreen() {
   const [activeRest, setActiveRest] = useState<ActiveRest | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  // Numpad state
+  const [numPadTarget, setNumPadTarget] = useState<NumPadTarget | null>(null);
+  const [numPadValue,  setNumPadValue]  = useState('0');
+
   const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const notifIdRef   = useRef<string | null>(null);
 
-  // ── Request notification permissions on mount ──────────────────────────────
+  // ── Notification permissions ───────────────────────────────────────────────
 
   useEffect(() => {
-    Notifications.requestPermissionsAsync();
+    Notifications.requestPermissionsAsync().catch(() => {});
   }, []);
 
   // ── Rest countdown ─────────────────────────────────────────────────────────
@@ -444,7 +551,7 @@ export default function StartWorkoutScreen() {
         if (!prev) return null;
         if (prev.remaining <= 1) {
           clearInterval(restTimerRef.current!);
-          return null;            // chip disappears — notification fires separately
+          return null;
         }
         return { ...prev, remaining: prev.remaining - 1 };
       });
@@ -453,33 +560,38 @@ export default function StartWorkoutScreen() {
     return () => {
       if (restTimerRef.current) clearInterval(restTimerRef.current);
     };
-  }, [activeRest?.exId, activeRest?.setIdx]);  // restart only when a new rest begins
+  }, [activeRest?.exId, activeRest?.setIdx]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
-  const allSets        = exercises.flatMap((e) => setsState[e.id] ?? []);
-  const totalSets      = allSets.length;
-  const doneSets       = allSets.filter((s) => s.done).length;
-  const allDone        = totalSets > 0 && doneSets === totalSets;
+  const allSets          = exercises.flatMap((e) => setsState[e.id] ?? []);
+  const totalSets        = allSets.length;
+  const doneSets         = allSets.filter((s) => s.done).length;
+  const allDone          = totalSets > 0 && doneSets === totalSets;
   const progressFraction = totalSets > 0 ? doneSets / totalSets : 0;
 
   // ── Rest helpers ───────────────────────────────────────────────────────────
 
   const scheduleRestNotification = useCallback(async (exerciseName: string) => {
-    // Cancel any previous pending notification
     if (notifIdRef.current) {
       await Notifications.cancelScheduledNotificationAsync(notifIdRef.current).catch(() => {});
       notifIdRef.current = null;
     }
-    const id = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Rest complete!',
-        body:  `Time to hit the next set — ${exerciseName}`,
-        sound: true,
-      },
-      trigger: { seconds: REST_SECONDS, repeats: false },
-    });
-    notifIdRef.current = id;
+    try {
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Rest complete!',
+          body:  `Time to hit the next set — ${exerciseName}`,
+          sound: true,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: REST_SECONDS,
+          repeats: false,
+        },
+      });
+      notifIdRef.current = id;
+    } catch { /* gracefully degrade in Expo Go */ }
   }, []);
 
   const cancelRestNotification = useCallback(async () => {
@@ -495,6 +607,30 @@ export default function StartWorkoutScreen() {
     cancelRestNotification();
   }, [cancelRestNotification]);
 
+  // Clamp remaining to 5 s minimum so the chip doesn't vanish unexpectedly on -15
+  const adjustRest = useCallback((delta: number) => {
+    setActiveRest((prev) =>
+      prev ? { ...prev, remaining: Math.max(5, prev.remaining + delta) } : null
+    );
+  }, []);
+
+  // ── NumPad helpers ─────────────────────────────────────────────────────────
+
+  function openNumPad(exId: string, setIdx: number, field: 'weight' | 'reps', currentValue: string) {
+    setNumPadTarget({ exId, setIdx, field });
+    setNumPadValue(currentValue || '0');
+  }
+
+  function confirmNumPad() {
+    if (!numPadTarget) return;
+    updateSet(numPadTarget.exId, numPadTarget.setIdx, numPadTarget.field, numPadValue);
+    setNumPadTarget(null);
+  }
+
+  function closeNumPad() {
+    setNumPadTarget(null);
+  }
+
   // ── Set mutations ──────────────────────────────────────────────────────────
 
   function updateSet(exId: string, idx: number, field: 'weight' | 'reps', value: string) {
@@ -505,25 +641,19 @@ export default function StartWorkoutScreen() {
   }
 
   function toggleSet(exId: string, idx: number, exerciseName: string) {
-    setSetsState((prev) => {
-      const wasDone = prev[exId][idx].done;
-      const updated = prev[exId].map((s, i) => (i === idx ? { ...s, done: !s.done } : s));
+    const wasDone = setsState[exId][idx].done;
 
-      if (!wasDone) {
-        // Completing a set → start rest
-        setTimeout(() => {
-          setActiveRest({ exId, setIdx: idx, remaining: REST_SECONDS });
-          scheduleRestNotification(exerciseName);
-        }, 0);
-      } else {
-        // Unchecking an active rest set → cancel rest
-        if (activeRest?.exId === exId && activeRest.setIdx === idx) {
-          setTimeout(skipRest, 0);
-        }
-      }
+    setSetsState((prev) => ({
+      ...prev,
+      [exId]: prev[exId].map((s, i) => (i === idx ? { ...s, done: !s.done } : s)),
+    }));
 
-      return { ...prev, [exId]: updated };
-    });
+    if (!wasDone) {
+      setActiveRest({ exId, setIdx: idx, remaining: REST_SECONDS });
+      scheduleRestNotification(exerciseName);
+    } else if (activeRest?.exId === exId && activeRest.setIdx === idx) {
+      skipRest();
+    }
   }
 
   function addSet(exId: string) {
@@ -544,10 +674,7 @@ export default function StartWorkoutScreen() {
       if (prev[exId].length <= 1) return prev;
       return { ...prev, [exId]: prev[exId].filter((_, i) => i !== idx) };
     });
-    // If the deleted set was resting, cancel rest
-    if (activeRest?.exId === exId && activeRest.setIdx === idx) {
-      skipRest();
-    }
+    if (activeRest?.exId === exId && activeRest.setIdx === idx) skipRest();
   }
 
   // ── Exercise mutations ─────────────────────────────────────────────────────
@@ -609,6 +736,8 @@ export default function StartWorkoutScreen() {
             onAddSet={() => addSet(ex.id)}
             onDeleteSet={(i) => deleteSet(ex.id, i)}
             onSkipRest={skipRest}
+            onAdjustRest={adjustRest}
+            onOpenNumPad={(setIdx, field, val) => openNumPad(ex.id, setIdx, field, val)}
             isLast={idx === exercises.length - 1}
           />
         ))}
@@ -643,6 +772,17 @@ export default function StartWorkoutScreen() {
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={addCustomExercise}
+      />
+
+      {/* Numpad — screen-level so it renders over everything */}
+      <NumPad
+        visible={numPadTarget !== null}
+        label={numPadTarget?.field === 'weight' ? 'Weight (kg)' : 'Reps'}
+        value={numPadValue}
+        allowDecimal={numPadTarget?.field === 'weight'}
+        onChange={setNumPadValue}
+        onDone={confirmNumPad}
+        onClose={closeNumPad}
       />
     </SafeAreaView>
   );

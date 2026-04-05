@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { styles } from './index.styles';
+import { styles } from '@/styles/tabs/index.styles';
 
 const WEIGHT_DAYS = [
   { label: 'Mon', height: 40, active: false },

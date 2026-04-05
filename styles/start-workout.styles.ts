@@ -379,4 +379,83 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalAddText: { ...Typography.titleLg, color: Colors.background },
+
+  // ── Rest timer — adjust buttons ────────────────────────────────────────────
+  restAdjustBtn: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.primary + '30',
+  },
+  restAdjustBtnText: { ...Typography.labelLg, color: Colors.primary },
+
+  // ── Numpad ─────────────────────────────────────────────────────────────────
+  numPadBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  numPadSheet: {
+    backgroundColor: Colors.surfaceContainerLow,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxxl,
+    paddingTop: Spacing.md,
+  },
+  numPadHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.outlineVariant,
+    alignSelf: 'center',
+    marginBottom: Spacing.sm,
+  },
+  numPadLabel: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+    textAlign: 'center' as const,
+    marginBottom: Spacing.xs,
+  },
+  numPadDisplay: {
+    alignItems: 'center' as const,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  numPadDisplayText: {
+    fontSize: 52,
+    fontWeight: '700' as const,
+    color: Colors.onSurface,
+    fontVariant: ['tabular-nums'] as const,
+    letterSpacing: -1,
+  },
+  numPadRow: {
+    flexDirection: 'row' as const,
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  numPadKey: {
+    flex: 1,
+    height: 60,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.surfaceContainerHigh,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  numPadKeySpecial: {
+    backgroundColor: Colors.surfaceContainerHighest,
+  },
+  numPadKeyText: {
+    ...Typography.headlineMd,
+    color: Colors.onSurface,
+  },
+  numPadDoneBtn: {
+    height: 52,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    marginTop: Spacing.xs,
+  },
+  numPadDoneBtnText: { ...Typography.titleLg, color: Colors.background },
 });

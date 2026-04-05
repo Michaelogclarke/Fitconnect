@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { styles } from './edit-routine.styles';
+import { styles } from '@/styles/edit-routine.styles';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
