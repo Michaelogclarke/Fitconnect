@@ -1,69 +1,34 @@
-import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/history.styles';
+import { supabase } from '@/lib/supabase';
+import { formatShortDate, formatDuration, formatVolume, weekLabel } from '@/lib/format';
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const HISTORY = [
-  {
-    week: 'This Week',
-    sessions: [
-      {
-        id: 'h1', name: 'Pull Day A', date: 'Thu 3 Apr', duration: '48 min',
-        sets: 14, volume: '4,200 kg',
-        exercises: ['Deadlift', 'Pull-ups', 'Barbell Row', 'Face Pulls', 'Bicep Curls'],
-      },
-      {
-        id: 'h2', name: 'Legs A', date: 'Mon 1 Apr', duration: '62 min',
-        sets: 16, volume: '6,800 kg',
-        exercises: ['Back Squat', 'Leg Press', 'RDL', 'Leg Curl', 'Calf Raises'],
-      },
-    ],
-  },
-  {
-    week: 'Last Week',
-    sessions: [
-      {
-        id: 'h3', name: 'Push Day B', date: 'Sun 30 Mar', duration: '51 min',
-        sets: 15, volume: '3,900 kg',
-        exercises: ['Incline Bench', 'DB Shoulder Press', 'Cable Fly', 'Lateral Raises', 'Skull Crushers'],
-      },
-      {
-        id: 'h4', name: 'Pull Day B', date: 'Fri 28 Mar', duration: '44 min',
-        sets: 13, volume: '3,600 kg',
-        exercises: ['Rack Pull', 'Cable Row', 'Lat Pulldown', 'Rear Delt Fly', 'Hammer Curls'],
-      },
-      {
-        id: 'h5', name: 'Legs B', date: 'Wed 26 Mar', duration: '58 min',
-        sets: 15, volume: '5,200 kg',
-        exercises: ['Front Squat', 'Hack Squat', 'Walking Lunges', 'Leg Extension', 'Seated Calf'],
-      },
-      {
-        id: 'h6', name: 'Push Day A', date: 'Mon 24 Mar', duration: '55 min',
-        sets: 16, volume: '4,100 kg',
-        exercises: ['Flat Bench Press', 'Overhead Press', 'Incline DB Press', 'Lateral Raises', 'Tricep Pushdown'],
-      },
-    ],
-  },
-  {
-    week: '24 – 30 Mar',
-    sessions: [
-      {
-        id: 'h7', name: 'Full Body', date: 'Sat 22 Mar', duration: '70 min',
-        sets: 18, volume: '5,900 kg',
-        exercises: ['Squat', 'Bench Press', 'Deadlift', 'OHP', 'Pull-ups'],
-      },
-    ],
-  },
-];
+type HistorySession = {
+  id: string;
+  name: string;
+  started_at: string;
+  duration_seconds: number | null;
+  set_count: number;
+  volume: number;
+  exercises: string[];
+};
+
+type WeekGroup = {
+  week: string;
+  sessions: HistorySession[];
+};
 
 // ─── Session card ─────────────────────────────────────────────────────────────
 
-function SessionCard({ session }: { session: typeof HISTORY[0]['sessions'][0] }) {
+function SessionCard({ session }: { session: HistorySession }) {
   const [expanded, setExpanded] = React.useState(false);
 
   return (
@@ -78,15 +43,20 @@ function SessionCard({ session }: { session: typeof HISTORY[0]['sessions'][0] })
         </View>
         <View style={styles.sessionInfo}>
           <Text style={styles.sessionName}>{session.name}</Text>
-          <Text style={styles.sessionMeta}>{session.date} · {session.duration}</Text>
+          <Text style={styles.sessionMeta}>
+            {formatShortDate(session.started_at)}
+            {session.duration_seconds ? ` · ${formatDuration(session.duration_seconds)}` : ''}
+          </Text>
         </View>
         <View style={styles.sessionRight}>
-          <Text style={styles.sessionVolume}>{session.volume}</Text>
-          <Text style={styles.sessionSets}>{session.sets} sets</Text>
+          {session.volume > 0 && (
+            <Text style={styles.sessionVolume}>{formatVolume(session.volume)}</Text>
+          )}
+          <Text style={styles.sessionSets}>{session.set_count} sets</Text>
         </View>
       </View>
 
-      {expanded && (
+      {expanded && session.exercises.length > 0 && (
         <View style={styles.sessionDetail}>
           <View style={styles.sessionDivider} />
           {session.exercises.map((ex, i) => (
@@ -104,8 +74,70 @@ function SessionCard({ session }: { session: typeof HISTORY[0]['sessions'][0] })
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
-  const totalSessions = HISTORY.reduce((n, w) => n + w.sessions.length, 0);
-  const totalVolume   = '28,000 kg';
+  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState<WeekGroup[]>([]);
+  const [totalSessions, setTotalSessions] = useState(0);
+  const [totalVolume, setTotalVolume] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [])
+  );
+
+  async function loadHistory() {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    const { data: sessions } = await supabase
+      .from('workout_sessions')
+      .select(`
+        id, name, started_at, duration_seconds,
+        session_exercises(
+          exercise_name,
+          session_sets(weight, reps, is_completed)
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('started_at', { ascending: false });
+
+    const mapped: HistorySession[] = (sessions ?? []).map((s: any) => {
+      const allSets = s.session_exercises.flatMap((e: any) => e.session_sets);
+      const completedSets = allSets.filter((st: any) => st.is_completed);
+      const volume = completedSets.reduce(
+        (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
+      );
+      return {
+        id:               s.id,
+        name:             s.name,
+        started_at:       s.started_at,
+        duration_seconds: s.duration_seconds,
+        set_count:        completedSets.length,
+        volume,
+        exercises:        s.session_exercises.map((e: any) => e.exercise_name),
+      };
+    });
+
+    // Group by week
+    const grouped: WeekGroup[] = [];
+    for (const session of mapped) {
+      const label = weekLabel(session.started_at);
+      const existing = grouped.find((g) => g.week === label);
+      if (existing) {
+        existing.sessions.push(session);
+      } else {
+        grouped.push({ week: label, sessions: [session] });
+      }
+    }
+
+    const allVol = mapped.reduce((sum, s) => sum + s.volume, 0);
+
+    setGroups(grouped);
+    setTotalSessions(mapped.length);
+    setTotalVolume(allVol);
+    setLoading(false);
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -123,24 +155,29 @@ export default function HistoryScreen() {
             <Text style={styles.summaryLabel}>Sessions logged</Text>
           </View>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{totalVolume}</Text>
+            <Text style={styles.summaryValue}>{totalVolume > 0 ? formatVolume(totalVolume) : '—'}</Text>
             <Text style={styles.summaryLabel}>Total volume</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>247</Text>
-            <Text style={styles.summaryLabel}>All time</Text>
           </View>
         </View>
 
-        {/* Weeks */}
-        {HISTORY.map((week) => (
-          <View key={week.week}>
-            <Text style={styles.weekLabel}>{week.week}</Text>
-            {week.sessions.map((session) => (
-              <SessionCard key={session.id} session={session} />
-            ))}
+        {loading ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        ) : groups.length === 0 ? (
+          <View style={styles.emptyState}>
+            <IconSymbol name="dumbbell.fill" size={32} color={Colors.outlineVariant} />
+            <Text style={styles.emptyText}>No sessions yet</Text>
+            <Text style={styles.emptySubtext}>Your completed workouts will appear here</Text>
           </View>
-        ))}
+        ) : (
+          groups.map((group) => (
+            <View key={group.week}>
+              <Text style={styles.weekLabel}>{group.week}</Text>
+              {group.sessions.map((session) => (
+                <SessionCard key={session.id} session={session} />
+              ))}
+            </View>
+          ))
+        )}
 
       </ScrollView>
     </SafeAreaView>

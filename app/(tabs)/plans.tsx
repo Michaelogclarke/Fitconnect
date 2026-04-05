@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/plans.styles';
+import { supabase } from '@/lib/supabase';
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const MY_ROUTINES = [
-  {
-    id: 'r1',
-    name: 'Hypertrophy Phase II',
-    focus: 'Chest & Back',
-    daysPerWeek: 4,
-    lastDone: '2 days ago',
-  },
-];
+type WorkoutPlan = {
+  id: string;
+  name: string;
+  days_per_week: number | null;
+  description: string | null;
+  is_active: boolean;
+};
+
+// ─── Preset splits (static reference data) ───────────────────────────────────
 
 type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced';
 
@@ -155,6 +156,29 @@ function SplitCard({ split }: { split: typeof PRESET_SPLITS[0] }) {
 
 export default function PlansScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [plans, setPlans] = useState<WorkoutPlan[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadPlans();
+    }, [])
+  );
+
+  async function loadPlans() {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    const { data } = await supabase
+      .from('workout_plans')
+      .select('id, name, days_per_week, description, is_active')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    setPlans(data ?? []);
+    setLoading(false);
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -163,7 +187,7 @@ export default function PlansScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Plans</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/edit-routine')}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/start-workout')}>
             <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
             <Text style={styles.addBtnText}>New Routine</Text>
           </TouchableOpacity>
@@ -172,26 +196,32 @@ export default function PlansScreen() {
         {/* My Routines */}
         <Text style={styles.sectionLabel}>My Routines</Text>
 
-        {MY_ROUTINES.length === 0 ? (
+        {loading ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 24 }} />
+        ) : plans.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>No routines yet</Text>
             <Text style={styles.emptySubtext}>Create your own or use a preset split below</Text>
           </View>
         ) : (
-          MY_ROUTINES.map((r) => (
+          plans.map((plan) => (
             <TouchableOpacity
-              key={r.id}
+              key={plan.id}
               style={styles.routineCard}
               onPress={() => router.push('/start-workout')}>
               <View style={styles.routineIconBox}>
                 <IconSymbol name="dumbbell.fill" size={20} color={Colors.primary} />
               </View>
               <View style={styles.routineInfo}>
-                <Text style={styles.routineName}>{r.name}</Text>
-                <Text style={styles.routineMeta}>{r.focus} · {r.daysPerWeek}x / week</Text>
+                <Text style={styles.routineName}>{plan.name}</Text>
+                <Text style={styles.routineMeta}>
+                  {plan.description ?? (plan.days_per_week ? `${plan.days_per_week}x / week` : 'Custom routine')}
+                </Text>
               </View>
               <View style={styles.routineRight}>
-                <Text style={styles.routineLastDone}>{r.lastDone}</Text>
+                {plan.is_active && (
+                  <Text style={styles.routineLastDone}>Active</Text>
+                )}
                 <IconSymbol name="chevron.right" size={16} color={Colors.onSurfaceVariant} />
               </View>
             </TouchableOpacity>

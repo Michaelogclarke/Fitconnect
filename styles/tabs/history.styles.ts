@@ -28,6 +28,19 @@ export const styles = StyleSheet.create({
   summaryValue: { ...Typography.headlineMd, color: Colors.primary },
   summaryLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginTop: 2 },
 
+  // ── Empty state ────────────────────────────────────────────────────────────
+  emptyState: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  emptyText:    { ...Typography.titleMd, color: Colors.onSurface },
+  emptySubtext: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' as const },
+
   // ── Week group ─────────────────────────────────────────────────────────────
   weekLabel: {
     ...Typography.labelLg,

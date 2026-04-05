@@ -22,18 +22,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
 
-  // ── Streak ─────────────────────────────────────────────────────────────────
-  streakRow: { paddingHorizontal: Spacing.lg, marginBottom: Spacing.lg },
-  streakBadge: {
-    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
-    gap: Spacing.xs,
-    backgroundColor: Colors.primary + '18',
-    borderRadius: Radius.full,
-    borderWidth: 1, borderColor: Colors.primary + '44',
-    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
-  },
-  streakText: { ...Typography.labelLg, color: Colors.primary },
-
   // ── Section label ──────────────────────────────────────────────────────────
   sectionLabel: {
     ...Typography.labelLg,
@@ -45,38 +33,37 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
 
-  // ── Today's workout card ───────────────────────────────────────────────────
-  todayCard: {
+  // ── Quick start card ──────────────────────────────────────────────────────
+  quickStartCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: Spacing.lg,
     backgroundColor: Colors.surfaceContainer,
     borderRadius: Radius.lg,
-    padding: Spacing.lg,
+    padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.primary + '33',
+    gap: Spacing.md,
   },
-  todayHeader: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  todayName: { ...Typography.headlineMd, color: Colors.onSurface },
-  todayMeta: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginTop: 2 },
-  todayBadge: {
-    backgroundColor: Colors.primary + '22',
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm, paddingVertical: 3,
-    marginLeft: Spacing.sm, marginTop: 2,
-  },
-  todayBadgeText: { ...Typography.labelMd, color: Colors.primary },
-  exerciseList: { marginBottom: Spacing.lg, gap: 4 },
-  exerciseItem: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  exerciseMore: { ...Typography.labelLg, color: Colors.primary, marginTop: 2 },
-  startBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 46, borderRadius: Radius.md,
+  quickStartLeft: {
+    width: 44, height: 44, borderRadius: Radius.md,
     backgroundColor: Colors.primary,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  quickStartTitle: { ...Typography.titleMd, color: Colors.onSurface },
+  quickStartSub:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+
+  // ── Empty state ────────────────────────────────────────────────────────────
+  emptyCard: {
+    marginHorizontal: Spacing.lg,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.xl,
+    alignItems: 'center',
     gap: Spacing.sm,
   },
-  startBtnText: { ...Typography.titleLg, color: Colors.background },
+  emptyText: { ...Typography.titleMd, color: Colors.onSurface },
+  emptySub:  { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' },
 
   // ── Quick stats ────────────────────────────────────────────────────────────
   statsRow: {

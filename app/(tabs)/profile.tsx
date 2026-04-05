@@ -1,10 +1,15 @@
-import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/profile.styles';
+import { supabase } from '@/lib/supabase';
+import { initials } from '@/lib/format';
+
+// ─── Static menu ─────────────────────────────────────────────────────────────
 
 const MENU_SECTIONS = [
   {
@@ -25,7 +30,48 @@ const MENU_SECTIONS = [
   },
 ];
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function ProfileScreen() {
+  const [loading, setLoading] = useState(true);
+  const [fullName, setFullName] = useState('');
+  const [totalSessions, setTotalSessions] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [])
+  );
+
+  async function loadProfile() {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+
+    const [{ data: profile }, { count }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single(),
+      supabase
+        .from('workout_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+    ]);
+
+    setFullName(profile?.full_name ?? '');
+    setTotalSessions(count ?? 0);
+    setLoading(false);
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+  }
+
+  const displayName = fullName || 'Athlete';
+  const avatarText  = fullName ? initials(fullName) : '?';
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -36,32 +82,23 @@ export default function ProfileScreen() {
         {/* Hero */}
         <View style={styles.heroSection}>
           <View style={styles.avatarLarge}>
-            <Text style={styles.avatarText}>AC</Text>
+            <Text style={styles.avatarText}>{avatarText}</Text>
           </View>
-          <Text style={styles.userName}>Alex Clarke</Text>
-          <Text style={styles.userRole}>Athlete · Level 12</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>247</Text>
-              <Text style={styles.statLabel}>Workouts</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>18</Text>
-              <Text style={styles.statLabel}>PRs</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>14</Text>
-              <Text style={styles.statLabel}>Streak</Text>
-            </View>
-          </View>
-        </View>
 
-        {/* Streak Banner */}
-        <View style={styles.streakBanner}>
-          <IconSymbol name="flame.fill" size={24} color={Colors.primary} />
-          <Text style={styles.streakText}>Current Streak</Text>
-          <Text style={styles.streakCount}>14</Text>
-          <Text style={[styles.streakText, { flex: 0 }]}> days</Text>
+          {loading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginTop: 12 }} />
+          ) : (
+            <>
+              <Text style={styles.userName}>{displayName}</Text>
+              <Text style={styles.userRole}>FitConnect Athlete</Text>
+              <View style={styles.statsRow}>
+                <View style={styles.stat}>
+                  <Text style={styles.statValue}>{totalSessions}</Text>
+                  <Text style={styles.statLabel}>Workouts</Text>
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Menu Sections */}
@@ -86,6 +123,18 @@ export default function ProfileScreen() {
             </View>
           </View>
         ))}
+
+        {/* Sign out */}
+        <View style={styles.section}>
+          <View style={styles.menuCard}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+              <View style={styles.menuIconBox}>
+                <IconSymbol name="rectangle.portrait.and.arrow.right" size={18} color={Colors.error} />
+              </View>
+              <Text style={[styles.menuLabel, { color: Colors.error }]}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
       </ScrollView>
     </SafeAreaView>

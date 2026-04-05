@@ -49,32 +49,6 @@ function formatTime(s: number) {
   return `${m}:${sec}`;
 }
 
-// ─── Initial data ─────────────────────────────────────────────────────────────
-
-const INITIAL_EXERCISES: Exercise[] = [
-  { id: 'e1', name: 'Flat Barbell Bench Press', muscle: 'Chest', tag: 'Primary'   },
-  { id: 'e2', name: 'Incline Dumbbell Press',   muscle: 'Chest', tag: 'Secondary' },
-  { id: 'e3', name: 'Cable Chest Fly',           muscle: 'Chest', tag: 'Isolation' },
-];
-
-const INITIAL_SETS: Record<string, SetRow[]> = {
-  e1: [
-    { weight: '80',   reps: '10', done: false },
-    { weight: '80',   reps: '10', done: false },
-    { weight: '82.5', reps: '8',  done: false },
-    { weight: '82.5', reps: '8',  done: false },
-  ],
-  e2: [
-    { weight: '32', reps: '12', done: false },
-    { weight: '32', reps: '12', done: false },
-    { weight: '34', reps: '10', done: false },
-  ],
-  e3: [
-    { weight: '15',   reps: '15', done: false },
-    { weight: '15',   reps: '15', done: false },
-    { weight: '17.5', reps: '12', done: false },
-  ],
-};
 
 const REST_SECONDS = 90;
 
@@ -523,8 +497,8 @@ export default function StartWorkoutScreen() {
     return () => clearInterval(id);
   }, []);
 
-  const [exercises, setExercises]   = useState<Exercise[]>(INITIAL_EXERCISES);
-  const [setsState, setSetsState]   = useState<Record<string, SetRow[]>>(INITIAL_SETS);
+  const [exercises, setExercises]   = useState<Exercise[]>([]);
+  const [setsState, setSetsState]   = useState<Record<string, SetRow[]>>({});
   const [activeRest, setActiveRest] = useState<ActiveRest | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -706,11 +680,15 @@ export default function StartWorkoutScreen() {
       if (!user) throw new Error('Not signed in');
 
       // 1. Create the session record
+      const sessionName = new Date(startedAt.current).toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'short',
+      }) + ' Workout';
+
       const { data: session, error: sessionErr } = await supabase
         .from('workout_sessions')
         .insert({
           user_id:          user.id,
-          name:             'Hypertrophy Phase II',
+          name:             sessionName,
           started_at:       startedAt.current.toISOString(),
           finished_at:      new Date().toISOString(),
           duration_seconds: elapsed,
@@ -771,8 +749,8 @@ export default function StartWorkoutScreen() {
           <IconSymbol name="chevron.left" size={20} color={Colors.onSurface} />
         </TouchableOpacity>
         <View style={styles.topBarCenter}>
-          <Text style={styles.topBarTitle}>Hypertrophy Phase II</Text>
-          <Text style={styles.topBarSub}>Chest Day</Text>
+          <Text style={styles.topBarTitle}>Today's Workout</Text>
+          <Text style={styles.topBarSub}>{exercises.length} exercise{exercises.length !== 1 ? 's' : ''}</Text>
         </View>
         <View style={styles.timerBadge}>
           <Text style={styles.timerText}>{formatTime(elapsed)}</Text>
@@ -795,6 +773,18 @@ export default function StartWorkoutScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}>
+
+        {exercises.length === 0 && (
+          <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32, gap: 8 }}>
+            <IconSymbol name="dumbbell.fill" size={40} color={Colors.outlineVariant} />
+            <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.onSurface, marginTop: 8 }}>
+              No exercises yet
+            </Text>
+            <Text style={{ fontSize: 14, color: Colors.onSurfaceVariant, textAlign: 'center' }}>
+              Tap "Add Exercise" below to get started
+            </Text>
+          </View>
+        )}
 
         {exercises.map((ex, idx) => (
           <ExerciseSection

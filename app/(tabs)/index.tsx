@@ -1,31 +1,120 @@
-import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/index.styles';
+import { supabase } from '@/lib/supabase';
+import { formatSessionDate, formatDuration, formatVolume } from '@/lib/format';
 
-const TODAY_WORKOUT = {
-  name: 'Push Day A',
-  plan: 'Push Pull Legs',
-  exercises: ['Flat Barbell Bench Press', 'Overhead Press', 'Incline DB Press', 'Lateral Raises', 'Tricep Pushdown'],
-  estimatedTime: '55 min',
-  totalSets: 16,
+type RecentSession = {
+  id: string;
+  name: string;
+  started_at: string;
+  duration_seconds: number | null;
+  set_count: number;
+  volume: number;
 };
-
-const RECENT_SESSIONS = [
-  { id: '1', name: 'Pull Day A',  date: 'Yesterday', duration: '48 min', sets: 14, volume: '4,200 kg' },
-  { id: '2', name: 'Legs A',      date: 'Monday',    duration: '62 min', sets: 16, volume: '6,800 kg' },
-  { id: '3', name: 'Push Day B',  date: 'Sunday',    duration: '51 min', sets: 15, volume: '3,900 kg' },
-];
 
 export default function HomeScreen() {
   const router = useRouter();
+
+  const [loading,         setLoading]         = useState(true);
+  const [userName,        setUserName]        = useState('');
+  const [recentSessions,  setRecentSessions]  = useState<RecentSession[]>([]);
+  const [weekSessions,    setWeekSessions]    = useState(0);
+  const [weekVolume,      setWeekVolume]      = useState(0);
+  const [totalSessions,   setTotalSessions]   = useState(0);
+
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
   });
+
+  // Reload whenever the tab comes into focus (so finishing a workout updates the list)
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
+
+  async function loadData() {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Profile name
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+    setUserName(profile?.full_name?.split(' ')[0] ?? '');
+
+    // Recent sessions with exercises + sets for volume
+    const { data: sessions } = await supabase
+      .from('workout_sessions')
+      .select(`
+        id, name, started_at, duration_seconds,
+        session_exercises(
+          session_sets(weight, reps, is_completed)
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('started_at', { ascending: false })
+      .limit(3);
+
+    const mapped: RecentSession[] = (sessions ?? []).map((s: any) => {
+      const allSets = s.session_exercises.flatMap((e: any) => e.session_sets);
+      const completedSets = allSets.filter((st: any) => st.is_completed);
+      const volume = completedSets.reduce(
+        (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
+      );
+      return {
+        id:               s.id,
+        name:             s.name,
+        started_at:       s.started_at,
+        duration_seconds: s.duration_seconds,
+        set_count:        completedSets.length,
+        volume,
+      };
+    });
+    setRecentSessions(mapped);
+
+    // This week stats
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+
+    const { data: weekData } = await supabase
+      .from('workout_sessions')
+      .select(`
+        session_exercises(
+          session_sets(weight, reps, is_completed)
+        )
+      `)
+      .eq('user_id', user.id)
+      .gte('started_at', weekStart.toISOString());
+
+    const wSessions = weekData?.length ?? 0;
+    const wVolume = (weekData ?? []).flatMap((s: any) =>
+      s.session_exercises.flatMap((e: any) => e.session_sets)
+    ).filter((st: any) => st.is_completed)
+     .reduce((sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0);
+
+    setWeekSessions(wSessions);
+    setWeekVolume(wVolume);
+
+    // Total session count
+    const { count } = await supabase
+      .from('workout_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id);
+    setTotalSessions(count ?? 0);
+
+    setLoading(false);
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -34,7 +123,9 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Let's get it, Alex</Text>
+            <Text style={styles.greeting}>
+              {userName ? `Let's get it, ${userName}` : "Let's get it"}
+            </Text>
             <Text style={styles.date}>{today}</Text>
           </View>
           <TouchableOpacity style={styles.iconBtn}>
@@ -42,74 +133,70 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Streak */}
-        <View style={styles.streakRow}>
-          <View style={styles.streakBadge}>
-            <IconSymbol name="flame.fill" size={13} color={Colors.primary} />
-            <Text style={styles.streakText}>14-day streak</Text>
-          </View>
-        </View>
+        {loading ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+        ) : (
+          <>
+            {/* Quick start */}
+            <Text style={styles.sectionLabel}>Quick Start</Text>
+            <TouchableOpacity style={styles.quickStartCard} onPress={() => router.push('/start-workout')}>
+              <View style={styles.quickStartLeft}>
+                <IconSymbol name="play.fill" size={20} color={Colors.background} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.quickStartTitle}>Start Empty Workout</Text>
+                <Text style={styles.quickStartSub}>Add exercises as you go</Text>
+              </View>
+              <IconSymbol name="chevron.right" size={18} color={Colors.primary} />
+            </TouchableOpacity>
 
-        {/* Today's workout */}
-        <Text style={styles.sectionLabel}>Today's Workout</Text>
-        <View style={styles.todayCard}>
-          <View style={styles.todayHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.todayName}>{TODAY_WORKOUT.name}</Text>
-              <Text style={styles.todayMeta}>
-                {TODAY_WORKOUT.plan} · {TODAY_WORKOUT.estimatedTime} · {TODAY_WORKOUT.totalSets} sets
-              </Text>
+            {/* Quick stats */}
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{weekSessions}</Text>
+                <Text style={styles.statLabel}>This week</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{weekVolume > 0 ? formatVolume(weekVolume) : '—'}</Text>
+                <Text style={styles.statLabel}>kg lifted</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{totalSessions}</Text>
+                <Text style={styles.statLabel}>All time</Text>
+              </View>
             </View>
-            <View style={styles.todayBadge}>
-              <Text style={styles.todayBadgeText}>Today</Text>
-            </View>
-          </View>
 
-          <View style={styles.exerciseList}>
-            {TODAY_WORKOUT.exercises.slice(0, 4).map((ex, i) => (
-              <Text key={i} style={styles.exerciseItem}>· {ex}</Text>
-            ))}
-            {TODAY_WORKOUT.exercises.length > 4 && (
-              <Text style={styles.exerciseMore}>+{TODAY_WORKOUT.exercises.length - 4} more</Text>
+            {/* Recent sessions */}
+            <Text style={styles.sectionLabel}>Recent Sessions</Text>
+
+            {recentSessions.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <IconSymbol name="dumbbell.fill" size={28} color={Colors.outlineVariant} />
+                <Text style={styles.emptyText}>No sessions yet</Text>
+                <Text style={styles.emptySub}>Complete your first workout to see it here</Text>
+              </View>
+            ) : (
+              recentSessions.map((s) => (
+                <View key={s.id} style={styles.recentCard}>
+                  <View style={styles.recentIconBox}>
+                    <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
+                  </View>
+                  <View style={styles.recentInfo}>
+                    <Text style={styles.recentName}>{s.name}</Text>
+                    <Text style={styles.recentMeta}>
+                      {formatSessionDate(s.started_at)}
+                      {s.duration_seconds ? ` · ${formatDuration(s.duration_seconds)}` : ''}
+                      {s.set_count > 0 ? ` · ${s.set_count} sets` : ''}
+                    </Text>
+                  </View>
+                  {s.volume > 0 && (
+                    <Text style={styles.recentVolume}>{formatVolume(s.volume)}</Text>
+                  )}
+                </View>
+              ))
             )}
-          </View>
-
-          <TouchableOpacity style={styles.startBtn} onPress={() => router.push('/start-workout')}>
-            <IconSymbol name="play.fill" size={15} color={Colors.background} />
-            <Text style={styles.startBtnText}>Start Workout</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Quick stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>4</Text>
-            <Text style={styles.statLabel}>This week</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>14,200</Text>
-            <Text style={styles.statLabel}>kg lifted</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>247</Text>
-            <Text style={styles.statLabel}>All time</Text>
-          </View>
-        </View>
-
-        {/* Recent sessions */}
-        <Text style={styles.sectionLabel}>Recent Sessions</Text>
-        {RECENT_SESSIONS.map((s) => (
-          <View key={s.id} style={styles.recentCard}>
-            <View style={styles.recentIconBox}>
-              <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
-            </View>
-            <View style={styles.recentInfo}>
-              <Text style={styles.recentName}>{s.name}</Text>
-              <Text style={styles.recentMeta}>{s.date} · {s.duration} · {s.sets} sets</Text>
-            </View>
-            <Text style={styles.recentVolume}>{s.volume}</Text>
-          </View>
-        ))}
+          </>
+        )}
 
       </ScrollView>
     </SafeAreaView>
