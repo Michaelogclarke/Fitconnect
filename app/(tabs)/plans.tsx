@@ -187,7 +187,7 @@ export default function PlansScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Plans</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/start-workout')}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/plan-editor' as any)}>
             <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
             <Text style={styles.addBtnText}>New Routine</Text>
           </TouchableOpacity>
@@ -208,7 +208,7 @@ export default function PlansScreen() {
             <TouchableOpacity
               key={plan.id}
               style={styles.routineCard}
-              onPress={() => router.push('/start-workout')}>
+              onPress={() => router.push({ pathname: '/plan-editor' as any, params: { planId: plan.id } })}>
               <View style={styles.routineIconBox}>
                 <IconSymbol name="dumbbell.fill" size={20} color={Colors.primary} />
               </View>
