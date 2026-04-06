@@ -8,6 +8,7 @@ import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/history.styles';
 import { supabase } from '@/lib/supabase';
 import { formatShortDate, formatDuration, formatVolume, weekLabel } from '@/lib/format';
+import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,12 @@ type HistorySession = {
 type WeekGroup = {
   week: string;
   sessions: HistorySession[];
+};
+
+type HistoryCache = {
+  groups:        WeekGroup[];
+  totalSessions: number;
+  totalVolume:   number;
 };
 
 // ─── Session card ─────────────────────────────────────────────────────────────
@@ -74,10 +81,16 @@ function SessionCard({ session }: { session: HistorySession }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
-  const [loading, setLoading] = useState(true);
-  const [groups, setGroups] = useState<WeekGroup[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [groups,        setGroups]        = useState<WeekGroup[]>([]);
   const [totalSessions, setTotalSessions] = useState(0);
-  const [totalVolume, setTotalVolume] = useState(0);
+  const [totalVolume,   setTotalVolume]   = useState(0);
+
+  function applyData(d: HistoryCache) {
+    setGroups(d.groups);
+    setTotalSessions(d.totalSessions);
+    setTotalVolume(d.totalVolume);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -86,57 +99,67 @@ export default function HistoryScreen() {
   );
 
   async function loadHistory() {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-
-    const { data: sessions } = await supabase
-      .from('workout_sessions')
-      .select(`
-        id, name, started_at, duration_seconds,
-        session_exercises(
-          exercise_name,
-          session_sets(weight, reps, is_completed)
-        )
-      `)
-      .eq('user_id', user.id)
-      .order('started_at', { ascending: false });
-
-    const mapped: HistorySession[] = (sessions ?? []).map((s: any) => {
-      const allSets = s.session_exercises.flatMap((e: any) => e.session_sets);
-      const completedSets = allSets.filter((st: any) => st.is_completed);
-      const volume = completedSets.reduce(
-        (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
-      );
-      return {
-        id:               s.id,
-        name:             s.name,
-        started_at:       s.started_at,
-        duration_seconds: s.duration_seconds,
-        set_count:        completedSets.length,
-        volume,
-        exercises:        s.session_exercises.map((e: any) => e.exercise_name),
-      };
-    });
-
-    // Group by week
-    const grouped: WeekGroup[] = [];
-    for (const session of mapped) {
-      const label = weekLabel(session.started_at);
-      const existing = grouped.find((g) => g.week === label);
-      if (existing) {
-        existing.sessions.push(session);
-      } else {
-        grouped.push({ week: label, sessions: [session] });
-      }
+    // Show cached data immediately
+    const cached = await getCachedAny<HistoryCache>(CACHE_KEYS.HISTORY);
+    if (cached) {
+      applyData(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
     }
 
-    const allVol = mapped.reduce((sum, s) => sum + s.volume, 0);
+    // Background refresh
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    setGroups(grouped);
-    setTotalSessions(mapped.length);
-    setTotalVolume(allVol);
-    setLoading(false);
+      const { data: sessions } = await supabase
+        .from('workout_sessions')
+        .select(`
+          id, name, started_at, duration_seconds,
+          session_exercises(
+            exercise_name,
+            session_sets(weight, reps, is_completed)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false });
+
+      const mapped: HistorySession[] = (sessions ?? []).map((s: any) => {
+        const allSets = s.session_exercises.flatMap((e: any) => e.session_sets);
+        const completedSets = allSets.filter((st: any) => st.is_completed);
+        const volume = completedSets.reduce(
+          (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
+        );
+        return {
+          id:               s.id,
+          name:             s.name,
+          started_at:       s.started_at,
+          duration_seconds: s.duration_seconds,
+          set_count:        completedSets.length,
+          volume,
+          exercises:        s.session_exercises.map((e: any) => e.exercise_name),
+        };
+      });
+
+      const grouped: WeekGroup[] = [];
+      for (const session of mapped) {
+        const label = weekLabel(session.started_at);
+        const existing = grouped.find((g) => g.week === label);
+        if (existing) existing.sessions.push(session);
+        else grouped.push({ week: label, sessions: [session] });
+      }
+
+      const totalVolume = mapped.reduce((sum, s) => sum + s.volume, 0);
+
+      const fresh: HistoryCache = { groups: grouped, totalSessions: mapped.length, totalVolume };
+      applyData(fresh);
+      await setCached(CACHE_KEYS.HISTORY, fresh);
+    } catch {
+      // Silently fall back to cached data
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

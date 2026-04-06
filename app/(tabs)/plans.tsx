@@ -7,6 +7,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/plans.styles';
 import { supabase } from '@/lib/supabase';
+import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -166,18 +167,34 @@ export default function PlansScreen() {
   );
 
   async function loadPlans() {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
+    // Show cached data immediately
+    const cached = await getCachedAny<WorkoutPlan[]>(CACHE_KEYS.PLANS);
+    if (cached) {
+      setPlans(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
-    const { data } = await supabase
-      .from('workout_plans')
-      .select('id, name, days_per_week, description, is_active')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    // Background refresh
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    setPlans(data ?? []);
-    setLoading(false);
+      const { data } = await supabase
+        .from('workout_plans')
+        .select('id, name, days_per_week, description, is_active')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      const fresh = data ?? [];
+      setPlans(fresh);
+      await setCached(CACHE_KEYS.PLANS, fresh);
+    } catch {
+      // Silently fall back to cached data
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

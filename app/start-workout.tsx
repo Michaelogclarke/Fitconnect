@@ -22,6 +22,8 @@ import { Colors } from '@/constants/theme';
 import { DELETE_WIDTH, styles } from '@/styles/start-workout.styles';
 import { supabase } from '@/lib/supabase';
 import { useWorkout, Exercise, SetRow, ActiveRest } from '@/contexts/WorkoutContext';
+import { getCached, getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
+import { enqueueWorkout, isNetworkError, WorkoutSavePayload } from '@/lib/offlineQueue';
 
 // Show notification even when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -215,15 +217,34 @@ function AddExerciseModal({
     setSearch('');
     setSelected(null);
     setForm({ muscle: '', sets: '3', reps: '10', weight: '' });
-    setLoading(true);
-    supabase
-      .from('exercises')
-      .select('name, muscle_group')
-      .order('name')
-      .then(({ data }) => {
-        setDbList(data ?? []);
+
+    async function fetchExercises() {
+      // Use fresh cache if available — avoids a round-trip
+      const cached = await getCached<DbExercise[]>(CACHE_KEYS.EXERCISES);
+      if (cached) {
+        setDbList(cached);
         setLoading(false);
-      });
+        return;
+      }
+
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('exercises')
+        .select('name, muscle_group')
+        .order('name');
+
+      if (data) {
+        setDbList(data);
+        setCached(CACHE_KEYS.EXERCISES, data, 24 * 60 * 60 * 1000); // 24h TTL
+      } else if (isNetworkError(error)) {
+        // Offline: fall back to any stale cached data
+        const stale = await getCachedAny<DbExercise[]>(CACHE_KEYS.EXERCISES);
+        setDbList(stale ?? []);
+      }
+      setLoading(false);
+    }
+
+    fetchExercises();
   }, [visible]);
 
   const trimmedSearch = search.trim();
@@ -788,7 +809,77 @@ export default function StartWorkoutScreen() {
     setShowAddModal(false);
   }
 
-  // ── Save workout to Supabase ───────────────────────────────────────────────
+  // ── Save workout ─────────────────────────────────────────────────────────────
+
+  function buildPayload(userId: string): WorkoutSavePayload {
+    const workoutStart = startedAt ?? new Date();
+    return {
+      user_id:          userId,
+      name:             workoutStart.toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'short',
+      }) + ' Workout',
+      started_at:       workoutStart.toISOString(),
+      finished_at:      new Date().toISOString(),
+      duration_seconds: elapsed,
+      exercises: exercises.map((ex, i) => ({
+        exercise_name: ex.name,
+        muscle_group:  ex.muscle,
+        sort_order:    i,
+        sets: (setsState[ex.id] ?? []).map((s, j) => ({
+          set_number:   j + 1,
+          weight:       parseFloat(s.weight) || null,
+          reps:         parseInt(s.reps)     || null,
+          is_completed: s.done,
+          completed_at: s.done ? new Date().toISOString() : null,
+        })),
+      })),
+    };
+  }
+
+  async function saveOnline(payload: WorkoutSavePayload): Promise<void> {
+    const { data: session, error: sessionErr } = await supabase
+      .from('workout_sessions')
+      .insert({
+        user_id:          payload.user_id,
+        name:             payload.name,
+        started_at:       payload.started_at,
+        finished_at:      payload.finished_at,
+        duration_seconds: payload.duration_seconds,
+      })
+      .select('id')
+      .single();
+    if (sessionErr) throw sessionErr;
+
+    for (const ex of payload.exercises) {
+      const { data: sessionEx, error: exErr } = await supabase
+        .from('session_exercises')
+        .insert({
+          session_id:    session.id,
+          exercise_name: ex.exercise_name,
+          muscle_group:  ex.muscle_group,
+          sort_order:    ex.sort_order,
+        })
+        .select('id')
+        .single();
+      if (exErr) throw exErr;
+
+      if (ex.sets.length > 0) {
+        const { error: setsErr } = await supabase
+          .from('session_sets')
+          .insert(
+            ex.sets.map((s) => ({
+              session_exercise_id: sessionEx.id,
+              set_number:          s.set_number,
+              weight:              s.weight,
+              reps:                s.reps,
+              is_completed:        s.is_completed,
+              completed_at:        s.completed_at,
+            }))
+          );
+        if (setsErr) throw setsErr;
+      }
+    }
+  }
 
   async function finishWorkout() {
     setFinishing(true);
@@ -798,60 +889,21 @@ export default function StartWorkoutScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not signed in');
 
-      // 1. Create the session record
-      const workoutStart = startedAt ?? new Date();
-      const sessionName  = workoutStart.toLocaleDateString('en-GB', {
-        weekday: 'long', day: 'numeric', month: 'short',
-      }) + ' Workout';
+      const payload = buildPayload(user.id);
 
-      const { data: session, error: sessionErr } = await supabase
-        .from('workout_sessions')
-        .insert({
-          user_id:          user.id,
-          name:             sessionName,
-          started_at:       workoutStart.toISOString(),
-          finished_at:      new Date().toISOString(),
-          duration_seconds: elapsed,
-        })
-        .select('id')
-        .single();
-      if (sessionErr) throw sessionErr;
-
-      // 2. Insert each exercise + its sets
-      for (let i = 0; i < exercises.length; i++) {
-        const ex   = exercises[i];
-        const sets = setsState[ex.id] ?? [];
-
-        const { data: sessionEx, error: exErr } = await supabase
-          .from('session_exercises')
-          .insert({
-            session_id:    session.id,
-            exercise_name: ex.name,
-            muscle_group:  ex.muscle,
-            sort_order:    i,
-          })
-          .select('id')
-          .single();
-        if (exErr) throw exErr;
-
-        if (sets.length > 0) {
-          const { error: setsErr } = await supabase
-            .from('session_sets')
-            .insert(
-              sets.map((s, idx) => ({
-                session_exercise_id: sessionEx.id,
-                set_number:          idx + 1,
-                weight:              parseFloat(s.weight) || null,
-                reps:                parseInt(s.reps)    || null,
-                is_completed:        s.done,
-                completed_at:        s.done ? new Date().toISOString() : null,
-              }))
-            );
-          if (setsErr) throw setsErr;
+      try {
+        await saveOnline(payload);
+      } catch (netErr) {
+        if (isNetworkError(netErr)) {
+          // No connection — store locally and sync later
+          await enqueueWorkout(payload);
+          clearWorkout();
+          router.replace('/(tabs)/history');
+          return;
         }
+        throw netErr; // re-throw auth / logic errors
       }
 
-      // Clear workout state and return to history
       clearWorkout();
       router.replace('/(tabs)/history');
     } catch (err: any) {

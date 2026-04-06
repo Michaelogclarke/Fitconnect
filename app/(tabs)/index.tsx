@@ -8,6 +8,7 @@ import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/index.styles';
 import { supabase } from '@/lib/supabase';
 import { formatSessionDate, formatDuration, formatVolume } from '@/lib/format';
+import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 
 type RecentSession = {
   id: string;
@@ -18,21 +19,37 @@ type RecentSession = {
   volume: number;
 };
 
+type HomeData = {
+  userName:       string;
+  recentSessions: RecentSession[];
+  weekSessions:   number;
+  weekVolume:     number;
+  totalSessions:  number;
+};
+
 export default function HomeScreen() {
   const router = useRouter();
 
-  const [loading,         setLoading]         = useState(true);
-  const [userName,        setUserName]        = useState('');
-  const [recentSessions,  setRecentSessions]  = useState<RecentSession[]>([]);
-  const [weekSessions,    setWeekSessions]    = useState(0);
-  const [weekVolume,      setWeekVolume]      = useState(0);
-  const [totalSessions,   setTotalSessions]   = useState(0);
+  const [loading,        setLoading]        = useState(true);
+  const [userName,       setUserName]       = useState('');
+  const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
+  const [weekSessions,   setWeekSessions]   = useState(0);
+  const [weekVolume,     setWeekVolume]     = useState(0);
+  const [totalSessions,  setTotalSessions]  = useState(0);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
   });
 
-  // Reload whenever the tab comes into focus (so finishing a workout updates the list)
+  function applyData(d: HomeData) {
+    setUserName(d.userName);
+    setRecentSessions(d.recentSessions);
+    setWeekSessions(d.weekSessions);
+    setWeekVolume(d.weekVolume);
+    setTotalSessions(d.totalSessions);
+  }
+
+  // Reload whenever the tab comes into focus
   useFocusEffect(
     useCallback(() => {
       loadData();
@@ -40,80 +57,89 @@ export default function HomeScreen() {
   );
 
   async function loadData() {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    // Show cached data immediately — no loading flash
+    const cached = await getCachedAny<HomeData>(CACHE_KEYS.HOME_DATA);
+    if (cached) {
+      applyData(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
-    // Profile name
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', user.id)
-      .single();
-    setUserName(profile?.full_name?.split(' ')[0] ?? '');
+    // Background refresh from Supabase
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    // Recent sessions with exercises + sets for volume
-    const { data: sessions } = await supabase
-      .from('workout_sessions')
-      .select(`
-        id, name, started_at, duration_seconds,
-        session_exercises(
-          session_sets(weight, reps, is_completed)
-        )
-      `)
-      .eq('user_id', user.id)
-      .order('started_at', { ascending: false })
-      .limit(3);
+      // Profile name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      const userName = profile?.full_name?.split(' ')[0] ?? '';
 
-    const mapped: RecentSession[] = (sessions ?? []).map((s: any) => {
-      const allSets = s.session_exercises.flatMap((e: any) => e.session_sets);
-      const completedSets = allSets.filter((st: any) => st.is_completed);
-      const volume = completedSets.reduce(
-        (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
-      );
-      return {
-        id:               s.id,
-        name:             s.name,
-        started_at:       s.started_at,
-        duration_seconds: s.duration_seconds,
-        set_count:        completedSets.length,
-        volume,
-      };
-    });
-    setRecentSessions(mapped);
+      // Recent sessions with exercises + sets for volume
+      const { data: sessions } = await supabase
+        .from('workout_sessions')
+        .select(`
+          id, name, started_at, duration_seconds,
+          session_exercises(
+            session_sets(weight, reps, is_completed)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false })
+        .limit(3);
 
-    // This week stats
-    const weekStart = new Date();
-    weekStart.setHours(0, 0, 0, 0);
-    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+      const recentSessions: RecentSession[] = (sessions ?? []).map((s: any) => {
+        const allSets = s.session_exercises.flatMap((e: any) => e.session_sets);
+        const completedSets = allSets.filter((st: any) => st.is_completed);
+        const volume = completedSets.reduce(
+          (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
+        );
+        return {
+          id:               s.id,
+          name:             s.name,
+          started_at:       s.started_at,
+          duration_seconds: s.duration_seconds,
+          set_count:        completedSets.length,
+          volume,
+        };
+      });
 
-    const { data: weekData } = await supabase
-      .from('workout_sessions')
-      .select(`
-        session_exercises(
-          session_sets(weight, reps, is_completed)
-        )
-      `)
-      .eq('user_id', user.id)
-      .gte('started_at', weekStart.toISOString());
+      // This week stats
+      const weekStart = new Date();
+      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
 
-    const wSessions = weekData?.length ?? 0;
-    const wVolume = (weekData ?? []).flatMap((s: any) =>
-      s.session_exercises.flatMap((e: any) => e.session_sets)
-    ).filter((st: any) => st.is_completed)
-     .reduce((sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0);
+      const { data: weekData } = await supabase
+        .from('workout_sessions')
+        .select(`session_exercises(session_sets(weight, reps, is_completed))`)
+        .eq('user_id', user.id)
+        .gte('started_at', weekStart.toISOString());
 
-    setWeekSessions(wSessions);
-    setWeekVolume(wVolume);
+      const weekSessions = weekData?.length ?? 0;
+      const weekVolume = (weekData ?? [])
+        .flatMap((s: any) => s.session_exercises.flatMap((e: any) => e.session_sets))
+        .filter((st: any) => st.is_completed)
+        .reduce((sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0);
 
-    // Total session count
-    const { count } = await supabase
-      .from('workout_sessions')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
-    setTotalSessions(count ?? 0);
+      // Total session count
+      const { count } = await supabase
+        .from('workout_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      const totalSessions = count ?? 0;
 
-    setLoading(false);
+      const fresh: HomeData = { userName, recentSessions, weekSessions, weekVolume, totalSessions };
+      applyData(fresh);
+      await setCached(CACHE_KEYS.HOME_DATA, fresh);
+    } catch {
+      // Silently fall back to cached data already displayed
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

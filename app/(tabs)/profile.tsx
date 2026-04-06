@@ -8,6 +8,14 @@ import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/profile.styles';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
+import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type ProfileCache = {
+  fullName:      string;
+  totalSessions: number;
+};
 
 // ─── Static menu ─────────────────────────────────────────────────────────────
 
@@ -33,9 +41,14 @@ const MENU_SECTIONS = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
-  const [loading, setLoading] = useState(true);
-  const [fullName, setFullName] = useState('');
+  const [loading,       setLoading]       = useState(true);
+  const [fullName,      setFullName]      = useState('');
   const [totalSessions, setTotalSessions] = useState(0);
+
+  function applyData(d: ProfileCache) {
+    setFullName(d.fullName);
+    setTotalSessions(d.totalSessions);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -44,25 +57,36 @@ export default function ProfileScreen() {
   );
 
   async function loadProfile() {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
+    // Show cached data immediately
+    const cached = await getCachedAny<ProfileCache>(CACHE_KEYS.PROFILE);
+    if (cached) {
+      applyData(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
-    const [{ data: profile }, { count }] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single(),
-      supabase
-        .from('workout_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id),
-    ]);
+    // Background refresh
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    setFullName(profile?.full_name ?? '');
-    setTotalSessions(count ?? 0);
-    setLoading(false);
+      const [{ data: profile }, { count }] = await Promise.all([
+        supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+        supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      ]);
+
+      const fresh: ProfileCache = {
+        fullName:      profile?.full_name ?? '',
+        totalSessions: count ?? 0,
+      };
+      applyData(fresh);
+      await setCached(CACHE_KEYS.PROFILE, fresh);
+    } catch {
+      // Silently fall back to cached data
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSignOut() {
