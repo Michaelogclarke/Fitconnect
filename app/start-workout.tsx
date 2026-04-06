@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  FlatList,
   KeyboardAvoidingView,
   Modal,
   PanResponder,
@@ -190,7 +191,8 @@ function NumPad({
 
 // ─── Add Exercise Modal ───────────────────────────────────────────────────────
 
-type NewExerciseForm = { name: string; muscle: string; sets: string; reps: string; weight: string };
+type DbExercise = { name: string; muscle_group: string | null };
+type ConfigForm = { muscle: string; sets: string; reps: string; weight: string };
 
 function AddExerciseModal({
   visible, onClose, onAdd,
@@ -199,20 +201,57 @@ function AddExerciseModal({
   onClose: () => void;
   onAdd: (exercise: Exercise, sets: SetRow[]) => void;
 }) {
-  const [form, setForm] = useState<NewExerciseForm>({
-    name: '', muscle: '', sets: '3', reps: '10', weight: '',
-  });
+  const [phase, setPhase]       = useState<'search' | 'configure'>('search');
+  const [search, setSearch]     = useState('');
+  const [dbList, setDbList]     = useState<DbExercise[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [selected, setSelected] = useState<{ name: string; isPreset: boolean } | null>(null);
+  const [form, setForm]         = useState<ConfigForm>({ muscle: '', sets: '3', reps: '10', weight: '' });
 
-  function field(key: keyof NewExerciseForm, value: string) {
-    setForm((f) => ({ ...f, [key]: value }));
+  // Fetch exercise library once per modal open
+  useEffect(() => {
+    if (!visible) return;
+    setPhase('search');
+    setSearch('');
+    setSelected(null);
+    setForm({ muscle: '', sets: '3', reps: '10', weight: '' });
+    setLoading(true);
+    supabase
+      .from('exercises')
+      .select('name, muscle_group')
+      .order('name')
+      .then(({ data }) => {
+        setDbList(data ?? []);
+        setLoading(false);
+      });
+  }, [visible]);
+
+  const trimmedSearch = search.trim();
+  const filtered = dbList.filter((e) =>
+    e.name.toLowerCase().includes(search.toLowerCase()),
+  );
+  const exactMatch = dbList.some(
+    (e) => e.name.toLowerCase() === trimmedSearch.toLowerCase(),
+  );
+
+  function selectPreset(ex: DbExercise) {
+    setSelected({ name: ex.name, isPreset: true });
+    setForm({ muscle: ex.muscle_group ?? '', sets: '3', reps: '10', weight: '' });
+    setPhase('configure');
+  }
+
+  function createCustom() {
+    setSelected({ name: trimmedSearch, isPreset: false });
+    setForm({ muscle: '', sets: '3', reps: '10', weight: '' });
+    setPhase('configure');
   }
 
   function handleAdd() {
-    if (!form.name.trim()) return;
-    const setCount  = Math.max(1, parseInt(form.sets) || 3);
+    if (!selected) return;
+    const setCount = Math.max(1, parseInt(form.sets) || 3);
     const exercise: Exercise = {
       id:     uid(),
-      name:   form.name.trim(),
+      name:   selected.name,
       muscle: form.muscle.trim() || 'Custom',
       tag:    'Custom',
     };
@@ -222,83 +261,158 @@ function AddExerciseModal({
       done:   false,
     }));
     onAdd(exercise, sets);
-    setForm({ name: '', muscle: '', sets: '3', reps: '10', weight: '' });
   }
 
+  function fieldC(key: keyof ConfigForm, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  // ── Search phase ────────────────────────────────────────────────────────────
+  if (phase === 'search') {
+    return (
+      <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+        <View style={styles.modalBackdrop}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { paddingHorizontal: 16 }]}>Add Exercise</Text>
+
+            {/* Search bar */}
+            <View style={styles.searchBarWrap}>
+              <IconSymbol name="magnifyingglass" size={16} color={Colors.onSurfaceVariant} />
+              <TextInput
+                style={styles.searchBarInput}
+                placeholder="Search exercises…"
+                placeholderTextColor={Colors.onSurfaceVariant}
+                value={search}
+                onChangeText={setSearch}
+                autoFocus
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+              />
+            </View>
+
+            {loading ? (
+              <ActivityIndicator color={Colors.primary} style={{ paddingVertical: 32 }} />
+            ) : (
+              <FlatList
+                style={styles.exerciseList}
+                data={filtered}
+                keyExtractor={(item) => item.name}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.exerciseListItem}
+                    onPress={() => selectPreset(item)}>
+                    <Text style={styles.exerciseListName}>{item.name}</Text>
+                    {item.muscle_group ? (
+                      <Text style={styles.exerciseListMuscle}>{item.muscle_group}</Text>
+                    ) : null}
+                    <IconSymbol name="plus" size={16} color={Colors.primary} />
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  trimmedSearch.length === 0 ? (
+                    <Text style={styles.emptyListText}>Type to search the exercise library</Text>
+                  ) : null
+                }
+                ListFooterComponent={
+                  trimmedSearch.length > 0 && !exactMatch ? (
+                    <TouchableOpacity style={styles.createCustomRow} onPress={createCustom}>
+                      <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
+                      <Text style={styles.createCustomText}>
+                        Create "{trimmedSearch}"
+                      </Text>
+                      <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+                    </TouchableOpacity>
+                  ) : null
+                }
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // ── Configure phase ─────────────────────────────────────────────────────────
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setPhase('search')}>
       <KeyboardAvoidingView
         style={styles.modalBackdrop}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setPhase('search')} />
         <View style={styles.modalSheet}>
           <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Add Exercise</Text>
 
-          <Text style={styles.fieldLabel}>Exercise Name</Text>
-          <TextInput
-            style={styles.fieldInput}
-            placeholder="e.g. Bulgarian Split Squat"
-            placeholderTextColor={Colors.onSurfaceVariant}
-            value={form.name}
-            onChangeText={(v) => field('name', v)}
-            returnKeyType="next"
-            autoFocus
-          />
-
-          <Text style={styles.fieldLabel}>Muscle Group</Text>
-          <TextInput
-            style={styles.fieldInput}
-            placeholder="e.g. Legs"
-            placeholderTextColor={Colors.onSurfaceVariant}
-            value={form.muscle}
-            onChangeText={(v) => field('muscle', v)}
-            returnKeyType="next"
-          />
-
-          <View style={styles.fieldRow}>
-            <View style={styles.fieldHalf}>
-              <Text style={styles.fieldLabel}>Sets</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={form.sets}
-                onChangeText={(v) => field('sets', v)}
-                keyboardType="number-pad"
-              />
-            </View>
-            <View style={styles.fieldHalf}>
-              <Text style={styles.fieldLabel}>Reps</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={form.reps}
-                onChangeText={(v) => field('reps', v)}
-              />
-            </View>
-            <View style={styles.fieldHalf}>
-              <Text style={styles.fieldLabel}>Weight (kg)</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="60"
-                placeholderTextColor={Colors.onSurfaceVariant}
-                value={form.weight}
-                onChangeText={(v) => field('weight', v)}
-                keyboardType="decimal-pad"
-                returnKeyType="done"
-                onSubmitEditing={handleAdd}
-              />
-            </View>
+          {/* Title row with back button */}
+          <View style={[styles.modalTitleRow, { paddingHorizontal: 16 }]}>
+            <TouchableOpacity style={styles.modalBackBtn} onPress={() => setPhase('search')}>
+              <IconSymbol name="chevron.left" size={14} color={Colors.onSurface} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitleInRow}>{selected?.name}</Text>
+            {form.muscle ? (
+              <Text style={styles.exerciseListMuscle}>{form.muscle}</Text>
+            ) : null}
           </View>
 
-          <View style={styles.modalActions}>
-            <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalAddBtn, !form.name.trim() && { opacity: 0.4 }]}
-              onPress={handleAdd}
-              disabled={!form.name.trim()}>
-              <Text style={styles.modalAddText}>Add to Workout</Text>
-            </TouchableOpacity>
+          <View style={styles.modalSheetInner}>
+            {/* Muscle group — only editable for custom exercises */}
+            {selected && !selected.isPreset && (
+              <>
+                <Text style={styles.fieldLabel}>Muscle Group</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder="e.g. Legs"
+                  placeholderTextColor={Colors.onSurfaceVariant}
+                  value={form.muscle}
+                  onChangeText={(v) => fieldC('muscle', v)}
+                  returnKeyType="next"
+                />
+              </>
+            )}
+
+            <View style={styles.fieldRow}>
+              <View style={styles.fieldHalf}>
+                <Text style={styles.fieldLabel}>Sets</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={form.sets}
+                  onChangeText={(v) => fieldC('sets', v)}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <View style={styles.fieldHalf}>
+                <Text style={styles.fieldLabel}>Reps</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={form.reps}
+                  onChangeText={(v) => fieldC('reps', v)}
+                />
+              </View>
+              <View style={styles.fieldHalf}>
+                <Text style={styles.fieldLabel}>Weight (kg)</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder="0"
+                  placeholderTextColor={Colors.onSurfaceVariant}
+                  value={form.weight}
+                  onChangeText={(v) => fieldC('weight', v)}
+                  keyboardType="decimal-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={handleAdd}
+                />
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={onClose}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalAddBtn} onPress={handleAdd}>
+                <Text style={styles.modalAddText}>Add to Workout</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -310,21 +424,21 @@ function AddExerciseModal({
 
 function ExerciseSection({
   exercise, sets, activeRest,
-  onUpdateName, onUpdateSet, onToggleSet, onAddSet, onDeleteSet,
+  onUpdateSet, onToggleSet, onAddSet, onDeleteSet, onDeleteExercise,
   onSkipRest, onAdjustRest, onOpenNumPad, isLast,
 }: {
-  exercise:     Exercise;
-  sets:         SetRow[];
-  activeRest:   ActiveRestDisplay | null;
-  onUpdateName: (name: string) => void;
-  onUpdateSet:  (idx: number, field: 'weight' | 'reps', value: string) => void;
-  onToggleSet:  (idx: number) => void;
-  onAddSet:     () => void;
-  onDeleteSet:  (idx: number) => void;
-  onSkipRest:   () => void;
-  onAdjustRest: (delta: number) => void;
-  onOpenNumPad: (setIdx: number, field: 'weight' | 'reps', currentValue: string) => void;
-  isLast:       boolean;
+  exercise:          Exercise;
+  sets:              SetRow[];
+  activeRest:        ActiveRestDisplay | null;
+  onUpdateSet:       (idx: number, field: 'weight' | 'reps', value: string) => void;
+  onToggleSet:       (idx: number) => void;
+  onAddSet:          () => void;
+  onDeleteSet:       (idx: number) => void;
+  onDeleteExercise:  () => void;
+  onSkipRest:        () => void;
+  onAdjustRest:      (delta: number) => void;
+  onOpenNumPad:      (setIdx: number, field: 'weight' | 'reps', currentValue: string) => void;
+  isLast:            boolean;
 }) {
   const doneCount  = sets.filter((s) => s.done).length;
   const allDone    = doneCount === sets.length && sets.length > 0;
@@ -341,14 +455,7 @@ function ExerciseSection({
     <View style={styles.exerciseSection}>
       {/* Section header */}
       <View style={styles.exerciseSectionHeader}>
-        <TextInput
-          style={styles.exerciseNameInput}
-          value={exercise.name}
-          onChangeText={onUpdateName}
-          placeholderTextColor={Colors.onSurfaceVariant}
-          multiline={false}
-          returnKeyType="done"
-        />
+        <Text style={styles.exerciseNameInput} numberOfLines={1}>{exercise.name}</Text>
         <View style={styles.muscleChip}>
           <Text style={styles.muscleChipText}>{exercise.muscle}</Text>
         </View>
@@ -360,6 +467,12 @@ function ExerciseSection({
             {doneCount}/{sets.length}
           </Text>
         </View>
+        <TouchableOpacity
+          onPress={onDeleteExercise}
+          style={{ padding: 8 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <IconSymbol name="trash.fill" size={16} color={Colors.error} />
+        </TouchableOpacity>
       </View>
 
       {/* Sets table */}
@@ -659,8 +772,14 @@ export default function StartWorkoutScreen() {
 
   // ── Exercise mutations ─────────────────────────────────────────────────────
 
-  function updateExerciseName(exId: string, name: string) {
-    setExercises((prev) => prev.map((e) => (e.id === exId ? { ...e, name } : e)));
+  function deleteExercise(exId: string) {
+    setExercises((prev) => prev.filter((e) => e.id !== exId));
+    setSetsState((prev) => {
+      const next = { ...prev };
+      delete next[exId];
+      return next;
+    });
+    if (activeRest?.exId === exId) setActiveRest(null);
   }
 
   function addCustomExercise(exercise: Exercise, sets: SetRow[]) {
@@ -794,7 +913,7 @@ export default function StartWorkoutScreen() {
             exercise={ex}
             sets={setsState[ex.id] ?? []}
             activeRest={activeRestDisplay}
-            onUpdateName={(name) => updateExerciseName(ex.id, name)}
+            onDeleteExercise={() => deleteExercise(ex.id)}
             onUpdateSet={(i, f, v) => updateSet(ex.id, i, f, v)}
             onToggleSet={(i) => toggleSet(ex.id, i, ex.name)}
             onAddSet={() => addSet(ex.id)}

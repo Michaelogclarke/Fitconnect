@@ -338,8 +338,11 @@ export const styles = StyleSheet.create({
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     paddingTop: Spacing.md,
-    paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xxxl,
+    maxHeight: '88%',
+  },
+  modalSheetInner: {
+    paddingHorizontal: Spacing.lg,
   },
   modalHandle: {
     width: 36,
@@ -349,7 +352,102 @@ export const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: Spacing.lg,
   },
+  modalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  modalBackBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceContainerHighest,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   modalTitle: { ...Typography.headlineMd, color: Colors.onSurface, marginBottom: Spacing.lg },
+  modalTitleInRow: { ...Typography.headlineMd, color: Colors.onSurface, flex: 1 },
+
+  // Search bar
+  searchBarWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceContainerHighest,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+    marginHorizontal: Spacing.lg,
+  },
+  searchBarInput: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+  },
+
+  // Exercise list
+  exerciseList: {
+    flexGrow: 0,
+  },
+  exerciseListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+  },
+  exerciseListName: {
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+    flex: 1,
+  },
+  exerciseListMuscle: {
+    ...Typography.labelMd,
+    color: Colors.primary,
+    backgroundColor: Colors.primary + '18',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: Radius.full,
+    overflow: 'hidden',
+  },
+  createCustomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  createCustomText: {
+    ...Typography.titleMd,
+    color: Colors.primary,
+    flex: 1,
+  },
+  emptyListText: {
+    ...Typography.bodyMd,
+    color: Colors.onSurfaceVariant,
+    textAlign: 'center',
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
+  },
+
+  // Configure phase
+  selectedExerciseCard: {
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    marginHorizontal: Spacing.lg,
+  },
+  selectedExerciseName: {
+    ...Typography.headlineMd,
+    color: Colors.onSurface,
+    marginBottom: 4,
+  },
+
   fieldLabel: {
     ...Typography.labelLg,
     color: Colors.onSurfaceVariant,
