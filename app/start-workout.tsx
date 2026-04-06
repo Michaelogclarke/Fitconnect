@@ -20,6 +20,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { DELETE_WIDTH, styles } from '@/styles/start-workout.styles';
 import { supabase } from '@/lib/supabase';
+import { useWorkout, Exercise, SetRow, ActiveRest } from '@/contexts/WorkoutContext';
 
 // Show notification even when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -32,10 +33,9 @@ Notifications.setNotificationHandler({
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SetRow     = { weight: string; reps: string; done: boolean };
-type Exercise   = { id: string; name: string; muscle: string; tag: string };
-type ActiveRest = { exId: string; setIdx: number; remaining: number };
-type NumPadTarget = { exId: string; setIdx: number; field: 'weight' | 'reps' };
+// SetRow, Exercise, ActiveRest are imported from WorkoutContext
+type ActiveRestDisplay = { exId: string; setIdx: number; remaining: number };
+type NumPadTarget      = { exId: string; setIdx: number; field: 'weight' | 'reps' };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -315,7 +315,7 @@ function ExerciseSection({
 }: {
   exercise:     Exercise;
   sets:         SetRow[];
-  activeRest:   ActiveRest | null;
+  activeRest:   ActiveRestDisplay | null;
   onUpdateName: (name: string) => void;
   onUpdateSet:  (idx: number, field: 'weight' | 'reps', value: string) => void;
   onToggleSet:  (idx: number) => void;
@@ -490,28 +490,51 @@ function ExerciseSection({
 export default function StartWorkoutScreen() {
   const router = useRouter();
 
-  // Workout stopwatch
-  const [elapsed, setElapsed] = useState(0);
+  // ── Persistent workout state from context ──────────────────────────────────
+  const {
+    isActive, exercises, setsState, activeRest, elapsed, startedAt,
+    startWorkout, clearWorkout, setExercises, setSetsState, setActiveRest,
+  } = useWorkout();
+
+  // Start a new workout on first mount (if none already running)
   useEffect(() => {
-    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
-    return () => clearInterval(id);
+    if (!isActive) startWorkout();
   }, []);
 
-  const [exercises, setExercises]   = useState<Exercise[]>([]);
-  const [setsState, setSetsState]   = useState<Record<string, SetRow[]>>({});
-  const [activeRest, setActiveRest] = useState<ActiveRest | null>(null);
+  // ── Local UI state (resets on unmount — that's fine) ──────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
 
   // Numpad state
   const [numPadTarget, setNumPadTarget] = useState<NumPadTarget | null>(null);
   const [numPadValue,  setNumPadValue]  = useState('0');
 
-  const restTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const notifIdRef   = useRef<string | null>(null);
-  const startedAt    = useRef(new Date());
+  const notifIdRef = useRef<string | null>(null);
 
-  const [finishing,  setFinishing]  = useState(false);
-  const [saveError,  setSaveError]  = useState('');
+  const [finishing, setFinishing] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  // ── Tick to keep rest countdown display fresh ──────────────────────────────
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!activeRest) return;
+    const id = setInterval(() => setTick((t) => t + 1), 500);
+    return () => clearInterval(id);
+  }, [!!activeRest]);
+
+  // Compute remaining from the endsAt timestamp (correct even after returning)
+  const restRemaining = activeRest
+    ? Math.max(0, Math.ceil((activeRest.endsAt - Date.now()) / 1000))
+    : 0;
+
+  // Auto-clear when rest expires
+  useEffect(() => {
+    if (activeRest && restRemaining <= 0) setActiveRest(null);
+  }, [restRemaining]);
+
+  // Display object passed to ExerciseSection (uses remaining, not endsAt)
+  const activeRestDisplay: ActiveRestDisplay | null = activeRest
+    ? { exId: activeRest.exId, setIdx: activeRest.setIdx, remaining: restRemaining }
+    : null;
 
   // ── Notification permissions ───────────────────────────────────────────────
 
@@ -519,28 +542,6 @@ export default function StartWorkoutScreen() {
     Notifications.requestPermissionsAsync().catch(() => {});
   }, []);
 
-  // ── Rest countdown ─────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!activeRest) return;
-
-    if (restTimerRef.current) clearInterval(restTimerRef.current);
-
-    restTimerRef.current = setInterval(() => {
-      setActiveRest((prev) => {
-        if (!prev) return null;
-        if (prev.remaining <= 1) {
-          clearInterval(restTimerRef.current!);
-          return null;
-        }
-        return { ...prev, remaining: prev.remaining - 1 };
-      });
-    }, 1000);
-
-    return () => {
-      if (restTimerRef.current) clearInterval(restTimerRef.current);
-    };
-  }, [activeRest?.exId, activeRest?.setIdx]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
@@ -582,15 +583,14 @@ export default function StartWorkoutScreen() {
   }, []);
 
   const skipRest = useCallback(() => {
-    if (restTimerRef.current) clearInterval(restTimerRef.current);
     setActiveRest(null);
     cancelRestNotification();
   }, [cancelRestNotification]);
 
-  // Clamp remaining to 5 s minimum so the chip doesn't vanish unexpectedly on -15
+  // Clamp to 5 s minimum so the chip doesn't vanish unexpectedly on -15
   const adjustRest = useCallback((delta: number) => {
     setActiveRest((prev) =>
-      prev ? { ...prev, remaining: Math.max(5, prev.remaining + delta) } : null
+      prev ? { ...prev, endsAt: Math.max(Date.now() + 5000, prev.endsAt + delta * 1000) } : null
     );
   }, []);
 
@@ -629,7 +629,7 @@ export default function StartWorkoutScreen() {
     }));
 
     if (!wasDone) {
-      setActiveRest({ exId, setIdx: idx, remaining: REST_SECONDS });
+      setActiveRest({ exId, setIdx: idx, endsAt: Date.now() + REST_SECONDS * 1000 });
       scheduleRestNotification(exerciseName);
     } else if (activeRest?.exId === exId && activeRest.setIdx === idx) {
       skipRest();
@@ -680,7 +680,8 @@ export default function StartWorkoutScreen() {
       if (!user) throw new Error('Not signed in');
 
       // 1. Create the session record
-      const sessionName = new Date(startedAt.current).toLocaleDateString('en-GB', {
+      const workoutStart = startedAt ?? new Date();
+      const sessionName  = workoutStart.toLocaleDateString('en-GB', {
         weekday: 'long', day: 'numeric', month: 'short',
       }) + ' Workout';
 
@@ -689,7 +690,7 @@ export default function StartWorkoutScreen() {
         .insert({
           user_id:          user.id,
           name:             sessionName,
-          started_at:       startedAt.current.toISOString(),
+          started_at:       workoutStart.toISOString(),
           finished_at:      new Date().toISOString(),
           duration_seconds: elapsed,
         })
@@ -731,7 +732,8 @@ export default function StartWorkoutScreen() {
         }
       }
 
-      // Success — go to history so they can see the saved session
+      // Clear workout state and return to history
+      clearWorkout();
       router.replace('/(tabs)/history');
     } catch (err: any) {
       setSaveError(err?.message ?? 'Failed to save. Please try again.');
@@ -791,7 +793,7 @@ export default function StartWorkoutScreen() {
             key={ex.id}
             exercise={ex}
             sets={setsState[ex.id] ?? []}
-            activeRest={activeRest}
+            activeRest={activeRestDisplay}
             onUpdateName={(name) => updateExerciseName(ex.id, name)}
             onUpdateSet={(i, f, v) => updateSet(ex.id, i, f, v)}
             onToggleSet={(i) => toggleSet(ex.id, i, ex.name)}

@@ -6,6 +6,7 @@ import { Session } from '@supabase/supabase-js';
 import 'react-native-reanimated';
 
 import { supabase } from '@/lib/supabase';
+import { WorkoutProvider } from '@/contexts/WorkoutContext';
 
 export default function RootLayout() {
   const router   = useRouter();
@@ -40,15 +41,17 @@ export default function RootLayout() {
   }, [session, segments]);
 
   return (
-    <ThemeProvider value={DarkTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)"        options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)"        options={{ headerShown: false }} />
-        <Stack.Screen name="start-workout" options={{ headerShown: false }} />
-        <Stack.Screen name="edit-routine"  options={{ headerShown: false }} />
-        <Stack.Screen name="modal"         options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="light" />
-    </ThemeProvider>
+    <WorkoutProvider>
+      <ThemeProvider value={DarkTheme}>
+        <Stack>
+          <Stack.Screen name="(tabs)"        options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)"        options={{ headerShown: false }} />
+          <Stack.Screen name="start-workout" options={{ headerShown: false }} />
+          <Stack.Screen name="edit-routine"  options={{ headerShown: false }} />
+          <Stack.Screen name="modal"         options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+        <StatusBar style="light" />
+      </ThemeProvider>
+    </WorkoutProvider>
   );
 }
