@@ -113,13 +113,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => <IconSymbol size={24} name="fork.knife" color={color} />,
           }}
         />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: 'Profile',
-            tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.fill" color={color} />,
-          }}
-        />
+        <Tabs.Screen name="profile" options={{ href: null }} />
 
         {/* Clients — accessible from Home, not needed in nav */}
         <Tabs.Screen name="clients" options={{ href: null }} />

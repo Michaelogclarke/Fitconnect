@@ -550,9 +550,18 @@ export default function HomeScreen() {
             </Text>
             <Text style={styles.date}>{today}</Text>
           </View>
-          <TouchableOpacity style={styles.iconBtn}>
-            <IconSymbol name="bell.fill" size={20} color={Colors.onSurface} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity style={styles.iconBtn}>
+              <IconSymbol name="bell.fill" size={20} color={Colors.onSurface} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: Colors.primary }]}
+              onPress={() => router.push('/(tabs)/profile' as any)}>
+              <Text style={{ ...Typography.labelLg, color: Colors.background }}>
+                {initials(userName)}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {loading ? (
