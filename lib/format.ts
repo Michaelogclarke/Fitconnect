@@ -60,7 +60,8 @@ export function toLocalDate(d: Date): string {
 
 // ─── Initials ─────────────────────────────────────────────────────────────────
 
-export function initials(name: string): string {
+export function initials(name: string | undefined | null): string {
+  if (!name) return '?';
   return name
     .split(' ')
     .map((n) => n[0])

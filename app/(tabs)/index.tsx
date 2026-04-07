@@ -382,7 +382,7 @@ export default function HomeScreen() {
         const days = last
           ? Math.floor((now - new Date(last).getTime()) / 86_400_000)
           : 999;
-        return { clientId: id, name: nameMap[id], daysSince: days };
+        return { clientId: id, name: nameMap[id] ?? 'Unknown', daysSince: days };
       })
       .filter((c) => c.daysSince >= 7)
       .sort((a, b) => b.daysSince - a.daysSince)
@@ -398,7 +398,7 @@ export default function HomeScreen() {
       .limit(5);
 
     const recentActivity: RecentClientActivity[] = (recent ?? []).map((s) => ({
-      clientName:  nameMap[s.user_id],
+      clientName:  nameMap[s.user_id] ?? 'Unknown',
       sessionName: s.name,
       startedAt:   s.started_at,
     }));
