@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
+import * as Haptics from 'expo-haptics';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
@@ -473,6 +474,45 @@ function ExerciseSection({
     if (!isResting) setRestExpanded(false);
   }, [isResting]);
 
+  // ── Previous performance ───────────────────────────────────────────────────
+  type PrevSet = { weight: number | null; reps: number | null };
+  const [prevSets, setPrevSets] = useState<PrevSet[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchPrev() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+
+        const { data: sessions } = await supabase
+          .from('workout_sessions')
+          .select(`
+            session_exercises!inner(
+              exercise_name,
+              session_sets(set_number, weight, reps, is_completed)
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('session_exercises.exercise_name', exercise.name)
+          .order('started_at', { ascending: false })
+          .limit(1);
+
+        if (cancelled || !sessions?.length) return;
+
+        const rawSets = (sessions[0] as any).session_exercises?.[0]?.session_sets ?? [];
+        const completed: PrevSet[] = rawSets
+          .filter((s: any) => s.is_completed)
+          .sort((a: any, b: any) => a.set_number - b.set_number)
+          .map((s: any) => ({ weight: s.weight ?? null, reps: s.reps ?? null }));
+
+        if (!cancelled) setPrevSets(completed.length > 0 ? completed : null);
+      } catch {}
+    }
+    fetchPrev();
+    return () => { cancelled = true; };
+  }, [exercise.name]);
+
   return (
     <View style={styles.exerciseSection}>
       {/* Section header */}
@@ -496,6 +536,16 @@ function ExerciseSection({
           <IconSymbol name="trash.fill" size={16} color={Colors.error} />
         </TouchableOpacity>
       </View>
+
+      {/* Previous performance strip */}
+      {prevSets && (
+        <View style={styles.prevRow}>
+          <IconSymbol name="clock" size={11} color={Colors.onSurfaceVariant} />
+          <Text style={styles.prevText} numberOfLines={1}>
+            {prevSets.map((s) => `${s.weight ?? '—'}×${s.reps ?? '—'}`).join('  ·  ')}
+          </Text>
+        </View>
+      )}
 
       {/* Sets table */}
       <View style={styles.setsSection}>
@@ -663,9 +713,12 @@ export default function StartWorkoutScreen() {
     ? Math.max(0, Math.ceil((activeRest.endsAt - Date.now()) / 1000))
     : 0;
 
-  // Auto-clear when rest expires
+  // Auto-clear when rest expires + vibrate to signal it's time
   useEffect(() => {
-    if (activeRest && restRemaining <= 0) setActiveRest(null);
+    if (activeRest && restRemaining <= 0) {
+      setActiveRest(null);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
   }, [restRemaining]);
 
   // Display object passed to ExerciseSection (uses remaining, not endsAt)
@@ -789,10 +842,12 @@ export default function StartWorkoutScreen() {
     }));
 
     if (!wasDone) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       restExerciseRef.current = exerciseName;
       setActiveRest({ exId, setIdx: idx, endsAt: Date.now() + REST_SECONDS * 1000 });
       scheduleRestNotification(exerciseName);
     } else if (activeRest?.exId === exId && activeRest.setIdx === idx) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       skipRest();
     }
   }
@@ -945,6 +1000,7 @@ export default function StartWorkoutScreen() {
         if (isNetworkError(netErr)) {
           // No connection — store locally and sync later
           await enqueueWorkout(payload);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           clearWorkout();
           router.replace('/(tabs)/history');
           return;
@@ -952,6 +1008,7 @@ export default function StartWorkoutScreen() {
         throw netErr; // re-throw auth / logic errors
       }
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       clearWorkout();
       router.replace('/(tabs)/history');
     } catch (err: any) {

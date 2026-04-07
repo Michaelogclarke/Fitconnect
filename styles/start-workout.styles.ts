@@ -106,6 +106,24 @@ export const styles = StyleSheet.create({
   sectionProgressText: { ...Typography.labelMd, color: Colors.onSurfaceVariant },
   sectionProgressTextDone: { color: Colors.primary },
 
+  // ── Previous performance strip ─────────────────────────────────────────────
+  prevRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 6,
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+  },
+  prevText: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+    flex: 1,
+    opacity: 0.85,
+  },
+
   // ── Sets table ─────────────────────────────────────────────────────────────
   setsSection: { paddingHorizontal: Spacing.lg, marginBottom: 4 },
   setsHeader: {
