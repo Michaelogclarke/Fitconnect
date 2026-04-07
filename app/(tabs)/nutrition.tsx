@@ -19,12 +19,17 @@ import { useFocusEffect } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Colors, Spacing } from '@/constants/theme';
 import { styles } from '@/styles/tabs/nutrition.styles';
 import { supabase } from '@/lib/supabase';
 import { toLocalDate } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
+
+const SAVED_FOODS_KEY = 'nutrition:saved_foods';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -368,6 +373,11 @@ function AddFoodModal({
   const [searching,     setSearching]     = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Saved foods + tab
+  const [savedFoods,   setSavedFoods]   = useState<RecentFood[]>([]);
+  const [activePickTab, setActivePickTab] = useState<'recent' | 'saved'>('recent');
+  const [isSaved,      setIsSaved]      = useState(false);
+
   // Pre-fill form when editing an existing log; set meal type when opening for specific meal
   useEffect(() => {
     if (!visible) return;
@@ -412,6 +422,22 @@ function AddFoodModal({
       } catch {}
     })();
   }, [visible]);
+
+  // Load saved foods when modal opens
+  useEffect(() => {
+    if (!visible) return;
+    AsyncStorage.getItem(SAVED_FOODS_KEY).then((val) => {
+      if (val) setSavedFoods(JSON.parse(val));
+    });
+  }, [visible]);
+
+  // Sync isSaved with current food name
+  useEffect(() => {
+    setIsSaved(
+      !!foodName.trim() &&
+      savedFoods.some((f) => f.name.toLowerCase() === foodName.trim().toLowerCase())
+    );
+  }, [foodName, savedFoods]);
 
   function handleSearchChange(text: string) {
     setSearchQuery(text);
@@ -460,6 +486,51 @@ function AddFoodModal({
     setPhase('configure');
   }
 
+  async function toggleSaveFood(food: RecentFood) {
+    const exists = savedFoods.some((f) => f.name.toLowerCase() === food.name.toLowerCase());
+    const next   = exists
+      ? savedFoods.filter((f) => f.name.toLowerCase() !== food.name.toLowerCase())
+      : [food, ...savedFoods];
+    setSavedFoods(next);
+    await AsyncStorage.setItem(SAVED_FOODS_KEY, JSON.stringify(next));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
+
+  async function toggleSaveCurrentFood() {
+    if (!foodName.trim()) return;
+    const food: RecentFood = {
+      name:      foodName.trim(),
+      calories:  parseInt(calories, 10) || 0,
+      protein_g: parseFloat(protein)   || 0,
+      carbs_g:   parseFloat(carbs)     || 0,
+      fat_g:     parseFloat(fat)       || 0,
+    };
+    await toggleSaveFood(food);
+  }
+
+  async function quickLog(food: RecentFood) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('food_logs')
+        .insert({
+          user_id:   user.id,
+          name:      food.name,
+          calories:  food.calories,
+          protein_g: food.protein_g,
+          carbs_g:   food.carbs_g,
+          fat_g:     food.fat_g,
+          meal_type: targetMealType ?? mealTypeForNow(),
+          logged_at: toLocalDate(viewDate),
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      handleDone(data as FoodLog);
+    } catch {}
+  }
+
   // Auto-recalculate macros when quantity changes (scanned products only)
   useEffect(() => {
     if (!scannedProduct) return;
@@ -483,6 +554,7 @@ function AddFoodModal({
     setProtein(''); setCarbs(''); setFat('');
     setScannedProduct(null); setSaving(false); setError('');
     setSearchQuery(''); setSearchResults([]);
+    setActivePickTab('recent'); setIsSaved(false);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     onClose();
   }
@@ -579,10 +651,32 @@ function AddFoodModal({
                   )}
                 </View>
 
-                {/* Search results or recent foods */}
-                {searchQuery.length >= 2 ? (
-                  <View>
-                    {searchResults.length > 0 ? (
+                {/* Tab row — hidden while searching */}
+                {searchQuery.length < 2 && (
+                  <View style={styles.pickTabRow}>
+                    {(['recent', 'saved'] as const).map((tab) => (
+                      <TouchableOpacity
+                        key={tab}
+                        style={[styles.pickTab, activePickTab === tab && styles.pickTabActive]}
+                        onPress={() => setActivePickTab(tab)}>
+                        <Text style={[styles.pickTabText, activePickTab === tab && styles.pickTabTextActive]}>
+                          {tab === 'recent' ? 'Recent' : 'Saved'}
+                        </Text>
+                        {tab === 'saved' && savedFoods.length > 0 && (
+                          <View style={styles.pickTabBadge}>
+                            <Text style={styles.pickTabBadgeText}>{savedFoods.length}</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Fixed-height results area */}
+                <View style={styles.pickResultsArea}>
+                  {searchQuery.length >= 2 ? (
+                    // ── Search results ────────────────────────────────────────
+                    searchResults.length > 0 ? (
                       <>
                         <Text style={styles.listSectionLabel}>Results</Text>
                         {searchResults.map((result, i) => (
@@ -601,30 +695,89 @@ function AddFoodModal({
                         ))}
                       </>
                     ) : !searching ? (
-                      <Text style={[styles.mealEmptyText, { textAlign: 'center', paddingVertical: Spacing.sm }]}>
-                        No results found
+                      <Text style={[styles.mealEmptyText, { textAlign: 'center', paddingVertical: Spacing.md }]}>
+                        No results — try a different term
                       </Text>
-                    ) : null}
-                  </View>
-                ) : recentFoods.length > 0 ? (
-                  <View>
-                    <Text style={styles.listSectionLabel}>Recent</Text>
-                    {recentFoods.map((food, i) => (
-                      <TouchableOpacity
-                        key={i}
-                        style={styles.quickPickItem}
-                        onPress={() => handleRecentPick(food)}>
-                        <View style={styles.quickPickInfo}>
-                          <Text style={styles.quickPickName} numberOfLines={1}>{food.name}</Text>
-                          <Text style={styles.quickPickMeta}>
-                            P {food.protein_g}g · C {food.carbs_g}g · F {food.fat_g}g
-                          </Text>
-                        </View>
-                        <Text style={styles.quickPickCals}>{food.calories} kcal</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : null}
+                    ) : null
+                  ) : activePickTab === 'recent' ? (
+                    // ── Recent ────────────────────────────────────────────────
+                    recentFoods.length > 0 ? (
+                      recentFoods.map((food, i) => {
+                        const alreadySaved = savedFoods.some(
+                          (f) => f.name.toLowerCase() === food.name.toLowerCase()
+                        );
+                        return (
+                          <TouchableOpacity
+                            key={i}
+                            style={styles.quickPickItem}
+                            onPress={() => handleRecentPick(food)}>
+                            <View style={styles.quickPickInfo}>
+                              <Text style={styles.quickPickName} numberOfLines={1}>{food.name}</Text>
+                              <Text style={styles.quickPickMeta}>
+                                P {food.protein_g}g · C {food.carbs_g}g · F {food.fat_g}g
+                              </Text>
+                            </View>
+                            <Text style={styles.quickPickCals}>{food.calories}</Text>
+                            <TouchableOpacity
+                              style={styles.foodActionBtn}
+                              onPress={() => toggleSaveFood(food)}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                              <IconSymbol
+                                name={alreadySaved ? 'star.fill' : 'star'}
+                                size={16}
+                                color={alreadySaved ? Colors.primary : Colors.onSurfaceVariant}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.foodActionBtn}
+                              onPress={() => quickLog(food)}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                              <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
+                            </TouchableOpacity>
+                          </TouchableOpacity>
+                        );
+                      })
+                    ) : (
+                      <Text style={[styles.mealEmptyText, { textAlign: 'center', paddingVertical: Spacing.md }]}>
+                        No recent foods yet
+                      </Text>
+                    )
+                  ) : (
+                    // ── Saved ─────────────────────────────────────────────────
+                    savedFoods.length > 0 ? (
+                      savedFoods.map((food, i) => (
+                        <TouchableOpacity
+                          key={i}
+                          style={styles.quickPickItem}
+                          onPress={() => handleRecentPick(food)}>
+                          <View style={styles.quickPickInfo}>
+                            <Text style={styles.quickPickName} numberOfLines={1}>{food.name}</Text>
+                            <Text style={styles.quickPickMeta}>
+                              P {food.protein_g}g · C {food.carbs_g}g · F {food.fat_g}g
+                            </Text>
+                          </View>
+                          <Text style={styles.quickPickCals}>{food.calories}</Text>
+                          <TouchableOpacity
+                            style={styles.foodActionBtn}
+                            onPress={() => toggleSaveFood(food)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                            <IconSymbol name="star.fill" size={16} color={Colors.primary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.foodActionBtn}
+                            onPress={() => quickLog(food)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                            <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
+                          </TouchableOpacity>
+                        </TouchableOpacity>
+                      ))
+                    ) : (
+                      <Text style={[styles.mealEmptyText, { textAlign: 'center', paddingVertical: Spacing.md }]}>
+                        No saved foods yet — tap ★ on a recent food
+                      </Text>
+                    )
+                  )}
+                </View>
 
                 {/* Method buttons */}
                 <TouchableOpacity
@@ -665,9 +818,20 @@ function AddFoodModal({
                       <IconSymbol name="chevron.left" size={20} color={Colors.onSurfaceVariant} />
                     </TouchableOpacity>
                   )}
-                  <Text style={styles.modalTitle}>
+                  <Text style={[styles.modalTitle, { flex: 1 }]}>
                     {isEditMode ? 'Edit Food' : scannedProduct ? 'Confirm Details' : 'Add Food'}
                   </Text>
+                  {!isEditMode && (
+                    <TouchableOpacity
+                      onPress={toggleSaveCurrentFood}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <IconSymbol
+                        name={isSaved ? 'star.fill' : 'star'}
+                        size={20}
+                        color={isSaved ? Colors.primary : Colors.onSurfaceVariant}
+                      />
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Food name */}
@@ -690,7 +854,7 @@ function AddFoodModal({
                   <View style={styles.formCard}>
                     <View style={[styles.fieldRow, styles.fieldRowLast]}>
                       <Text style={styles.fieldLabel}>Quantity</Text>
-                      <TextInput
+                      <NumericInput
                         style={styles.fieldInput}
                         value={quantity}
                         onChangeText={setQuantity}
@@ -707,7 +871,7 @@ function AddFoodModal({
                 <View style={styles.formCard}>
                   <View style={styles.fieldRow}>
                     <Text style={styles.fieldLabel}>Calories</Text>
-                    <TextInput
+                    <NumericInput
                       style={styles.fieldInput}
                       value={calories}
                       onChangeText={setCalories}
@@ -720,7 +884,7 @@ function AddFoodModal({
                   </View>
                   <View style={styles.fieldRow}>
                     <Text style={styles.fieldLabel}>Protein</Text>
-                    <TextInput
+                    <NumericInput
                       style={styles.fieldInput}
                       value={protein}
                       onChangeText={setProtein}
@@ -733,7 +897,7 @@ function AddFoodModal({
                   </View>
                   <View style={styles.fieldRow}>
                     <Text style={styles.fieldLabel}>Carbs</Text>
-                    <TextInput
+                    <NumericInput
                       style={styles.fieldInput}
                       value={carbs}
                       onChangeText={setCarbs}
@@ -746,7 +910,7 @@ function AddFoodModal({
                   </View>
                   <View style={[styles.fieldRow, styles.fieldRowLast]}>
                     <Text style={styles.fieldLabel}>Fat</Text>
-                    <TextInput
+                    <NumericInput
                       style={styles.fieldInput}
                       value={fat}
                       onChangeText={setFat}
@@ -871,7 +1035,7 @@ function NutritionGoalsModal({
                 key={row.label}
                 style={[styles.goalsRow, i === arr.length - 1 && styles.goalsRowLast]}>
                 <Text style={styles.goalsLabel}>{row.label}</Text>
-                <TextInput
+                <NumericInput
                   style={styles.goalsInput}
                   value={row.value}
                   onChangeText={row.set}

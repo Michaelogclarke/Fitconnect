@@ -332,6 +332,52 @@ export const styles = StyleSheet.create({
   },
   goalsUnit: { ...Typography.labelLg, color: Colors.onSurfaceVariant, width: 24 },
 
+  // ── Pick tabs (Recent / Saved) ─────────────────────────────────────────────
+  pickTabRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  pickTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
+  pickTabActive: {
+    backgroundColor: Colors.primary + '22',
+    borderColor: Colors.primary,
+  },
+  pickTabText: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  pickTabTextActive: { color: Colors.primary },
+  pickTabBadge: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.full,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  pickTabBadgeText: { ...Typography.labelMd, color: Colors.background, fontSize: 10 },
+
+  // ── Fixed-height results container ────────────────────────────────────────
+  pickResultsArea: {
+    minHeight: 220,
+  },
+
+  // ── Food item action buttons (star + quick-log) ───────────────────────────
+  foodActionBtn: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   // ── Search bar ─────────────────────────────────────────────────────────────
   searchBarContainer: {
     flexDirection: 'row',

@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
@@ -398,7 +399,7 @@ function AddExerciseModal({
             <View style={styles.fieldRow}>
               <View style={styles.fieldHalf}>
                 <Text style={styles.fieldLabel}>Sets</Text>
-                <TextInput
+                <NumericInput
                   style={styles.fieldInput}
                   value={form.sets}
                   onChangeText={(v) => fieldC('sets', v)}
@@ -407,7 +408,7 @@ function AddExerciseModal({
               </View>
               <View style={styles.fieldHalf}>
                 <Text style={styles.fieldLabel}>Reps</Text>
-                <TextInput
+                <NumericInput
                   style={styles.fieldInput}
                   value={form.reps}
                   onChangeText={(v) => fieldC('reps', v)}
@@ -415,7 +416,7 @@ function AddExerciseModal({
               </View>
               <View style={styles.fieldHalf}>
                 <Text style={styles.fieldLabel}>Weight (kg)</Text>
-                <TextInput
+                <NumericInput
                   style={styles.fieldInput}
                   placeholder="0"
                   placeholderTextColor={Colors.onSurfaceVariant}

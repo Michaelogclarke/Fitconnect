@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -211,7 +212,7 @@ function AddExerciseModal({
             <View style={styles.fieldRow}>
               <View style={styles.fieldHalf}>
                 <Text style={styles.fieldLabel}>Sets</Text>
-                <TextInput
+                <NumericInput
                   style={styles.fieldInput}
                   value={form.sets}
                   onChangeText={(v) => fc('sets', v)}
@@ -220,7 +221,7 @@ function AddExerciseModal({
               </View>
               <View style={styles.fieldHalf}>
                 <Text style={styles.fieldLabel}>Reps</Text>
-                <TextInput
+                <NumericInput
                   style={styles.fieldInput}
                   value={form.reps}
                   onChangeText={(v) => fc('reps', v)}
@@ -228,7 +229,7 @@ function AddExerciseModal({
               </View>
               <View style={styles.fieldHalf}>
                 <Text style={styles.fieldLabel}>Weight (kg)</Text>
-                <TextInput
+                <NumericInput
                   style={styles.fieldInput}
                   placeholder="0"
                   placeholderTextColor={Colors.onSurfaceVariant}
@@ -371,7 +372,7 @@ function DaySection({
                   <View style={styles.inlineEditRow}>
                     <View style={styles.inlineField}>
                       <Text style={styles.inlineLabel}>Sets</Text>
-                      <TextInput
+                      <NumericInput
                         style={styles.inlineInput}
                         value={ex.sets}
                         onChangeText={(v) => onUpdateExercise(ex.id, 'sets', v)}
@@ -380,7 +381,7 @@ function DaySection({
                     </View>
                     <View style={styles.inlineField}>
                       <Text style={styles.inlineLabel}>Reps</Text>
-                      <TextInput
+                      <NumericInput
                         style={styles.inlineInput}
                         value={ex.reps}
                         onChangeText={(v) => onUpdateExercise(ex.id, 'reps', v)}
@@ -388,7 +389,7 @@ function DaySection({
                     </View>
                     <View style={styles.inlineField}>
                       <Text style={styles.inlineLabel}>Weight (kg)</Text>
-                      <TextInput
+                      <NumericInput
                         style={styles.inlineInput}
                         value={ex.weight}
                         onChangeText={(v) => onUpdateExercise(ex.id, 'weight', v)}

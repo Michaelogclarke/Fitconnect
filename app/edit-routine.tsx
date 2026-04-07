@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -92,7 +93,7 @@ function ExerciseCard({
           <View style={styles.editRow}>
             <View style={styles.editField}>
               <Text style={styles.editFieldLabel}>Sets</Text>
-              <TextInput
+              <NumericInput
                 style={styles.editFieldInput}
                 value={exercise.sets}
                 onChangeText={(v) => onUpdate('sets', v)}
@@ -102,7 +103,7 @@ function ExerciseCard({
             </View>
             <View style={styles.editField}>
               <Text style={styles.editFieldLabel}>Reps</Text>
-              <TextInput
+              <NumericInput
                 style={styles.editFieldInput}
                 value={exercise.reps}
                 onChangeText={(v) => onUpdate('reps', v)}
@@ -111,7 +112,7 @@ function ExerciseCard({
             </View>
             <View style={styles.editField}>
               <Text style={styles.editFieldLabel}>Weight</Text>
-              <TextInput
+              <NumericInput
                 style={styles.editFieldInput}
                 value={exercise.weight}
                 onChangeText={(v) => onUpdate('weight', v)}

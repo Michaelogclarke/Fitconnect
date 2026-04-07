@@ -55,6 +55,10 @@ const MAPPING = {
   'magnifyingglass':  'search',
   'figure.walk':      'directions-walk',
   'plus':             'add',
+  'star.fill':        'star',
+  'star':             'star-border',
+  'bookmark.fill':    'bookmark',
+  'bookmark':         'bookmark-border',
 } as IconMapping;
 
 /**

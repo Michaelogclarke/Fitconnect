@@ -4,6 +4,7 @@ import {
   Platform, RefreshControl, ScrollView, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -233,7 +234,7 @@ function LogWeightModal({
           <Text style={styles.modalTitle}>Log Body Weight</Text>
 
           <View style={styles.modalInputRow}>
-            <TextInput
+            <NumericInput
               style={styles.modalInput}
               value={weight}
               onChangeText={setWeight}
