@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -13,13 +14,16 @@ import { useRouter } from 'expo-router';
 
 import { supabase } from '@/lib/supabase';
 import { styles } from '@/styles/auth.styles';
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+
+type Role = 'client' | 'trainer';
 
 export default function SignUpScreen() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
+  const [role,     setRole]     = useState<Role>('client');
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
   const [done,     setDone]     = useState(false);
@@ -33,7 +37,7 @@ export default function SignUpScreen() {
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { full_name: fullName.trim() } },
+      options: { data: { full_name: fullName.trim(), role } },
     });
 
     setLoading(false);
@@ -99,6 +103,34 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
+            <Text style={styles.label}>I am a</Text>
+            <View style={roleStyles.row}>
+              <TouchableOpacity
+                style={[roleStyles.option, role === 'client' && roleStyles.optionSelected]}
+                onPress={() => setRole('client')}
+                activeOpacity={0.8}>
+                <Text style={[roleStyles.optionText, role === 'client' && roleStyles.optionTextSelected]}>
+                  Client
+                </Text>
+                <Text style={[roleStyles.optionSub, role === 'client' && roleStyles.optionSubSelected]}>
+                  Track my fitness
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[roleStyles.option, role === 'trainer' && roleStyles.optionSelected]}
+                onPress={() => setRole('trainer')}
+                activeOpacity={0.8}>
+                <Text style={[roleStyles.optionText, role === 'trainer' && roleStyles.optionTextSelected]}>
+                  Personal Trainer
+                </Text>
+                <Text style={[roleStyles.optionSub, role === 'trainer' && roleStyles.optionSubSelected]}>
+                  Manage my clients
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
@@ -152,3 +184,40 @@ export default function SignUpScreen() {
     </SafeAreaView>
   );
 }
+
+const roleStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  option: {
+    flex: 1,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.outlineVariant,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    alignItems: 'center',
+  },
+  optionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '14',
+  },
+  optionText: {
+    ...Typography.titleMd,
+    color: Colors.onSurfaceVariant,
+  },
+  optionTextSelected: {
+    color: Colors.primary,
+  },
+  optionSub: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+    marginTop: 2,
+    opacity: 0.7,
+  },
+  optionSubSelected: {
+    color: Colors.primary,
+    opacity: 0.8,
+  },
+});
