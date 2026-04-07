@@ -602,4 +602,32 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   numPadDoneBtnText: { ...Typography.titleLg, color: Colors.background },
+
+  // ── Workout saved overlay ──────────────────────────────────────────────────
+  savedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  savedCard: {
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.xl,
+    padding: Spacing.xl,
+    marginHorizontal: Spacing.xl,
+    alignItems: 'center',
+    gap: Spacing.md,
+    width: '80%',
+  },
+  savedIconBox: {
+    width: 72, height: 72, borderRadius: Radius.full,
+    backgroundColor: Colors.primary + '22',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  savedTitle: { ...Typography.headlineMd, color: Colors.onSurface },
+  savedStatsRow: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.xs },
+  savedStat: { alignItems: 'center', minWidth: 60 },
+  savedStatValue: { ...Typography.headlineMd, color: Colors.primary },
+  savedStatLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginTop: 2 },
 });

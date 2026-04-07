@@ -66,6 +66,12 @@ export const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     borderRadius: Radius.full,
   },
+  calorieRemaining: {
+    ...Typography.labelLg,
+    textAlign: 'right',
+    marginBottom: Spacing.md,
+    marginTop: -Spacing.xs,
+  },
   macroRow: {
     flexDirection: 'row',
     gap: Spacing.md,
@@ -125,16 +131,27 @@ export const styles = StyleSheet.create({
   },
   foodInfo:    { flex: 1 },
   foodName:    { ...Typography.titleMd, color: Colors.onSurface },
-  foodMeta:    { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  foodMacroRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 5,
+    flexWrap: 'wrap',
+  },
+  foodMacroPill: {
+    backgroundColor: Colors.surfaceContainerHighest,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  foodMacroText: { ...Typography.labelMd, fontWeight: '600' as const },
   foodCals:    { ...Typography.titleMd, color: Colors.primary },
   deleteAction: {
     backgroundColor: Colors.error,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 72,
+    width: 76,
     alignSelf: 'stretch',
   },
-  deleteActionText: { ...Typography.labelLg, color: '#fff', marginTop: 4 },
 
   // ── FAB ────────────────────────────────────────────────────────────────────
   fab: {

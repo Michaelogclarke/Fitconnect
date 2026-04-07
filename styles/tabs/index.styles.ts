@@ -110,6 +110,82 @@ export const styles = StyleSheet.create({
   statValue: { ...Typography.headlineMd, color: Colors.primary },
   statLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginTop: 2 },
 
+  // ── Weekly goal card ───────────────────────────────────────────────────────
+  weeklyGoalCard: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
+  weeklyGoalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  weeklyGoalTitle: { ...Typography.titleMd, color: Colors.onSurface, flex: 1 },
+  weeklyGoalTapHint: { ...Typography.labelMd, color: Colors.onSurfaceVariant },
+  weeklyGoalDots: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  weeklyGoalDot: {
+    height: 10,
+    flex: 1,
+    borderRadius: Radius.full,
+  },
+  weeklyGoalDotFilled: { backgroundColor: Colors.primary },
+  weeklyGoalDotEmpty:  { backgroundColor: Colors.outlineVariant },
+  weeklyGoalCount: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+
+  // ── Weekly goal picker modal ───────────────────────────────────────────────
+  goalPickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
+  },
+  goalPickerSheet: {
+    width: '100%',
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.xl,
+    padding: Spacing.xl,
+  },
+  goalPickerTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.xs },
+  goalPickerSub:   { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginBottom: Spacing.lg },
+  goalPickerOptions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  goalPickerOption: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
+  goalPickerOptionActive: {
+    backgroundColor: Colors.primary + '22',
+    borderColor: Colors.primary,
+  },
+  goalPickerOptionText: {
+    ...Typography.headlineMd,
+    color: Colors.onSurface,
+  },
+  goalPickerOptionLabel: {
+    ...Typography.labelMd,
+    color: Colors.onSurfaceVariant,
+    marginTop: 2,
+  },
+  goalPickerOptionTextActive: { color: Colors.primary },
+
   // ── Recent sessions ────────────────────────────────────────────────────────
   recentCard: {
     flexDirection: 'row', alignItems: 'center',

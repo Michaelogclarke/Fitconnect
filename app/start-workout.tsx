@@ -743,8 +743,9 @@ export default function StartWorkoutScreen() {
   const notifIdRef       = useRef<string | null>(null);
   const restExerciseRef  = useRef<string>('');
 
-  const [finishing, setFinishing] = useState(false);
-  const [saveError, setSaveError] = useState('');
+  const [finishing,   setFinishing]   = useState(false);
+  const [saveError,   setSaveError]   = useState('');
+  const [savedStats,  setSavedStats]  = useState<{ sets: number; volume: number; duration: number } | null>(null);
 
   // ── Tick to keep rest countdown display fresh ──────────────────────────────
   const [, setTick] = useState(0);
@@ -759,11 +760,13 @@ export default function StartWorkoutScreen() {
     ? Math.max(0, Math.ceil((activeRest.endsAt - Date.now()) / 1000))
     : 0;
 
-  // Auto-clear when rest expires + vibrate to signal it's time
+  // Auto-clear when rest expires + double-pulse to signal it's time
   useEffect(() => {
     if (activeRest && restRemaining <= 0) {
       setActiveRest(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 180);
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 360);
     }
   }, [restRemaining]);
 
@@ -960,13 +963,19 @@ export default function StartWorkoutScreen() {
 
   // ── Save workout ─────────────────────────────────────────────────────────────
 
+  function sessionName(d: Date): string {
+    const h = d.getHours();
+    if (h < 12) return 'Morning Workout';
+    if (h < 17) return 'Afternoon Workout';
+    if (h < 21) return 'Evening Workout';
+    return 'Night Workout';
+  }
+
   function buildPayload(userId: string): WorkoutSavePayload {
     const workoutStart = startedAt ?? new Date();
     return {
       user_id:          userId,
-      name:             workoutStart.toLocaleDateString('en-GB', {
-        weekday: 'long', day: 'numeric', month: 'short',
-      }) + ' Workout',
+      name:             sessionName(workoutStart),
       started_at:       workoutStart.toISOString(),
       finished_at:      new Date().toISOString(),
       duration_seconds: elapsed,
@@ -1046,17 +1055,30 @@ export default function StartWorkoutScreen() {
         if (isNetworkError(netErr)) {
           // No connection — store locally and sync later
           await enqueueWorkout(payload);
+          const allSets  = Object.values(setsState).flat();
+          const doneSets = allSets.filter((s) => s.done);
+          const volume   = doneSets.reduce((sum, s) => sum + (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0), 0);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          clearWorkout();
-          router.replace('/(tabs)/history');
+          setSavedStats({ sets: doneSets.length, volume, duration: elapsed });
+          setFinishing(false);
+          setTimeout(() => { clearWorkout(); setSavedStats(null); router.replace('/(tabs)'); }, 2200);
           return;
         }
         throw netErr; // re-throw auth / logic errors
       }
 
+      const allSets   = Object.values(setsState).flat();
+      const doneSets  = allSets.filter((s) => s.done);
+      const volume    = doneSets.reduce((sum, s) => sum + (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0), 0);
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      clearWorkout();
-      router.replace('/(tabs)/history');
+      setSavedStats({ sets: doneSets.length, volume, duration: elapsed });
+      setFinishing(false);
+      setTimeout(() => {
+        clearWorkout();
+        setSavedStats(null);
+        router.replace('/(tabs)');
+      }, 2200);
     } catch (err: any) {
       setSaveError(err?.message ?? 'Failed to save. Please try again.');
       setFinishing(false);
@@ -1174,6 +1196,32 @@ export default function StartWorkoutScreen() {
         onClose={() => setShowAddModal(false)}
         onAdd={addCustomExercise}
       />
+
+      {/* Workout saved overlay */}
+      {savedStats && (
+        <View style={styles.savedOverlay}>
+          <View style={styles.savedCard}>
+            <View style={styles.savedIconBox}>
+              <IconSymbol name="checkmark.circle.fill" size={40} color={Colors.primary} />
+            </View>
+            <Text style={styles.savedTitle}>Workout Complete!</Text>
+            <View style={styles.savedStatsRow}>
+              <View style={styles.savedStat}>
+                <Text style={styles.savedStatValue}>{formatTime(savedStats.duration)}</Text>
+                <Text style={styles.savedStatLabel}>Duration</Text>
+              </View>
+              <View style={styles.savedStat}>
+                <Text style={styles.savedStatValue}>{savedStats.sets}</Text>
+                <Text style={styles.savedStatLabel}>Sets</Text>
+              </View>
+              <View style={styles.savedStat}>
+                <Text style={styles.savedStatValue}>{savedStats.volume >= 1000 ? `${(savedStats.volume / 1000).toFixed(1)}k` : String(Math.round(savedStats.volume))}</Text>
+                <Text style={styles.savedStatLabel}>kg lifted</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Numpad — screen-level so it renders over everything */}
       <NumPad

@@ -54,6 +54,12 @@ export const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   logWeightText: { ...Typography.labelLg, color: Colors.primary },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  viewAllText: { ...Typography.labelLg, color: Colors.primary },
 
   // ── Body weight card ───────────────────────────────────────────────────────
   bwCard: {

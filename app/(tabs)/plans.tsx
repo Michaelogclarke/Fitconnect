@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { styles } from '@/styles/tabs/plans.styles';
 import { supabase } from '@/lib/supabase';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
@@ -233,10 +233,17 @@ export default function PlansScreen() {
           <ActivityIndicator color={Colors.primary} style={{ marginVertical: 40 }} />
         ) : plans.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No plans yet</Text>
+            <IconSymbol name="list.bullet" size={36} color={Colors.outlineVariant} />
+            <Text style={[styles.emptyText, { marginTop: Spacing.md }]}>No plans yet</Text>
             <Text style={styles.emptySubtext}>
-              Tap "New Plan" to build your first training routine
+              Build a training plan with your exercises, sets, and reps — then start any day with one tap.
             </Text>
+            <TouchableOpacity
+              style={styles.emptyCreateBtn}
+              onPress={() => router.push('/plan-editor' as any)}>
+              <IconSymbol name="plus.circle.fill" size={16} color={Colors.background} />
+              <Text style={styles.emptyCreateText}>Create Your First Plan</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           plans.map((plan) => (

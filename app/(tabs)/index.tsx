@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
@@ -10,6 +12,9 @@ import { supabase } from '@/lib/supabase';
 import { formatSessionDate, formatDuration, formatVolume } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
+
+const WEEKLY_GOAL_KEY = 'pref:weekly_goal';
+const WEEKLY_GOAL_OPTIONS = [2, 3, 4, 5, 6];
 
 // ─── Streak helpers ───────────────────────────────────────────────────────────
 
@@ -83,6 +88,14 @@ type HomeData = {
   longestStreak:  number;
 };
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  if (h < 21) return 'Good evening';
+  return 'Good night';
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const { isActive, startWorkoutFromPlan } = useWorkout();
@@ -95,6 +108,8 @@ export default function HomeScreen() {
   const [totalSessions,  setTotalSessions]  = useState(0);
   const [currentStreak,  setCurrentStreak]  = useState(0);
   const [longestStreak,  setLongestStreak]  = useState(0);
+  const [weeklyGoal,     setWeeklyGoal]     = useState(4);
+  const [showGoalPicker, setShowGoalPicker] = useState(false);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -108,6 +123,24 @@ export default function HomeScreen() {
     setTotalSessions(d.totalSessions);
     setCurrentStreak(d.currentStreak);
     setLongestStreak(d.longestStreak);
+  }
+
+  // Load weekly goal from storage once on mount
+  useEffect(() => {
+    AsyncStorage.getItem(WEEKLY_GOAL_KEY).then((val) => {
+      if (val) setWeeklyGoal(Number(val));
+    });
+  }, []);
+
+  async function openGoalPicker() {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowGoalPicker(true);
+  }
+
+  async function selectWeeklyGoal(val: number) {
+    setWeeklyGoal(val);
+    setShowGoalPicker(false);
+    await AsyncStorage.setItem(WEEKLY_GOAL_KEY, String(val));
   }
 
   // Reload whenever the tab comes into focus
@@ -274,7 +307,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>
-              {userName ? `Let's get it, ${userName}` : "Let's get it"}
+              {userName ? `${getGreeting()}, ${userName}` : getGreeting()}
             </Text>
             <Text style={styles.date}>{today}</Text>
           </View>
@@ -336,6 +369,35 @@ export default function HomeScreen() {
               </View>
             </View>
 
+            {/* Weekly goal */}
+            <TouchableOpacity
+              style={styles.weeklyGoalCard}
+              onLongPress={openGoalPicker}
+              delayLongPress={400}
+              activeOpacity={0.8}>
+              <View style={styles.weeklyGoalHeader}>
+                <IconSymbol name="trophy.fill" size={16} color={Colors.primary} />
+                <Text style={styles.weeklyGoalTitle}>Weekly Goal</Text>
+                <Text style={styles.weeklyGoalTapHint}>Hold to change · {weeklyGoal}×/week</Text>
+              </View>
+              <View style={styles.weeklyGoalDots}>
+                {Array.from({ length: weeklyGoal }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.weeklyGoalDot,
+                      i < weekSessions ? styles.weeklyGoalDotFilled : styles.weeklyGoalDotEmpty,
+                    ]}
+                  />
+                ))}
+              </View>
+              <Text style={styles.weeklyGoalCount}>
+                {weekSessions >= weeklyGoal
+                  ? `Goal reached! ${weekSessions} / ${weeklyGoal} sessions`
+                  : `${weekSessions} / ${weeklyGoal} sessions this week`}
+              </Text>
+            </TouchableOpacity>
+
             {/* Recent sessions */}
             <Text style={styles.sectionLabel}>Recent Sessions</Text>
 
@@ -381,6 +443,32 @@ export default function HomeScreen() {
         )}
 
       </ScrollView>
+
+      {/* Weekly goal picker */}
+      <Modal visible={showGoalPicker} transparent animationType="fade">
+        <Pressable style={styles.goalPickerOverlay} onPress={() => setShowGoalPicker(false)}>
+          <Pressable style={styles.goalPickerSheet} onPress={() => {}}>
+            <Text style={styles.goalPickerTitle}>Weekly Workout Goal</Text>
+            <Text style={styles.goalPickerSub}>How many sessions per week?</Text>
+            <View style={styles.goalPickerOptions}>
+              {WEEKLY_GOAL_OPTIONS.map((n) => (
+                <TouchableOpacity
+                  key={n}
+                  style={[styles.goalPickerOption, n === weeklyGoal && styles.goalPickerOptionActive]}
+                  onPress={() => selectWeeklyGoal(n)}>
+                  <Text style={[styles.goalPickerOptionText, n === weeklyGoal && styles.goalPickerOptionTextActive]}>
+                    {n}
+                  </Text>
+                  <Text style={[styles.goalPickerOptionLabel, n === weeklyGoal && styles.goalPickerOptionTextActive]}>
+                    {n === 1 ? 'day' : 'days'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
     </SafeAreaView>
   );
 }

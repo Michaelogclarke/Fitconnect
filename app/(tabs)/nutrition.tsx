@@ -6,6 +6,7 @@ import {
   Modal,
   PanResponder,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -63,6 +64,16 @@ type RecentFood = {
 
 type NutritionDayCache = { date: string; goals: NutritionGoals; logs: FoodLog[] };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function mealTypeForNow(): MealType {
+  const h = new Date().getHours();
+  if (h < 10) return 'breakfast';
+  if (h < 14) return 'lunch';
+  if (h < 18) return 'dinner';
+  return 'snack';
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEFAULT_GOALS: NutritionGoals = {
@@ -83,13 +94,16 @@ const MEAL_LABELS: Record<MealType, string> = {
 function SwipeableFoodRow({
   log,
   onDelete,
+  onEdit,
 }: {
   log:      FoodLog;
   onDelete: () => void;
+  onEdit:   () => void;
 }) {
-  const DELETE_W   = 72;
+  const DELETE_W   = 76;
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen     = useRef(false);
+  const [rowWidth, setRowWidth] = useState(0);
 
   const pan = useRef(
     PanResponder.create({
@@ -112,27 +126,44 @@ function SwipeableFoodRow({
     })
   ).current;
 
-  const macroStr = [
-    log.protein_g > 0 ? `P ${log.protein_g}g` : null,
-    log.carbs_g   > 0 ? `C ${log.carbs_g}g`   : null,
-    log.fat_g     > 0 ? `F ${log.fat_g}g`     : null,
-  ].filter(Boolean).join('  ·  ');
+  const macros = [
+    log.protein_g > 0 ? { label: 'P', value: log.protein_g, color: Colors.primary } : null,
+    log.carbs_g   > 0 ? { label: 'C', value: log.carbs_g,   color: '#70aaff'       } : null,
+    log.fat_g     > 0 ? { label: 'F', value: log.fat_g,     color: Colors.success  } : null,
+  ].filter(Boolean) as { label: string; value: number; color: string }[];
 
   return (
-    <View style={styles.foodRowContainer}>
+    <View
+      style={styles.foodRowContainer}
+      onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
       <Animated.View
         style={{ flexDirection: 'row', transform: [{ translateX }] }}
         {...pan.panHandlers}>
-        <View style={styles.foodRow}>
+        {/* Food content — locked to container width so delete stays hidden */}
+        <TouchableOpacity
+          style={[styles.foodRow, rowWidth > 0 && { width: rowWidth }]}
+          onPress={onEdit}
+          activeOpacity={0.7}>
           <View style={styles.foodInfo}>
             <Text style={styles.foodName} numberOfLines={1}>{log.name}</Text>
-            {!!macroStr && <Text style={styles.foodMeta}>{macroStr}</Text>}
+            {macros.length > 0 && (
+              <View style={styles.foodMacroRow}>
+                {macros.map((m) => (
+                  <View key={m.label} style={styles.foodMacroPill}>
+                    <Text style={[styles.foodMacroText, { color: m.color }]}>
+                      {m.label} {m.value}g
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
           <Text style={styles.foodCals}>{log.calories} kcal</Text>
-        </View>
+        </TouchableOpacity>
+
+        {/* Delete action revealed on swipe */}
         <TouchableOpacity style={styles.deleteAction} onPress={onDelete}>
-          <IconSymbol name="trash.fill" size={18} color="#fff" />
-          <Text style={styles.deleteActionText}>Delete</Text>
+          <IconSymbol name="trash.fill" size={20} color="#fff" />
         </TouchableOpacity>
       </Animated.View>
     </View>
@@ -299,14 +330,21 @@ function BarcodeScannerModal({
 function AddFoodModal({
   visible,
   viewDate,
+  editLog,
+  targetMealType,
   onClose,
   onAdded,
+  onEdited,
 }: {
-  visible:  boolean;
-  viewDate: Date;
-  onClose:  () => void;
-  onAdded:  (log: FoodLog) => void;
+  visible:         boolean;
+  viewDate:        Date;
+  editLog?:        FoodLog;
+  targetMealType?: MealType;
+  onClose:         () => void;
+  onAdded:         (log: FoodLog) => void;
+  onEdited:        (log: FoodLog) => void;
 }) {
+  const isEditMode = !!editLog;
   type Phase = 'pick' | 'configure';
   const [phase,    setPhase]    = useState<Phase>('pick');
   const [showScan, setShowScan] = useState(false);
@@ -318,7 +356,7 @@ function AddFoodModal({
   const [protein,        setProtein]        = useState('');
   const [carbs,          setCarbs]          = useState('');
   const [fat,            setFat]            = useState('');
-  const [mealType,       setMealType]       = useState<MealType>('breakfast');
+  const [mealType,       setMealType]       = useState<MealType>(mealTypeForNow());
   const [scannedProduct, setScannedProduct] = useState<ScannedProduct | null>(null);
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState('');
@@ -329,6 +367,22 @@ function AddFoodModal({
   const [searchResults, setSearchResults] = useState<ScannedProduct[]>([]);
   const [searching,     setSearching]     = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Pre-fill form when editing an existing log; set meal type when opening for specific meal
+  useEffect(() => {
+    if (!visible) return;
+    if (editLog) {
+      setFoodName(editLog.name);
+      setCalories(String(editLog.calories));
+      setProtein(String(editLog.protein_g));
+      setCarbs(String(editLog.carbs_g));
+      setFat(String(editLog.fat_g));
+      setMealType(editLog.meal_type);
+      setPhase('configure');
+    } else {
+      setMealType(targetMealType ?? mealTypeForNow());
+    }
+  }, [visible, editLog, targetMealType]);
 
   // Load recent foods when modal opens
   useEffect(() => {
@@ -433,6 +487,13 @@ function AddFoodModal({
     onClose();
   }
 
+  function handleDone(log: FoodLog) {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (isEditMode) onEdited(log);
+    else onAdded(log);
+    handleClose();
+  }
+
   async function handleSave() {
     const cal = parseInt(calories, 10);
     if (!foodName.trim()) { setError('Food name is required'); return; }
@@ -445,24 +506,34 @@ function AddFoodModal({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not signed in');
 
-      const { data, error: insertErr } = await supabase
-        .from('food_logs')
-        .insert({
-          user_id:   user.id,
-          name:      foodName.trim(),
-          calories:  cal,
-          protein_g: parseFloat(protein) || 0,
-          carbs_g:   parseFloat(carbs)   || 0,
-          fat_g:     parseFloat(fat)     || 0,
-          meal_type: mealType,
-          logged_at: toLocalDate(viewDate),
-        })
-        .select()
-        .single();
+      const fields = {
+        name:      foodName.trim(),
+        calories:  cal,
+        protein_g: parseFloat(protein) || 0,
+        carbs_g:   parseFloat(carbs)   || 0,
+        fat_g:     parseFloat(fat)     || 0,
+        meal_type: mealType,
+      };
 
-      if (insertErr) throw insertErr;
-      onAdded(data as FoodLog);
-      handleClose();
+      if (isEditMode && editLog) {
+        const { data, error: updateErr } = await supabase
+          .from('food_logs')
+          .update(fields)
+          .eq('id', editLog.id)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+        if (updateErr) throw updateErr;
+        handleDone(data as FoodLog);
+      } else {
+        const { data, error: insertErr } = await supabase
+          .from('food_logs')
+          .insert({ user_id: user.id, ...fields, logged_at: toLocalDate(viewDate) })
+          .select()
+          .single();
+        if (insertErr) throw insertErr;
+        handleDone(data as FoodLog);
+      }
     } catch (err: any) {
       setError(err?.message ?? 'Failed to save');
       setSaving(false);
@@ -589,13 +660,13 @@ function AddFoodModal({
             ) : (
               <>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                  {!scannedProduct && (
+                  {!scannedProduct && !isEditMode && (
                     <TouchableOpacity onPress={() => setPhase('pick')}>
                       <IconSymbol name="chevron.left" size={20} color={Colors.onSurfaceVariant} />
                     </TouchableOpacity>
                   )}
                   <Text style={styles.modalTitle}>
-                    {scannedProduct ? 'Confirm Details' : 'Add Food'}
+                    {isEditMode ? 'Edit Food' : scannedProduct ? 'Confirm Details' : 'Add Food'}
                   </Text>
                 </View>
 
@@ -714,7 +785,7 @@ function AddFoodModal({
                     disabled={saving}>
                     {saving
                       ? <ActivityIndicator size="small" color={Colors.background} />
-                      : <Text style={styles.modalSaveText}>Add Food</Text>}
+                      : <Text style={styles.modalSaveText}>{isEditMode ? 'Save Changes' : 'Add Food'}</Text>}
                   </TouchableOpacity>
                 </View>
               </>
@@ -785,6 +856,9 @@ function NutritionGoalsModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalSheet}>
           <Text style={styles.modalTitle}>Daily Goals</Text>
+          <Text style={styles.modalSubtitle}>
+            Set your daily calorie and macro targets. A typical starting point is 2000 kcal · 150g protein · 200g carbs · 65g fat.
+          </Text>
 
           <View style={styles.formCard}>
             {[
@@ -834,12 +908,17 @@ function NutritionGoalsModal({
 export default function NutritionScreen() {
   const insets = useSafeAreaInsets();
 
-  const [loading,       setLoading]       = useState(true);
-  const [viewDate,      setViewDate]      = useState(new Date());
-  const [goals,         setGoals]         = useState<NutritionGoals>(DEFAULT_GOALS);
-  const [logs,          setLogs]          = useState<FoodLog[]>([]);
-  const [showAddModal,  setShowAddModal]  = useState(false);
+  const [loading,        setLoading]        = useState(true);
+  const [refreshing,     setRefreshing]     = useState(false);
+  const [viewDate,       setViewDate]       = useState(new Date());
+  const [goals,          setGoals]          = useState<NutritionGoals>(DEFAULT_GOALS);
+  const [logs,           setLogs]           = useState<FoodLog[]>([]);
+  const [showAddModal,   setShowAddModal]   = useState(false);
   const [showGoalsModal, setShowGoalsModal] = useState(false);
+  const [editLog,        setEditLog]        = useState<FoodLog | undefined>(undefined);
+  const [targetMeal,     setTargetMeal]     = useState<MealType | undefined>(undefined);
+  // Meals with entries start expanded; empty meals start collapsed
+  const [expandedMeals,  setExpandedMeals]  = useState<Set<MealType>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
@@ -847,17 +926,29 @@ export default function NutritionScreen() {
     }, [viewDate])
   );
 
-  async function loadData(date: Date) {
+  // Expand meals that have logs when logs change
+  useEffect(() => {
+    setExpandedMeals((prev) => {
+      const next = new Set(prev);
+      MEAL_TYPES.forEach((meal) => {
+        if (logs.some((l) => l.meal_type === meal)) next.add(meal);
+      });
+      return next;
+    });
+  }, [logs]);
+
+  async function loadData(date: Date, silent = false) {
     const dateStr = toLocalDate(date);
 
-    // Show cached data for this date immediately
-    const cached = await getCachedAny<NutritionDayCache>(CACHE_KEYS.NUTRITION_DAY);
-    if (cached && cached.date === dateStr) {
-      setGoals(cached.goals);
-      setLogs(cached.logs);
-      setLoading(false);
-    } else {
-      setLoading(true);
+    if (!silent) {
+      const cached = await getCachedAny<NutritionDayCache>(CACHE_KEYS.NUTRITION_DAY);
+      if (cached && cached.date === dateStr) {
+        setGoals(cached.goals);
+        setLogs(cached.logs);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
     }
 
     try {
@@ -886,7 +977,14 @@ export default function NutritionScreen() {
     setLoading(false);
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadData(viewDate, true);
+    setRefreshing(false);
+  }
+
   async function deleteLog(id: string) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -899,6 +997,12 @@ export default function NutritionScreen() {
 
   function handleLogAdded(log: FoodLog) {
     const updated = [...logs, log];
+    setLogs(updated);
+    setCached(CACHE_KEYS.NUTRITION_DAY, { date: toLocalDate(viewDate), goals, logs: updated });
+  }
+
+  function handleLogEdited(log: FoodLog) {
+    const updated = logs.map((l) => l.id === log.id ? log : l);
     setLogs(updated);
     setCached(CACHE_KEYS.NUTRITION_DAY, { date: toLocalDate(viewDate), goals, logs: updated });
   }
@@ -928,6 +1032,14 @@ export default function NutritionScreen() {
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   }
 
+  function toggleMeal(meal: MealType) {
+    setExpandedMeals((prev) => {
+      const next = new Set(prev);
+      if (next.has(meal)) next.delete(meal); else next.add(meal);
+      return next;
+    });
+  }
+
   const isToday = toLocalDate(viewDate) === toLocalDate(new Date());
 
   // Derived totals
@@ -936,10 +1048,11 @@ export default function NutritionScreen() {
   const totalCarbs    = logs.reduce((s, l) => s + l.carbs_g,   0);
   const totalFat      = logs.reduce((s, l) => s + l.fat_g,     0);
 
-  const calPct     = Math.min(totalCalories / (goals.calories  || 1), 1);
-  const proteinPct = Math.min(totalProtein  / (goals.protein_g || 1), 1);
-  const carbsPct   = Math.min(totalCarbs    / (goals.carbs_g   || 1), 1);
-  const fatPct     = Math.min(totalFat      / (goals.fat_g     || 1), 1);
+  const calRemaining = goals.calories - totalCalories;
+  const calPct       = Math.min(totalCalories / (goals.calories  || 1), 1);
+  const proteinPct   = Math.min(totalProtein  / (goals.protein_g || 1), 1);
+  const carbsPct     = Math.min(totalCarbs    / (goals.carbs_g   || 1), 1);
+  const fatPct       = Math.min(totalFat      / (goals.fat_g     || 1), 1);
 
   const fabBottom = 60 + insets.bottom + Spacing.lg;
 
@@ -967,7 +1080,12 @@ export default function NutritionScreen() {
       {loading ? (
         <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
+          }>
 
           {/* Daily summary card */}
           <View style={styles.summaryCard}>
@@ -981,6 +1099,16 @@ export default function NutritionScreen() {
             <View style={styles.calorieBar}>
               <View style={[styles.calorieBarFill, { width: `${calPct * 100}%` }]} />
             </View>
+
+            {/* Remaining calories */}
+            <Text style={[
+              styles.calorieRemaining,
+              { color: calRemaining < 0 ? Colors.error : Colors.onSurfaceVariant },
+            ]}>
+              {calRemaining < 0
+                ? `${Math.abs(calRemaining)} kcal over`
+                : `${calRemaining} kcal remaining`}
+            </Text>
 
             <View style={styles.macroRow}>
               {[
@@ -1002,23 +1130,49 @@ export default function NutritionScreen() {
 
           {/* Meal sections */}
           {MEAL_TYPES.map((meal) => {
-            const mealLogs = logs.filter((l) => l.meal_type === meal);
-            const mealCals = mealLogs.reduce((s, l) => s + l.calories, 0);
+            const mealLogs  = logs.filter((l) => l.meal_type === meal);
+            const mealCals  = mealLogs.reduce((s, l) => s + l.calories, 0);
+            const isExpanded = expandedMeals.has(meal);
             return (
               <View key={meal} style={styles.mealSection}>
                 <View style={styles.mealHeader}>
-                  <Text style={styles.mealLabel}>{MEAL_LABELS[meal]}</Text>
-                  {mealCals > 0 && <Text style={styles.mealCals}>{mealCals} kcal</Text>}
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 }}
+                    onPress={() => toggleMeal(meal)}
+                    activeOpacity={0.7}>
+                    <Text style={styles.mealLabel}>{MEAL_LABELS[meal]}</Text>
+                    <IconSymbol
+                      name={isExpanded ? 'chevron.left' : 'chevron.right'}
+                      size={12}
+                      color={Colors.onSurfaceVariant}
+                      style={{ transform: [{ rotate: isExpanded ? '270deg' : '90deg' }] }}
+                    />
+                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                    {mealCals > 0 && <Text style={styles.mealCals}>{mealCals} kcal</Text>}
+                    <TouchableOpacity
+                      onPress={() => { setEditLog(undefined); setTargetMeal(meal); setShowAddModal(true); }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
-                {mealLogs.length === 0 ? (
-                  <View style={styles.mealEmpty}>
-                    <Text style={styles.mealEmptyText}>Nothing logged yet</Text>
-                  </View>
-                ) : (
-                  mealLogs.map((log) => (
-                    <SwipeableFoodRow key={log.id} log={log} onDelete={() => deleteLog(log.id)} />
-                  ))
+                {isExpanded && (
+                  mealLogs.length === 0 ? (
+                    <View style={styles.mealEmpty}>
+                      <Text style={styles.mealEmptyText}>Nothing logged yet</Text>
+                    </View>
+                  ) : (
+                    mealLogs.map((log) => (
+                      <SwipeableFoodRow
+                        key={log.id}
+                        log={log}
+                        onDelete={() => deleteLog(log.id)}
+                        onEdit={() => { setEditLog(log); setShowAddModal(true); }}
+                      />
+                    ))
+                  )
                 )}
               </View>
             );
@@ -1030,15 +1184,18 @@ export default function NutritionScreen() {
       {/* FAB */}
       <TouchableOpacity
         style={[styles.fab, { bottom: fabBottom }]}
-        onPress={() => setShowAddModal(true)}>
+        onPress={() => { setEditLog(undefined); setTargetMeal(undefined); setShowAddModal(true); }}>
         <IconSymbol name="plus.circle.fill" size={26} color={Colors.background} />
       </TouchableOpacity>
 
       <AddFoodModal
         visible={showAddModal}
         viewDate={viewDate}
-        onClose={() => setShowAddModal(false)}
+        editLog={editLog}
+        targetMealType={targetMeal}
+        onClose={() => { setShowAddModal(false); setEditLog(undefined); setTargetMeal(undefined); }}
         onAdded={handleLogAdded}
+        onEdited={handleLogEdited}
       />
 
       <NutritionGoalsModal

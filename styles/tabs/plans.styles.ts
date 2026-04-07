@@ -48,7 +48,18 @@ export const styles = StyleSheet.create({
     borderColor: Colors.outlineVariant,
   },
   emptyText:    { ...Typography.titleMd, color: Colors.onSurface, marginBottom: Spacing.xs },
-  emptySubtext: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' },
+  emptySubtext: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' as const },
+  emptyCreateBtn: {
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: Spacing.xs,
+  },
+  emptyCreateText: { ...Typography.titleMd, color: Colors.background },
 
   // ── Plan card ──────────────────────────────────────────────────────────────
   planCard: {

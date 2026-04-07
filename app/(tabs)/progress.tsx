@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal,
-  Platform, ScrollView, Text, TextInput,
+  Platform, RefreshControl, ScrollView, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,7 +12,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { styles } from '@/styles/tabs/progress.styles';
 import { styles as hStyles } from '@/styles/tabs/history.styles';
 import { supabase } from '@/lib/supabase';
-import { formatVolume, formatShortDate, formatDuration, weekLabel } from '@/lib/format';
+import { formatVolume, formatShortDate, formatDuration } from '@/lib/format';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,8 +30,6 @@ type HistorySession = {
   volume:           number;
   exercises:        string[];
 };
-
-type WeekGroup = { week: string; sessions: HistorySession[] };
 
 const RANGE_OPTIONS = ['1W', '1M', '3M', 'All'] as const;
 type Range = typeof RANGE_OPTIONS[number];
@@ -282,8 +280,9 @@ export default function ProgressScreen() {
   const [weeklyVol,      setWeeklyVol]      = useState<VolEntry[]>([]);
   const [muscleFreq,     setMuscleFreq]     = useState<FreqEntry[]>([]);
   const [showLogModal,   setShowLogModal]   = useState(false);
-  const [historyGroups,  setHistoryGroups]  = useState<WeekGroup[]>([]);
+  const [recentSessions, setRecentSessions] = useState<HistorySession[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [refreshing,     setRefreshing]     = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -308,7 +307,8 @@ export default function ProgressScreen() {
           )
         `)
         .eq('user_id', user.id)
-        .order('started_at', { ascending: false });
+        .order('started_at', { ascending: false })
+        .limit(3);
 
       const mapped: HistorySession[] = (sessions ?? []).map((s: any) => {
         const allSets       = s.session_exercises.flatMap((e: any) => e.session_sets);
@@ -327,14 +327,7 @@ export default function ProgressScreen() {
         };
       });
 
-      const grouped: WeekGroup[] = [];
-      for (const session of mapped) {
-        const label    = weekLabel(session.started_at);
-        const existing = grouped.find((g) => g.week === label);
-        if (existing) existing.sessions.push(session);
-        else grouped.push({ week: label, sessions: [session] });
-      }
-      setHistoryGroups(grouped);
+      setRecentSessions(mapped);
     } catch {}
     setHistoryLoading(false);
   }
@@ -456,7 +449,16 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => { setRefreshing(true); await Promise.all([loadProgress(), loadHistory()]); setRefreshing(false); }}
+            tintColor={Colors.primary}
+          />
+        }>
 
         {/* Header */}
         <View style={styles.header}>
@@ -590,25 +592,28 @@ export default function ProgressScreen() {
             )}
 
             {/* Workout history */}
-            <Text style={styles.sectionLabel}>History</Text>
+            <View style={styles.sectionRow}>
+              <Text style={[styles.sectionLabel, { marginHorizontal: 0, marginTop: 0, marginBottom: 0 }]}>History</Text>
+              <TouchableOpacity
+                style={styles.viewAllBtn}
+                onPress={() => router.push('/(tabs)/history' as any)}>
+                <Text style={styles.viewAllText}>View All</Text>
+                <IconSymbol name="chevron.right" size={13} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
             {historyLoading ? (
               <ActivityIndicator color={Colors.primary} style={{ marginBottom: Spacing.lg }} />
-            ) : historyGroups.length === 0 ? (
+            ) : recentSessions.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyCardText}>No sessions logged yet</Text>
               </View>
             ) : (
-              historyGroups.map((group) => (
-                <View key={group.week}>
-                  <Text style={hStyles.weekLabel}>{group.week}</Text>
-                  {group.sessions.map((session) => (
-                    <SessionCard
-                      key={session.id}
-                      session={session}
-                      onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: session.id } })}
-                    />
-                  ))}
-                </View>
+              recentSessions.map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: session.id } })}
+                />
               ))
             )}
           </>
