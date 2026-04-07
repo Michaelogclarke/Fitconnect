@@ -57,6 +57,22 @@ export const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
 
+  doAgainBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+  },
+
+  doAgainText: {
+    ...Typography.titleMd,
+    color: Colors.background,
+  },
+
   statBox: {
     flex: 1,
     backgroundColor: Colors.primary + '11',

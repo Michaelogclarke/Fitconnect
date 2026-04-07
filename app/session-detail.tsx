@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -14,6 +15,7 @@ import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { formatShortDate, formatDuration } from '@/lib/format';
 import { styles } from '@/styles/session-detail.styles';
+import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +56,7 @@ function formatVolume(vol: number): string {
 export default function SessionDetailScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const router = useRouter();
+  const { isActive, startWorkoutFromPlan } = useWorkout();
 
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,6 +102,48 @@ export default function SessionDetailScreen() {
 
     fetchSession();
   }, [sessionId]);
+
+  // ── Repeat workout ────────────────────────────────────────────────────────
+
+  function handleDoAgain() {
+    if (!session) return;
+
+    function launch() {
+      const exercises: Exercise[] = session!.session_exercises.map((ex) => ({
+        id:     Math.random().toString(36).slice(2),
+        name:   ex.exercise_name,
+        muscle: ex.muscle_group ?? '',
+        tag:    'Custom',
+      }));
+
+      const setsState: Record<string, SetRow[]> = {};
+      session!.session_exercises.forEach((ex, i) => {
+        const completedSets = ex.session_sets.filter((s) => s.is_completed);
+        const rows = completedSets.length > 0 ? completedSets : ex.session_sets.slice(0, 1);
+        setsState[exercises[i].id] = rows.map((s) => ({
+          weight: s.weight != null ? String(s.weight) : '0',
+          reps:   s.reps   != null ? String(s.reps)   : '10',
+          done:   false,
+        }));
+      });
+
+      startWorkoutFromPlan(exercises, setsState);
+      router.push('/start-workout' as any);
+    }
+
+    if (isActive) {
+      Alert.alert(
+        'Workout in Progress',
+        'Starting this workout will discard your current session.',
+        [
+          { text: 'Keep Current', style: 'cancel' },
+          { text: 'Start New',    style: 'destructive', onPress: launch },
+        ]
+      );
+    } else {
+      launch();
+    }
+  }
 
   // ── Derived stats ──────────────────────────────────────────────────────────
 
@@ -181,6 +226,11 @@ export default function SessionDetailScreen() {
               <Text style={styles.statLabel}>volume</Text>
             </View>
           </View>
+
+          <TouchableOpacity style={styles.doAgainBtn} onPress={handleDoAgain}>
+            <IconSymbol name="play.fill" size={14} color={Colors.background} />
+            <Text style={styles.doAgainText}>Do Again</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Exercise cards */}

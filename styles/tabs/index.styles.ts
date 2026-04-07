@@ -128,4 +128,17 @@ export const styles = StyleSheet.create({
   recentName:   { ...Typography.titleMd, color: Colors.onSurface },
   recentMeta:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
   recentVolume: { ...Typography.labelLg, color: Colors.primary },
+
+  recentRight: { alignItems: 'flex-end', gap: 6 },
+  recentDoAgainBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary + '1a',
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: Colors.primary + '44',
+  },
+  recentDoAgainText: { ...Typography.labelMd, color: Colors.primary },
 });

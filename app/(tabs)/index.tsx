@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -9,6 +9,7 @@ import { styles } from '@/styles/tabs/index.styles';
 import { supabase } from '@/lib/supabase';
 import { formatSessionDate, formatDuration, formatVolume } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
+import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
 
 // ─── Streak helpers ───────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ type HomeData = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isActive, startWorkoutFromPlan } = useWorkout();
 
   const [loading,        setLoading]        = useState(true);
   const [userName,       setUserName]       = useState('');
@@ -208,6 +210,62 @@ export default function HomeScreen() {
     }
   }
 
+  async function doAgain(sessionId: string) {
+    try {
+      const { data } = await supabase
+        .from('workout_sessions')
+        .select(`
+          session_exercises(
+            exercise_name, muscle_group, sort_order,
+            session_sets(set_number, weight, reps, is_completed)
+          )
+        `)
+        .eq('id', sessionId)
+        .single();
+
+      if (!data) return;
+
+      const sortedEx = [...(data as any).session_exercises]
+        .sort((a: any, b: any) => a.sort_order - b.sort_order);
+
+      const exercises: Exercise[] = sortedEx.map((ex: any) => ({
+        id:     Math.random().toString(36).slice(2),
+        name:   ex.exercise_name,
+        muscle: ex.muscle_group ?? '',
+        tag:    'Custom',
+      }));
+
+      const setsState: Record<string, SetRow[]> = {};
+      sortedEx.forEach((ex: any, i: number) => {
+        const completed = ex.session_sets.filter((s: any) => s.is_completed);
+        const rows      = completed.length > 0 ? completed : ex.session_sets.slice(0, 1);
+        setsState[exercises[i].id] = rows.map((s: any) => ({
+          weight: s.weight != null ? String(s.weight) : '0',
+          reps:   s.reps   != null ? String(s.reps)   : '10',
+          done:   false,
+        }));
+      });
+
+      function launch() {
+        startWorkoutFromPlan(exercises, setsState);
+        router.push('/start-workout' as any);
+      }
+
+      if (isActive) {
+        Alert.alert(
+          'Workout in Progress',
+          'Starting this workout will discard your current session.',
+          [
+            { text: 'Keep Current', style: 'cancel' },
+            { text: 'Start New', style: 'destructive', onPress: launch },
+          ]
+        );
+      } else {
+        launch();
+      }
+    } catch {}
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -289,7 +347,11 @@ export default function HomeScreen() {
               </View>
             ) : (
               recentSessions.map((s) => (
-                <View key={s.id} style={styles.recentCard}>
+                <TouchableOpacity
+                  key={s.id}
+                  style={styles.recentCard}
+                  onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: s.id } })}
+                  activeOpacity={0.8}>
                   <View style={styles.recentIconBox}>
                     <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
                   </View>
@@ -301,10 +363,18 @@ export default function HomeScreen() {
                       {s.set_count > 0 ? ` · ${s.set_count} sets` : ''}
                     </Text>
                   </View>
-                  {s.volume > 0 && (
-                    <Text style={styles.recentVolume}>{formatVolume(s.volume)}</Text>
-                  )}
-                </View>
+                  <View style={styles.recentRight}>
+                    {s.volume > 0 && (
+                      <Text style={styles.recentVolume}>{formatVolume(s.volume)}</Text>
+                    )}
+                    <TouchableOpacity
+                      style={styles.recentDoAgainBtn}
+                      onPress={() => doAgain(s.id)}>
+                      <IconSymbol name="play.fill" size={10} color={Colors.primary} />
+                      <Text style={styles.recentDoAgainText}>Do Again</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
               ))
             )}
           </>
