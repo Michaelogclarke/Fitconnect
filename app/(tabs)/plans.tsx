@@ -1,14 +1,15 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Spacing } from '@/constants/theme';
+import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { styles } from '@/styles/tabs/plans.styles';
 import { supabase } from '@/lib/supabase';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { useWorkout, Exercise, SetRow } from '@/contexts/WorkoutContext';
+import { initials } from '@/lib/format';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,14 @@ type WorkoutPlan = {
   days_per_week: number | null;
   description:  string | null;
   is_active:    boolean;
+  is_template:  boolean;
   days:         PlanDay[];
+};
+
+type ActiveClient = {
+  linkId:    string;
+  clientId:  string;
+  name:      string;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -38,10 +46,16 @@ function PlanCard({
   plan,
   onStartDay,
   onEdit,
+  isTrainer,
+  onToggleTemplate,
+  onDeploy,
 }: {
-  plan:         WorkoutPlan;
-  onStartDay:   (dayId: string) => Promise<void>;
-  onEdit:       () => void;
+  plan:             WorkoutPlan;
+  onStartDay:       (dayId: string) => Promise<void>;
+  onEdit:           () => void;
+  isTrainer?:       boolean;
+  onToggleTemplate?: () => void;
+  onDeploy?:        () => void;
 }) {
   const [expanded,    setExpanded]    = useState(false);
   const [startingId,  setStartingId]  = useState<string | null>(null);
@@ -65,7 +79,14 @@ function PlanCard({
           <IconSymbol name="dumbbell.fill" size={20} color={Colors.primary} />
         </View>
         <View style={styles.planInfo}>
-          <Text style={styles.planName}>{plan.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+            <Text style={styles.planName}>{plan.name}</Text>
+            {plan.is_template && (
+              <View style={templateStyles.badge}>
+                <Text style={templateStyles.badgeText}>Template</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.planMeta}>
             {plan.description
               ? plan.description
@@ -119,10 +140,40 @@ function PlanCard({
             </View>
           )}
 
-          <TouchableOpacity style={styles.editPlanRow} onPress={onEdit}>
-            <Text style={styles.editPlanText}>Edit Plan</Text>
-            <IconSymbol name="pencil" size={13} color={Colors.onSurfaceVariant} />
-          </TouchableOpacity>
+          <View style={templateStyles.footerRow}>
+            <TouchableOpacity style={[styles.editPlanRow, { flex: 1 }]} onPress={onEdit}>
+              <Text style={styles.editPlanText}>Edit Plan</Text>
+              <IconSymbol name="pencil" size={13} color={Colors.onSurfaceVariant} />
+            </TouchableOpacity>
+            {isTrainer && (
+              <>
+                <View style={templateStyles.footerDivider} />
+                <TouchableOpacity
+                  style={[styles.editPlanRow, { flex: 1 }]}
+                  onPress={onToggleTemplate}>
+                  <Text style={[styles.editPlanText, plan.is_template && { color: Colors.primary }]}>
+                    {plan.is_template ? 'Remove Template' : 'Make Template'}
+                  </Text>
+                  <IconSymbol
+                    name="doc.on.doc.fill"
+                    size={13}
+                    color={plan.is_template ? Colors.primary : Colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+                {plan.is_template && (
+                  <>
+                    <View style={templateStyles.footerDivider} />
+                    <TouchableOpacity
+                      style={[styles.editPlanRow, { flex: 1 }]}
+                      onPress={onDeploy}>
+                      <Text style={[styles.editPlanText, { color: Colors.success }]}>Deploy</Text>
+                      <IconSymbol name="arrow.up.circle.fill" size={13} color={Colors.success} />
+                    </TouchableOpacity>
+                  </>
+                )}
+              </>
+            )}
+          </View>
         </>
       )}
     </View>
@@ -135,8 +186,12 @@ export default function PlansScreen() {
   const router = useRouter();
   const { startWorkoutFromPlan } = useWorkout();
 
-  const [loading, setLoading] = useState(true);
-  const [plans,   setPlans]   = useState<WorkoutPlan[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [plans,          setPlans]          = useState<WorkoutPlan[]>([]);
+  const [isTrainer,      setIsTrainer]      = useState(false);
+  const [activeClients,  setActiveClients]  = useState<ActiveClient[]>([]);
+  const [deployPlanId,   setDeployPlanId]   = useState<string | null>(null);
+  const [deployingId,    setDeployingId]    = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -158,30 +213,79 @@ export default function PlansScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const { data } = await supabase
-        .from('workout_plans')
-        .select(`
-          id, name, days_per_week, description, is_active,
-          workout_plan_days(id, name, focus, day_number)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      const [plansRes, profileRes] = await Promise.all([
+        supabase
+          .from('workout_plans')
+          .select(`id, name, days_per_week, description, is_active, is_template, workout_plan_days(id, name, focus, day_number)`)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase.from('profiles').select('role').eq('id', user.id).single(),
+      ]);
 
-      const fresh: WorkoutPlan[] = (data ?? []).map((p: any) => ({
+      const trainer = profileRes.data?.role === 'trainer';
+      setIsTrainer(trainer);
+
+      const fresh: WorkoutPlan[] = (plansRes.data ?? []).map((p: any) => ({
         id:            p.id,
         name:          p.name,
         days_per_week: p.days_per_week,
         description:   p.description,
         is_active:     p.is_active,
+        is_template:   p.is_template ?? false,
         days:          p.workout_plan_days ?? [],
       }));
 
       setPlans(fresh);
       await setCached(CACHE_KEYS.PLANS, fresh);
+
+      if (trainer) {
+        const { data: links } = await supabase
+          .from('trainer_clients')
+          .select('id, client_id')
+          .eq('trainer_id', user.id)
+          .eq('status', 'active');
+
+        if (links && links.length > 0) {
+          const clientIds = links.map((l) => l.client_id);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', clientIds);
+          setActiveClients(links.map((l) => ({
+            linkId:   l.id,
+            clientId: l.client_id,
+            name:     profiles?.find((p) => p.id === l.client_id)?.full_name ?? 'Unknown',
+          })));
+        }
+      }
     } catch {
       // Fall back to cached data already displayed
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function toggleTemplate(planId: string, current: boolean) {
+    await supabase
+      .from('workout_plans')
+      .update({ is_template: !current })
+      .eq('id', planId);
+    setPlans((prev) => prev.map((p) => p.id === planId ? { ...p, is_template: !current } : p));
+  }
+
+  async function deployToClient(clientId: string) {
+    if (!deployPlanId) return;
+    setDeployingId(clientId);
+    const { data, error } = await supabase.rpc('deploy_template_to_client', {
+      p_template_id: deployPlanId,
+      p_client_id:   clientId,
+    });
+    setDeployingId(null);
+    setDeployPlanId(null);
+    if (error || data?.error) {
+      Alert.alert('Error', data?.error ?? error?.message ?? 'Could not deploy plan.');
+    } else {
+      Alert.alert('Deployed', 'A copy of the plan has been assigned to the client.');
     }
   }
 
@@ -252,11 +356,146 @@ export default function PlansScreen() {
               plan={plan}
               onStartDay={startDayWorkout}
               onEdit={() => router.push({ pathname: '/plan-editor' as any, params: { planId: plan.id } })}
+              isTrainer={isTrainer}
+              onToggleTemplate={() => toggleTemplate(plan.id, plan.is_template)}
+              onDeploy={() => setDeployPlanId(plan.id)}
             />
           ))
         )}
 
       </ScrollView>
+      {/* Deploy to client modal */}
+      <Modal visible={!!deployPlanId} animationType="slide" transparent onRequestClose={() => setDeployPlanId(null)}>
+        <View style={templateStyles.backdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setDeployPlanId(null)} activeOpacity={1} />
+          <View style={templateStyles.sheet}>
+            <View style={templateStyles.handle} />
+            <Text style={templateStyles.sheetTitle}>Deploy to Client</Text>
+            <Text style={templateStyles.sheetSub}>
+              A copy of this plan will be assigned to the selected client.
+            </Text>
+            {activeClients.length === 0 ? (
+              <Text style={templateStyles.empty}>No active clients to deploy to.</Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {activeClients.map((c) => (
+                  <TouchableOpacity
+                    key={c.clientId}
+                    style={templateStyles.clientRow}
+                    onPress={() => deployToClient(c.clientId)}
+                    disabled={!!deployingId}>
+                    <View style={templateStyles.clientAvatar}>
+                      <Text style={templateStyles.clientAvatarText}>{initials(c.name)}</Text>
+                    </View>
+                    <Text style={templateStyles.clientName}>{c.name}</Text>
+                    {deployingId === c.clientId
+                      ? <ActivityIndicator size="small" color={Colors.primary} />
+                      : <IconSymbol name="arrow.up.circle.fill" size={20} color={Colors.success} />}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity style={templateStyles.cancelBtn} onPress={() => setDeployPlanId(null)}>
+              <Text style={templateStyles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const templateStyles = StyleSheet.create({
+  badge: {
+    backgroundColor: Colors.tertiary + '22',
+    borderRadius: Radius.full,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: Colors.tertiary + '55',
+  },
+  badgeText: {
+    ...Typography.labelMd,
+    color: Colors.tertiary,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: Colors.outlineVariant,
+  },
+  footerDivider: {
+    width: 1,
+    backgroundColor: Colors.outlineVariant,
+  },
+  backdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  sheet: {
+    backgroundColor: Colors.surfaceContainer,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    padding: Spacing.xl,
+    paddingBottom: Spacing.xxxl,
+    maxHeight: '65%',
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.outlineVariant,
+    alignSelf: 'center',
+    marginBottom: Spacing.lg,
+  },
+  sheetTitle: {
+    ...Typography.headlineMd,
+    color: Colors.onSurface,
+    marginBottom: Spacing.xs,
+  },
+  sheetSub: {
+    ...Typography.bodyMd,
+    color: Colors.onSurfaceVariant,
+    marginBottom: Spacing.lg,
+  },
+  empty: {
+    ...Typography.bodyMd,
+    color: Colors.onSurfaceVariant,
+    marginBottom: Spacing.lg,
+  },
+  clientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineVariant,
+  },
+  clientAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary + '33',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clientAvatarText: {
+    ...Typography.titleMd,
+    color: Colors.primary,
+  },
+  clientName: {
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+    flex: 1,
+  },
+  cancelBtn: {
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+  },
+  cancelText: {
+    ...Typography.titleMd,
+    color: Colors.onSurfaceVariant,
+  },
+});

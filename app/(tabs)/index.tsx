@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { styles } from '@/styles/tabs/index.styles';
 import { supabase } from '@/lib/supabase';
-import { formatSessionDate, formatDuration, formatVolume } from '@/lib/format';
+import { formatSessionDate, formatDuration, formatVolume, initials } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
 import {
@@ -96,6 +96,25 @@ type HomeData = {
   longestStreak:  number;
 };
 
+type FlaggedClient = {
+  clientId:  string;
+  name:      string;
+  daysSince: number;
+};
+
+type RecentClientActivity = {
+  clientName:   string;
+  sessionName:  string;
+  startedAt:    string;
+};
+
+type TrainerDashData = {
+  activeClients:  number;
+  weekSessions:   number;
+  flagged:        FlaggedClient[];
+  recentActivity: RecentClientActivity[];
+};
+
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -109,6 +128,7 @@ export default function HomeScreen() {
   const { isActive, startWorkoutFromPlan } = useWorkout();
 
   const [loading,        setLoading]        = useState(true);
+  const [role,           setRole]           = useState<'client' | 'trainer' | null>(null);
   const [userName,       setUserName]       = useState('');
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const [weekSessions,   setWeekSessions]   = useState(0);
@@ -119,7 +139,8 @@ export default function HomeScreen() {
   const [weeklyGoal,     setWeeklyGoal]     = useState(4);
   const [showGoalPicker, setShowGoalPicker] = useState(false);
   const [healthSnap,     setHealthSnap]     = useState<HealthSnapshot | null>(null);
-  const [healthConnected, setHealthConnected] = useState(false);  // persisted via AsyncStorage
+  const [healthConnected, setHealthConnected] = useState(false);
+  const [trainerData,    setTrainerData]    = useState<TrainerDashData | null>(null);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -218,13 +239,22 @@ export default function HomeScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Profile name
+      // Profile name + role
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('full_name, role')
         .eq('id', user.id)
         .single();
-      const userName = profile?.full_name?.split(' ')[0] ?? '';
+      const userName   = profile?.full_name?.split(' ')[0] ?? '';
+      const userRole   = (profile?.role ?? 'client') as 'client' | 'trainer';
+      setRole(userRole);
+      setUserName(userName);
+
+      if (userRole === 'trainer') {
+        await loadTrainerData(user.id);
+        setLoading(false);
+        return;
+      }
 
       // Recent sessions with exercises + sets for volume
       const { data: sessions } = await supabase
@@ -294,6 +324,86 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadTrainerData(userId: string) {
+    // 1. Active client links
+    const { data: links } = await supabase
+      .from('trainer_clients')
+      .select('id, client_id')
+      .eq('trainer_id', userId)
+      .eq('status', 'active');
+
+    const activeClients = links?.length ?? 0;
+
+    if (activeClients === 0) {
+      setTrainerData({ activeClients: 0, weekSessions: 0, flagged: [], recentActivity: [] });
+      return;
+    }
+
+    const clientIds = (links ?? []).map((l) => l.client_id);
+
+    // 2. Profile names
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', clientIds);
+    const nameMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.full_name ?? 'Unknown']));
+
+    // 3. Sessions this week across all clients
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+
+    const { count: weekSessions } = await supabase
+      .from('workout_sessions')
+      .select('*', { count: 'exact', head: true })
+      .in('user_id', clientIds)
+      .gte('started_at', weekStart.toISOString())
+      .not('finished_at', 'is', null);
+
+    // 4. Last session per client (to find flagged)
+    const { data: lastSessions } = await supabase
+      .from('workout_sessions')
+      .select('user_id, started_at')
+      .in('user_id', clientIds)
+      .not('finished_at', 'is', null)
+      .order('started_at', { ascending: false });
+
+    const lastByClient: Record<string, string> = {};
+    (lastSessions ?? []).forEach((s) => {
+      if (!lastByClient[s.user_id]) lastByClient[s.user_id] = s.started_at;
+    });
+
+    const now = Date.now();
+    const flagged: FlaggedClient[] = clientIds
+      .map((id) => {
+        const last = lastByClient[id];
+        const days = last
+          ? Math.floor((now - new Date(last).getTime()) / 86_400_000)
+          : 999;
+        return { clientId: id, name: nameMap[id], daysSince: days };
+      })
+      .filter((c) => c.daysSince >= 7)
+      .sort((a, b) => b.daysSince - a.daysSince)
+      .slice(0, 3);
+
+    // 5. Recent activity across all clients (last 5 completed sessions)
+    const { data: recent } = await supabase
+      .from('workout_sessions')
+      .select('user_id, name, started_at')
+      .in('user_id', clientIds)
+      .not('finished_at', 'is', null)
+      .order('started_at', { ascending: false })
+      .limit(5);
+
+    const recentActivity: RecentClientActivity[] = (recent ?? []).map((s) => ({
+      clientName:  nameMap[s.user_id],
+      sessionName: s.name,
+      startedAt:   s.started_at,
+    }));
+
+    setTrainerData({ activeClients, weekSessions: weekSessions ?? 0, flagged, recentActivity });
   }
 
   async function doAgain(sessionId: string) {
@@ -371,6 +481,105 @@ export default function HomeScreen() {
 
         {loading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+        ) : role === 'trainer' ? (
+          /* ── Trainer Dashboard ──────────────────────────────────────── */
+          <>
+            {/* Stats row */}
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{trainerData?.activeClients ?? 0}</Text>
+                <Text style={styles.statLabel}>Clients</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{trainerData?.weekSessions ?? 0}</Text>
+                <Text style={styles.statLabel}>Sessions this week</Text>
+              </View>
+            </View>
+
+            {/* Quick actions */}
+            <View style={trainerStyles.actionRow}>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/(tabs)/clients' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.primary + '22' }]}>
+                  <IconSymbol name="person.2.fill" size={20} color={Colors.primary} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>All Clients</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/(tabs)/plans' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.tertiary + '22' }]}>
+                  <IconSymbol name="doc.on.doc.fill" size={20} color={Colors.tertiary} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>Templates</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/(tabs)/chat' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.success + '22' }]}>
+                  <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color={Colors.success} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>Messages</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Needs attention */}
+            {(trainerData?.flagged ?? []).length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>Needs Attention</Text>
+                {(trainerData?.flagged ?? []).map((c) => (
+                  <TouchableOpacity
+                    key={c.clientId}
+                    style={trainerStyles.flagCard}
+                    onPress={() => router.push({
+                      pathname: '/client-detail' as any,
+                      params: { clientId: c.clientId, clientName: c.name },
+                    })}
+                    activeOpacity={0.8}>
+                    <View style={trainerStyles.flagAvatar}>
+                      <Text style={trainerStyles.flagAvatarText}>{initials(c.name)}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={trainerStyles.flagName}>{c.name}</Text>
+                      <Text style={trainerStyles.flagSub}>
+                        {c.daysSince >= 999 ? 'No sessions logged yet' : `Last session ${c.daysSince} days ago`}
+                      </Text>
+                    </View>
+                    <View style={trainerStyles.flagBadge}>
+                      <Text style={trainerStyles.flagBadgeText}>
+                        {c.daysSince >= 999 ? 'New' : `${c.daysSince}d`}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* Recent client activity */}
+            <Text style={styles.sectionLabel}>Recent Client Activity</Text>
+            {(trainerData?.recentActivity ?? []).length === 0 ? (
+              <View style={styles.emptyCard}>
+                <IconSymbol name="dumbbell.fill" size={28} color={Colors.outlineVariant} />
+                <Text style={styles.emptyText}>No activity yet</Text>
+                <Text style={styles.emptySub}>Client sessions will appear here once they start training</Text>
+              </View>
+            ) : (
+              (trainerData?.recentActivity ?? []).map((a, i) => (
+                <View key={i} style={styles.recentCard}>
+                  <View style={styles.recentIconBox}>
+                    <Text style={{ ...Typography.labelLg, color: Colors.primary }}>{initials(a.clientName)}</Text>
+                  </View>
+                  <View style={styles.recentInfo}>
+                    <Text style={styles.recentName}>{a.sessionName}</Text>
+                    <Text style={styles.recentMeta}>
+                      {a.clientName} · {formatSessionDate(a.startedAt)}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </>
         ) : (
           <>
             {/* Streak banner */}
@@ -532,8 +741,8 @@ export default function HomeScreen() {
 
       </ScrollView>
 
-      {/* Weekly goal picker */}
-      <Modal visible={showGoalPicker} transparent animationType="fade">
+      {/* Weekly goal picker — client only */}
+      <Modal visible={role !== 'trainer' && showGoalPicker} transparent animationType="fade">
         <Pressable style={styles.goalPickerOverlay} onPress={() => setShowGoalPicker(false)}>
           <Pressable style={styles.goalPickerSheet} onPress={() => {}}>
             <Text style={styles.goalPickerTitle}>Weekly Workout Goal</Text>
@@ -560,3 +769,76 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+
+const trainerStyles = StyleSheet.create({
+  actionRow: {
+    flexDirection: 'row',
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  actionCard: {
+    flex: 1,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  actionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionLabel: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+    textAlign: 'center',
+  },
+  flagCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    gap: Spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.error,
+  },
+  flagAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.error + '22',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  flagAvatarText: {
+    ...Typography.titleMd,
+    color: Colors.error,
+  },
+  flagName: {
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+  },
+  flagSub: {
+    ...Typography.bodyMd,
+    color: Colors.onSurfaceVariant,
+    marginTop: 2,
+  },
+  flagBadge: {
+    backgroundColor: Colors.error + '22',
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+  },
+  flagBadgeText: {
+    ...Typography.labelLg,
+    color: Colors.error,
+    fontWeight: '700',
+  },
+});
