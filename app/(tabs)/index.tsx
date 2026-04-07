@@ -141,6 +141,9 @@ export default function HomeScreen() {
   const [healthSnap,     setHealthSnap]     = useState<HealthSnapshot | null>(null);
   const [healthConnected, setHealthConnected] = useState(false);
   const [trainerData,    setTrainerData]    = useState<TrainerDashData | null>(null);
+  const [trainerMode,    setTrainerMode]    = useState<'clients' | 'own'>('clients');
+  const [ownLoading,     setOwnLoading]     = useState(false);
+  const [ownDataLoaded,  setOwnDataLoaded]  = useState(false);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -223,6 +226,13 @@ export default function HomeScreen() {
       loadData();
     }, [])
   );
+
+  // Lazy-load personal workout data when trainer switches to 'own' mode
+  useEffect(() => {
+    if (trainerMode === 'own' && !ownDataLoaded) {
+      loadOwnWorkoutData();
+    }
+  }, [trainerMode]);
 
   async function loadData() {
     // Show cached data immediately — no loading flash
@@ -406,6 +416,72 @@ export default function HomeScreen() {
     setTrainerData({ activeClients, weekSessions: weekSessions ?? 0, flagged, recentActivity });
   }
 
+  async function loadOwnWorkoutData() {
+    setOwnLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: sessions } = await supabase
+        .from('workout_sessions')
+        .select(`
+          id, name, started_at, duration_seconds,
+          session_exercises(
+            session_sets(weight, reps, is_completed)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false })
+        .limit(3);
+
+      const recentSessions: RecentSession[] = (sessions ?? []).map((s: any) => {
+        const allSets = s.session_exercises.flatMap((e: any) => e.session_sets);
+        const completedSets = allSets.filter((st: any) => st.is_completed);
+        const volume = completedSets.reduce(
+          (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
+        );
+        return {
+          id: s.id, name: s.name, started_at: s.started_at,
+          duration_seconds: s.duration_seconds, set_count: completedSets.length, volume,
+        };
+      });
+
+      const weekStart = new Date();
+      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+
+      const { data: weekData } = await supabase
+        .from('workout_sessions')
+        .select(`session_exercises(session_sets(weight, reps, is_completed))`)
+        .eq('user_id', user.id)
+        .gte('started_at', weekStart.toISOString());
+
+      const weekSessions = weekData?.length ?? 0;
+      const weekVolume = (weekData ?? [])
+        .flatMap((s: any) => s.session_exercises.flatMap((e: any) => e.session_sets))
+        .filter((st: any) => st.is_completed)
+        .reduce((sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0);
+
+      const { data: allDateRows, count } = await supabase
+        .from('workout_sessions')
+        .select('started_at', { count: 'exact' })
+        .eq('user_id', user.id);
+
+      const { currentStreak, longestStreak } = computeStreaks(
+        (allDateRows ?? []).map((r: any) => r.started_at)
+      );
+
+      setRecentSessions(recentSessions);
+      setWeekSessions(weekSessions);
+      setWeekVolume(weekVolume);
+      setTotalSessions(count ?? 0);
+      setCurrentStreak(currentStreak);
+      setLongestStreak(longestStreak);
+      setOwnDataLoaded(true);
+    } catch {}
+    finally { setOwnLoading(false); }
+  }
+
   async function doAgain(sessionId: string) {
     try {
       const { data } = await supabase
@@ -481,7 +557,7 @@ export default function HomeScreen() {
 
         {loading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
-        ) : role === 'trainer' ? (
+        ) : role === 'trainer' && trainerMode === 'clients' ? (
           /* ── Trainer Dashboard ──────────────────────────────────────── */
           <>
             {/* Stats row */}
@@ -580,6 +656,8 @@ export default function HomeScreen() {
               ))
             )}
           </>
+        ) : role === 'trainer' && trainerMode === 'own' && ownLoading ? (
+          <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
         ) : (
           <>
             {/* Streak banner */}
@@ -741,8 +819,32 @@ export default function HomeScreen() {
 
       </ScrollView>
 
-      {/* Weekly goal picker — client only */}
-      <Modal visible={role !== 'trainer' && showGoalPicker} transparent animationType="fade">
+      {/* Mode toggle — trainer only, fixed at bottom */}
+      {role === 'trainer' && (
+        <View style={trainerStyles.modeBar}>
+          <TouchableOpacity
+            style={[trainerStyles.modePill, trainerMode === 'clients' && trainerStyles.modePillActive]}
+            onPress={() => setTrainerMode('clients')}
+            activeOpacity={0.8}>
+            <IconSymbol name="person.2.fill" size={13} color={trainerMode === 'clients' ? Colors.background : Colors.onSurfaceVariant} />
+            <Text style={[trainerStyles.modePillText, trainerMode === 'clients' && trainerStyles.modePillTextActive]}>
+              Client Work
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[trainerStyles.modePill, trainerMode === 'own' && trainerStyles.modePillActive]}
+            onPress={() => setTrainerMode('own')}
+            activeOpacity={0.8}>
+            <IconSymbol name="dumbbell.fill" size={13} color={trainerMode === 'own' ? Colors.background : Colors.onSurfaceVariant} />
+            <Text style={[trainerStyles.modePillText, trainerMode === 'own' && trainerStyles.modePillTextActive]}>
+              My Training
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Weekly goal picker — available in client view */}
+      <Modal visible={(role === 'client' || trainerMode === 'own') && showGoalPicker} transparent animationType="fade">
         <Pressable style={styles.goalPickerOverlay} onPress={() => setShowGoalPicker(false)}>
           <Pressable style={styles.goalPickerSheet} onPress={() => {}}>
             <Text style={styles.goalPickerTitle}>Weekly Workout Goal</Text>
@@ -840,5 +942,35 @@ const trainerStyles = StyleSheet.create({
     ...Typography.labelLg,
     color: Colors.error,
     fontWeight: '700',
+  },
+  modeBar: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.outlineVariant,
+    backgroundColor: Colors.surfaceContainer,
+  },
+  modePill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceContainerHigh,
+  },
+  modePillActive: {
+    backgroundColor: Colors.primary,
+  },
+  modePillText: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+  },
+  modePillTextActive: {
+    color: Colors.background,
+    fontWeight: '600',
   },
 });

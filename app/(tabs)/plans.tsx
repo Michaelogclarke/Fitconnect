@@ -27,6 +27,7 @@ type WorkoutPlan = {
   description:  string | null;
   is_active:    boolean;
   is_template:  boolean;
+  assigned_by:  string | null;
   days:         PlanDay[];
 };
 
@@ -84,6 +85,11 @@ function PlanCard({
             {plan.is_template && (
               <View style={templateStyles.badge}>
                 <Text style={templateStyles.badgeText}>Template</Text>
+              </View>
+            )}
+            {plan.assigned_by && !isTrainer && (
+              <View style={[templateStyles.badge, { backgroundColor: Colors.primary + '22' }]}>
+                <Text style={[templateStyles.badgeText, { color: Colors.primary }]}>From Trainer</Text>
               </View>
             )}
           </View>
@@ -216,8 +222,8 @@ export default function PlansScreen() {
       const [plansRes, profileRes] = await Promise.all([
         supabase
           .from('workout_plans')
-          .select(`id, name, days_per_week, description, is_active, is_template, workout_plan_days(id, name, focus, day_number)`)
-          .eq('user_id', user.id)
+          .select(`id, name, days_per_week, description, is_active, is_template, assigned_by, workout_plan_days(id, name, focus, day_number)`)
+          .or(`user_id.eq.${user.id},assigned_to.eq.${user.id}`)
           .order('created_at', { ascending: false }),
         supabase.from('profiles').select('role').eq('id', user.id).single(),
       ]);
@@ -232,6 +238,7 @@ export default function PlansScreen() {
         description:   p.description,
         is_active:     p.is_active,
         is_template:   p.is_template ?? false,
+        assigned_by:   p.assigned_by ?? null,
         days:          p.workout_plan_days ?? [],
       }));
 

@@ -27,6 +27,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
+      "softInputMode": "softInputAdjustResize",
       "predictiveBackGestureEnabled": false,
       "package": "com.michaelog.fitconnect"
     },

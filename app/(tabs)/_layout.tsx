@@ -35,9 +35,7 @@ export default function TabLayout() {
       const r = profile?.role as 'client' | 'trainer' | undefined;
       if (r) setRole(r);
 
-      if (r === 'trainer') {
-        setShowChat(true);
-      } else {
+      if (r !== 'trainer') {
         // Clients only see chat if they have an active trainer
         const { count } = await supabase
           .from('trainer_clients')
@@ -46,6 +44,7 @@ export default function TabLayout() {
           .eq('status', 'active');
         setShowChat((count ?? 0) > 0);
       }
+      // Trainers access messages from the Home screen — no nav tab needed
     });
   }, []);
 
@@ -61,8 +60,8 @@ export default function TabLayout() {
     ? Math.max(0, Math.ceil((activeRest.endsAt - Date.now()) / 1000))
     : 0;
 
-  // Tab bar is 60px tall; sit the banner just above it with an 8px gap
-  const bannerBottom = 60 + insets.bottom + 8;
+  // Tab bar is 56px tall; sit the banner just above it with an 8px gap
+  const bannerBottom = 56 + insets.bottom + 8;
 
   return (
     <View style={{ flex: 1 }}>
@@ -76,8 +75,8 @@ export default function TabLayout() {
             backgroundColor: Colors.tabBarBackground,
             borderTopColor: Colors.outlineVariant,
             borderTopWidth: 1,
-            height: 60,
-            paddingBottom: 8,
+            height: 72,
+            paddingBottom: 12,
           },
           tabBarLabelStyle: {
             fontSize: 11,
@@ -122,15 +121,8 @@ export default function TabLayout() {
           }}
         />
 
-        {/* Trainer-only tab */}
-        <Tabs.Screen
-          name="clients"
-          options={{
-            title: 'Clients',
-            href: role === 'trainer' ? undefined : null,
-            tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.2.fill" color={color} />,
-          }}
-        />
+        {/* Clients — accessible from Home, not needed in nav */}
+        <Tabs.Screen name="clients" options={{ href: null }} />
 
         {/* Chat — visible for trainers and clients with an active trainer */}
         <Tabs.Screen

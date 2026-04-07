@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -10,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -71,7 +72,17 @@ export default function ConversationScreen() {
   const [sending,  setSending]  = useState(false);
   const [userId,   setUserId]   = useState<string | null>(null);
 
-  const listRef = useRef<FlatList>(null);
+  const listRef  = useRef<FlatList>(null);
+  const insets   = useSafeAreaInsets();
+  const [kbShown, setKbShown] = useState(false);
+
+  useEffect(() => {
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvt, () => setKbShown(true));
+    const hide = Keyboard.addListener(hideEvt, () => setKbShown(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   // Load user ID + messages, then subscribe to realtime
   useEffect(() => {
@@ -208,7 +219,7 @@ export default function ConversationScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}>
 
         {loading ? (
@@ -221,6 +232,7 @@ export default function ConversationScreen() {
             renderItem={renderItem}
             contentContainerStyle={convStyles.messageList}
             showsVerticalScrollIndicator={false}
+            style={{ flex: 1 }}
             ListEmptyComponent={
               <View style={convStyles.emptyWrap}>
                 <Text style={convStyles.emptyText}>
@@ -231,8 +243,8 @@ export default function ConversationScreen() {
           />
         )}
 
-        {/* Input bar */}
-        <View style={convStyles.inputBar}>
+        {/* Input bar — bottom inset only when keyboard is hidden */}
+        <View style={[convStyles.inputBar, { paddingBottom: kbShown ? Spacing.sm : Spacing.sm + insets.bottom }]}>
           <TextInput
             style={convStyles.input}
             value={text}
