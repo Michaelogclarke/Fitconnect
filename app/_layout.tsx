@@ -75,6 +75,7 @@ export default function RootLayout() {
           <Stack.Screen name="edit-routine"  options={{ headerShown: false }} />
           <Stack.Screen name="plan-editor"      options={{ headerShown: false }} />
           <Stack.Screen name="session-detail"  options={{ headerShown: false }} />
+          <Stack.Screen name="edit-profile"    options={{ headerShown: false }} />
           <Stack.Screen name="modal"         options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="light" />

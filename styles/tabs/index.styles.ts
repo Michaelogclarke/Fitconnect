@@ -33,6 +33,35 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.lg,
   },
 
+  // ── Streak card ────────────────────────────────────────────────────────────
+  streakCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary + '14',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.primary + '35',
+    padding: Spacing.md,
+    gap: Spacing.md,
+  },
+  streakLeft: {
+    width: 44, height: 44,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary + '22',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  streakMid: { flex: 1 },
+  streakTitle: { ...Typography.titleLg, color: Colors.primary },
+  streakSub:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  streakCount: {
+    ...Typography.displayMd,
+    color: Colors.primary,
+    opacity: 0.25,
+  },
+
   // ── Quick start card ──────────────────────────────────────────────────────
   quickStartCard: {
     flexDirection: 'row',

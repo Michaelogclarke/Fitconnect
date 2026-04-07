@@ -10,6 +10,59 @@ import { supabase } from '@/lib/supabase';
 import { formatSessionDate, formatDuration, formatVolume } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 
+// ─── Streak helpers ───────────────────────────────────────────────────────────
+
+function toLocalDateStr(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function computeStreaks(isoDates: string[]): { currentStreak: number; longestStreak: number } {
+  if (!isoDates.length) return { currentStreak: 0, longestStreak: 0 };
+
+  // Unique local dates, newest first
+  const unique = [...new Set(isoDates.map(toLocalDateStr))].sort().reverse();
+
+  const now  = new Date();
+  const todayStr = toLocalDateStr(now.toISOString());
+  const yd   = new Date(now); yd.setDate(yd.getDate() - 1);
+  const ydStr = toLocalDateStr(yd.toISOString());
+
+  // Current streak — count back from today or yesterday
+  let currentStreak = 0;
+  if (unique[0] === todayStr || unique[0] === ydStr) {
+    currentStreak = 1;
+    // Use noon to avoid any DST edge cases when stepping back one day
+    let anchor = new Date(unique[0] + 'T12:00:00');
+    for (let i = 1; i < unique.length; i++) {
+      const prev = new Date(anchor); prev.setDate(prev.getDate() - 1);
+      if (unique[i] === toLocalDateStr(prev.toISOString())) {
+        currentStreak++;
+        anchor = prev;
+      } else { break; }
+    }
+  }
+
+  // Longest streak — scan full history
+  let longestStreak = 0;
+  let run = 1;
+  for (let i = 0; i < unique.length - 1; i++) {
+    const a = new Date(unique[i]     + 'T12:00:00');
+    const b = new Date(unique[i + 1] + 'T12:00:00');
+    if (Math.round((a.getTime() - b.getTime()) / 86_400_000) === 1) {
+      run++;
+    } else {
+      longestStreak = Math.max(longestStreak, run);
+      run = 1;
+    }
+  }
+  longestStreak = Math.max(longestStreak, run);
+
+  return { currentStreak, longestStreak };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 type RecentSession = {
   id: string;
   name: string;
@@ -25,6 +78,8 @@ type HomeData = {
   weekSessions:   number;
   weekVolume:     number;
   totalSessions:  number;
+  currentStreak:  number;
+  longestStreak:  number;
 };
 
 export default function HomeScreen() {
@@ -36,6 +91,8 @@ export default function HomeScreen() {
   const [weekSessions,   setWeekSessions]   = useState(0);
   const [weekVolume,     setWeekVolume]     = useState(0);
   const [totalSessions,  setTotalSessions]  = useState(0);
+  const [currentStreak,  setCurrentStreak]  = useState(0);
+  const [longestStreak,  setLongestStreak]  = useState(0);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -47,6 +104,8 @@ export default function HomeScreen() {
     setWeekSessions(d.weekSessions);
     setWeekVolume(d.weekVolume);
     setTotalSessions(d.totalSessions);
+    setCurrentStreak(d.currentStreak);
+    setLongestStreak(d.longestStreak);
   }
 
   // Reload whenever the tab comes into focus
@@ -125,14 +184,21 @@ export default function HomeScreen() {
         .filter((st: any) => st.is_completed)
         .reduce((sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0);
 
-      // Total session count
-      const { count } = await supabase
+      // Total session count + all dates for streak calculation
+      const { data: allDateRows, count } = await supabase
         .from('workout_sessions')
-        .select('*', { count: 'exact', head: true })
+        .select('started_at', { count: 'exact' })
         .eq('user_id', user.id);
       const totalSessions = count ?? 0;
 
-      const fresh: HomeData = { userName, recentSessions, weekSessions, weekVolume, totalSessions };
+      const { currentStreak, longestStreak } = computeStreaks(
+        (allDateRows ?? []).map((r: any) => r.started_at)
+      );
+
+      const fresh: HomeData = {
+        userName, recentSessions, weekSessions, weekVolume,
+        totalSessions, currentStreak, longestStreak,
+      };
       applyData(fresh);
       await setCached(CACHE_KEYS.HOME_DATA, fresh);
     } catch {
@@ -163,6 +229,26 @@ export default function HomeScreen() {
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
         ) : (
           <>
+            {/* Streak banner */}
+            {currentStreak > 0 && (
+              <View style={styles.streakCard}>
+                <View style={styles.streakLeft}>
+                  <IconSymbol name="flame.fill" size={28} color={Colors.primary} />
+                </View>
+                <View style={styles.streakMid}>
+                  <Text style={styles.streakTitle}>
+                    {currentStreak} day streak
+                  </Text>
+                  <Text style={styles.streakSub}>
+                    {currentStreak === longestStreak
+                      ? 'Personal best — keep it up!'
+                      : `Best: ${longestStreak} days · Keep going!`}
+                  </Text>
+                </View>
+                <Text style={styles.streakCount}>{currentStreak}</Text>
+              </View>
+            )}
+
             {/* Quick start */}
             <Text style={styles.sectionLabel}>Quick Start</Text>
             <TouchableOpacity style={styles.quickStartCard} onPress={() => router.push('/start-workout')}>

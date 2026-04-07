@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
@@ -23,17 +23,17 @@ const MENU_SECTIONS = [
   {
     title: 'Fitness',
     items: [
-      { label: 'Progress Photos',  icon: 'camera.fill'    as const },
-      { label: 'Body Weight Log',  icon: 'scalemass.fill' as const },
-      { label: 'Achievements',     icon: 'trophy.fill'    as const },
+      { label: 'Progress Photos',  icon: 'camera.fill'    as const, route: null },
+      { label: 'Body Weight Log',  icon: 'scalemass.fill' as const, route: null },
+      { label: 'Achievements',     icon: 'trophy.fill'    as const, route: null },
     ],
   },
   {
     title: 'Account',
     items: [
-      { label: 'Edit Profile',       icon: 'pencil'    as const },
-      { label: 'Notifications',      icon: 'bell.fill' as const },
-      { label: 'Privacy & Security', icon: 'lock.fill' as const },
+      { label: 'Edit Profile',       icon: 'pencil'    as const, route: '/edit-profile' as const },
+      { label: 'Notifications',      icon: 'bell.fill' as const, route: null },
+      { label: 'Privacy & Security', icon: 'lock.fill' as const, route: null },
     ],
   },
 ];
@@ -41,6 +41,7 @@ const MENU_SECTIONS = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [loading,       setLoading]       = useState(true);
   const [fullName,      setFullName]      = useState('');
   const [totalSessions, setTotalSessions] = useState(0);
@@ -136,12 +137,20 @@ export default function ProfileScreen() {
                   style={[
                     styles.menuItem,
                     idx < section.items.length - 1 && styles.menuItemBorder,
-                  ]}>
+                  ]}
+                  onPress={() => item.route && router.push(item.route as any)}
+                  activeOpacity={item.route ? 0.7 : 1}>
                   <View style={styles.menuIconBox}>
-                    <IconSymbol name={item.icon} size={18} color={Colors.primary} />
+                    <IconSymbol name={item.icon} size={18} color={item.route ? Colors.primary : Colors.onSurfaceVariant} />
                   </View>
-                  <Text style={styles.menuLabel}>{item.label}</Text>
-                  <IconSymbol name="chevron.right" size={16} color={Colors.onSurfaceVariant} />
+                  <Text style={[styles.menuLabel, !item.route && { color: Colors.onSurfaceVariant }]}>
+                    {item.label}
+                  </Text>
+                  <IconSymbol
+                    name="chevron.right"
+                    size={16}
+                    color={item.route ? Colors.onSurfaceVariant : Colors.outlineVariant}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
