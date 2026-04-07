@@ -1,10 +1,10 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { styles } from '@/styles/tabs/profile.styles';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
@@ -15,6 +15,12 @@ import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 type ProfileCache = {
   fullName:      string;
   totalSessions: number;
+};
+
+type PendingInvite = {
+  linkId:      string;
+  trainerId:   string;
+  trainerName: string;
 };
 
 // ─── Static menu ─────────────────────────────────────────────────────────────
@@ -42,9 +48,12 @@ const MENU_SECTIONS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [loading,       setLoading]       = useState(true);
-  const [fullName,      setFullName]      = useState('');
-  const [totalSessions, setTotalSessions] = useState(0);
+  const [loading,        setLoading]        = useState(true);
+  const [fullName,       setFullName]       = useState('');
+  const [role,           setRole]           = useState<'client' | 'trainer'>('client');
+  const [totalSessions,  setTotalSessions]  = useState(0);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [acceptingId,    setAcceptingId]    = useState<string | null>(null);
 
   function applyData(d: ProfileCache) {
     setFullName(d.fullName);
@@ -73,7 +82,7 @@ export default function ProfileScreen() {
       if (!user) { setLoading(false); return; }
 
       const [{ data: profile }, { count }] = await Promise.all([
-        supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+        supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
         supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
       ]);
 
@@ -82,7 +91,13 @@ export default function ProfileScreen() {
         totalSessions: count ?? 0,
       };
       applyData(fresh);
+      if (profile?.role) setRole(profile.role as 'client' | 'trainer');
       await setCached(CACHE_KEYS.PROFILE, fresh);
+
+      // Load pending invites (clients only)
+      if (profile?.role === 'client') {
+        await loadPendingInvites(user.id);
+      }
     } catch {
       // Silently fall back to cached data
     } finally {
@@ -90,12 +105,52 @@ export default function ProfileScreen() {
     }
   }
 
+  async function loadPendingInvites(userId: string) {
+    const { data: links } = await supabase
+      .from('trainer_clients')
+      .select('id, trainer_id')
+      .eq('client_id', userId)
+      .eq('status', 'pending');
+
+    if (!links || links.length === 0) { setPendingInvites([]); return; }
+
+    const trainerIds = links.map((l) => l.trainer_id);
+    const { data: trainers } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', trainerIds);
+
+    const trainerMap = Object.fromEntries((trainers ?? []).map((t) => [t.id, t.full_name]));
+
+    setPendingInvites(links.map((l) => ({
+      linkId:      l.id,
+      trainerId:   l.trainer_id,
+      trainerName: trainerMap[l.trainer_id] ?? 'Unknown Trainer',
+    })));
+  }
+
+  async function handleAcceptInvite(linkId: string) {
+    setAcceptingId(linkId);
+    await supabase
+      .from('trainer_clients')
+      .update({ status: 'active', accepted_at: new Date().toISOString() })
+      .eq('id', linkId);
+    setPendingInvites((prev) => prev.filter((i) => i.linkId !== linkId));
+    setAcceptingId(null);
+  }
+
+  async function handleDeclineInvite(linkId: string) {
+    await supabase.from('trainer_clients').delete().eq('id', linkId);
+    setPendingInvites((prev) => prev.filter((i) => i.linkId !== linkId));
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
   }
 
-  const displayName = fullName || 'Athlete';
+  const displayName = fullName || (role === 'trainer' ? 'Trainer' : 'Athlete');
   const avatarText  = fullName ? initials(fullName) : '?';
+  const roleLabel   = role === 'trainer' ? 'Personal Trainer' : 'FitConnect Athlete';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -115,7 +170,7 @@ export default function ProfileScreen() {
           ) : (
             <>
               <Text style={styles.userName}>{displayName}</Text>
-              <Text style={styles.userRole}>FitConnect Athlete</Text>
+              <Text style={styles.userRole}>{roleLabel}</Text>
               <View style={styles.statsRow}>
                 <View style={styles.stat}>
                   <Text style={styles.statValue}>{totalSessions}</Text>
@@ -125,6 +180,46 @@ export default function ProfileScreen() {
             </>
           )}
         </View>
+
+        {/* Pending trainer invites (clients only) */}
+        {pendingInvites.length > 0 && (
+          <View style={inviteStyles.section}>
+            <Text style={styles.sectionTitle}>Trainer Invites</Text>
+            <View style={styles.menuCard}>
+              {pendingInvites.map((invite, idx) => (
+                <View
+                  key={invite.linkId}
+                  style={[
+                    inviteStyles.inviteRow,
+                    idx < pendingInvites.length - 1 && styles.menuItemBorder,
+                  ]}>
+                  <View style={inviteStyles.avatar}>
+                    <Text style={inviteStyles.avatarText}>{initials(invite.trainerName)}</Text>
+                  </View>
+                  <View style={inviteStyles.inviteInfo}>
+                    <Text style={inviteStyles.trainerName}>{invite.trainerName}</Text>
+                    <Text style={inviteStyles.inviteLabel}>wants to be your trainer</Text>
+                  </View>
+                  <View style={inviteStyles.actions}>
+                    <TouchableOpacity
+                      style={inviteStyles.acceptBtn}
+                      onPress={() => handleAcceptInvite(invite.linkId)}
+                      disabled={acceptingId === invite.linkId}>
+                      {acceptingId === invite.linkId
+                        ? <ActivityIndicator size="small" color={Colors.background} />
+                        : <Text style={inviteStyles.acceptBtnText}>Accept</Text>}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={inviteStyles.declineBtn}
+                      onPress={() => handleDeclineInvite(invite.linkId)}>
+                      <Text style={inviteStyles.declineBtnText}>Decline</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Menu Sections */}
         {MENU_SECTIONS.map((section) => (
@@ -173,3 +268,65 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
+
+const inviteStyles = StyleSheet.create({
+  section: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.lg,
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary + '33',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    ...Typography.titleMd,
+    color: Colors.primary,
+  },
+  inviteInfo: {
+    flex: 1,
+  },
+  trainerName: {
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+  },
+  inviteLabel: {
+    ...Typography.bodyMd,
+    color: Colors.onSurfaceVariant,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  acceptBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    minWidth: 64,
+    alignItems: 'center',
+  },
+  acceptBtnText: {
+    ...Typography.labelLg,
+    color: Colors.background,
+    fontWeight: '600',
+  },
+  declineBtn: {
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  declineBtnText: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+  },
+});

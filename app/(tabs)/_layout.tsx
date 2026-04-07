@@ -7,6 +7,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { useWorkout } from '@/contexts/WorkoutContext';
+import { supabase } from '@/lib/supabase';
 
 function formatTime(s: number) {
   const m   = Math.floor(s / 60).toString().padStart(2, '0');
@@ -18,6 +19,22 @@ export default function TabLayout() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const { isActive, elapsed, exercises, activeRest } = useWorkout();
+
+  const [role, setRole] = useState<'client' | 'trainer' | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data?.role) setRole(data.role as 'client' | 'trainer');
+        });
+    });
+  }, []);
 
   // Tick to keep rest countdown on the banner fresh
   const [, setTick] = useState(0);
@@ -92,9 +109,18 @@ export default function TabLayout() {
           }}
         />
 
+        {/* Trainer-only tab */}
+        <Tabs.Screen
+          name="clients"
+          options={{
+            title: 'Clients',
+            href: role === 'trainer' ? undefined : null,
+            tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.2.fill" color={color} />,
+          }}
+        />
+
         {/* Hide legacy tabs from the bar */}
         <Tabs.Screen name="workouts" options={{ href: null }} />
-        <Tabs.Screen name="clients"  options={{ href: null }} />
         <Tabs.Screen name="chat"     options={{ href: null }} />
       </Tabs>
 
