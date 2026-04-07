@@ -10,18 +10,19 @@ export type ActiveRest = { exId: string; setIdx: number; endsAt: number };
 // ─── Context shape ────────────────────────────────────────────────────────────
 
 type WorkoutContextType = {
-  isActive:    boolean;
-  exercises:   Exercise[];
-  setsState:   Record<string, SetRow[]>;
-  activeRest:  ActiveRest | null;
-  elapsed:     number;
-  startedAt:   Date | null;
+  isActive:   boolean;
+  exercises:  Exercise[];
+  setsState:  Record<string, SetRow[]>;
+  activeRest: ActiveRest | null;
+  elapsed:    number;
+  startedAt:  Date | null;
 
-  startWorkout:  () => void;
-  clearWorkout:  () => void;
-  setExercises:  React.Dispatch<React.SetStateAction<Exercise[]>>;
-  setSetsState:  React.Dispatch<React.SetStateAction<Record<string, SetRow[]>>>;
-  setActiveRest: React.Dispatch<React.SetStateAction<ActiveRest | null>>;
+  startWorkout:         () => void;
+  startWorkoutFromPlan: (exercises: Exercise[], setsState: Record<string, SetRow[]>) => void;
+  clearWorkout:         () => void;
+  setExercises:         React.Dispatch<React.SetStateAction<Exercise[]>>;
+  setSetsState:         React.Dispatch<React.SetStateAction<Record<string, SetRow[]>>>;
+  setActiveRest:        React.Dispatch<React.SetStateAction<ActiveRest | null>>;
 };
 
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
@@ -29,11 +30,11 @@ const WorkoutContext = createContext<WorkoutContextType | null>(null);
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function WorkoutProvider({ children }: { children: React.ReactNode }) {
-  const [isActive,    setIsActive]    = useState(false);
-  const [exercises,   setExercises]   = useState<Exercise[]>([]);
-  const [setsState,   setSetsState]   = useState<Record<string, SetRow[]>>({});
-  const [activeRest,  setActiveRest]  = useState<ActiveRest | null>(null);
-  const [elapsed,     setElapsed]     = useState(0);
+  const [isActive,   setIsActive]   = useState(false);
+  const [exercises,  setExercises]  = useState<Exercise[]>([]);
+  const [setsState,  setSetsState]  = useState<Record<string, SetRow[]>>({});
+  const [activeRest, setActiveRest] = useState<ActiveRest | null>(null);
+  const [elapsed,    setElapsed]    = useState(0);
   const startedAt = useRef<Date | null>(null);
   const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -59,6 +60,18 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     setIsActive(true);
   }
 
+  function startWorkoutFromPlan(
+    planExercises: Exercise[],
+    planSetsState: Record<string, SetRow[]>,
+  ) {
+    setExercises(planExercises);
+    setSetsState(planSetsState);
+    setActiveRest(null);
+    setElapsed(0);
+    startedAt.current = new Date();
+    setIsActive(true);
+  }
+
   function clearWorkout() {
     setIsActive(false);
     setExercises([]);
@@ -78,6 +91,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         elapsed,
         startedAt: startedAt.current,
         startWorkout,
+        startWorkoutFromPlan,
         clearWorkout,
         setExercises,
         setSetsState,

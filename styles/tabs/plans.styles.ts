@@ -36,7 +36,7 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
 
-  // ── My Routines ────────────────────────────────────────────────────────────
+  // ── Empty state ────────────────────────────────────────────────────────────
   emptyState: {
     marginHorizontal: Spacing.lg,
     backgroundColor: Colors.surfaceContainer,
@@ -50,81 +50,71 @@ export const styles = StyleSheet.create({
   emptyText:    { ...Typography.titleMd, color: Colors.onSurface, marginBottom: Spacing.xs },
   emptySubtext: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' },
 
-  routineCard: {
-    flexDirection: 'row', alignItems: 'center',
-    marginHorizontal: Spacing.lg, marginBottom: Spacing.sm,
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    gap: Spacing.md,
-  },
-  routineIconBox: {
-    width: 44, height: 44, borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  routineInfo:    { flex: 1 },
-  routineName:    { ...Typography.titleMd, color: Colors.onSurface },
-  routineMeta:    { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
-  routineRight:   { alignItems: 'flex-end', gap: 4 },
-  routineLastDone:{ ...Typography.labelMd, color: Colors.onSurfaceVariant },
-
-  // ── Preset split card ──────────────────────────────────────────────────────
-  splitCard: {
+  // ── Plan card ──────────────────────────────────────────────────────────────
+  planCard: {
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.sm,
     backgroundColor: Colors.surfaceContainer,
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
-  splitCardHeader: {
-    flexDirection: 'row', alignItems: 'flex-start',
+  planCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: Spacing.lg,
     gap: Spacing.sm,
   },
-  splitTitleRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: 4,
-    flexWrap: 'wrap',
+  planIconBox: {
+    width: 44, height: 44, borderRadius: Radius.md,
+    backgroundColor: Colors.primary + '22',
+    justifyContent: 'center', alignItems: 'center',
   },
-  splitName: { ...Typography.titleLg, color: Colors.onSurface },
-  diffBadge: {
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.sm, paddingVertical: 2,
-  },
-  diffBadgeText: { ...Typography.labelMd },
-  splitMeta: { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginBottom: 4 },
-  splitDesc: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
+  planInfo: { flex: 1 },
+  planName:    { ...Typography.titleLg, color: Colors.onSurface },
+  planMeta:    { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
 
-  splitDivider: {
+  // ── Expanded days list ─────────────────────────────────────────────────────
+  planDivider: {
     height: 1,
     backgroundColor: Colors.outlineVariant,
     marginHorizontal: Spacing.lg,
   },
-  daysList: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, gap: Spacing.sm },
+  daysList: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
   dayRow: {
-    flexDirection: 'row', alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
     gap: Spacing.md,
   },
   dayNumber: {
-    width: 24, height: 24, borderRadius: Radius.full,
+    width: 26, height: 26, borderRadius: Radius.full,
     backgroundColor: Colors.primary + '22',
     justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
   },
   dayNumberText: { ...Typography.labelLg, color: Colors.primary },
+  dayInfo: { flex: 1 },
   dayName:  { ...Typography.titleMd, color: Colors.onSurface },
   dayFocus: { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
-
-  usePlanBtn: {
-    margin: Spacing.lg,
-    marginTop: Spacing.md,
-    height: 44,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
+  dayStartBtn: {
+    width: 36, height: 36,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary + '22',
+    borderWidth: 1,
+    borderColor: Colors.primary + '55',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  usePlanBtnText: { ...Typography.titleMd, color: Colors.background },
+
+  // Edit plan link row (bottom of expanded card)
+  editPlanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+    paddingTop: Spacing.xs,
+    gap: Spacing.xs,
+  },
+  editPlanText: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
 });

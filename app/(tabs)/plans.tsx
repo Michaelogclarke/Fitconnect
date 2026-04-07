@@ -8,144 +8,120 @@ import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/plans.styles';
 import { supabase } from '@/lib/supabase';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
+import { useWorkout, Exercise, SetRow } from '@/contexts/WorkoutContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type PlanDay = {
+  id:         string;
+  name:       string;
+  focus:      string | null;
+  day_number: number;
+};
+
 type WorkoutPlan = {
-  id: string;
-  name: string;
+  id:           string;
+  name:         string;
   days_per_week: number | null;
-  description: string | null;
-  is_active: boolean;
+  description:  string | null;
+  is_active:    boolean;
+  days:         PlanDay[];
 };
 
-// ─── Preset splits (static reference data) ───────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type Difficulty = 'Beginner' | 'Intermediate' | 'Advanced';
+function uid() { return Math.random().toString(36).slice(2); }
 
-const PRESET_SPLITS = [
-  {
-    id: 'ppl',
-    name: 'Push Pull Legs',
-    daysPerWeek: 6,
-    difficulty: 'Intermediate' as Difficulty,
-    description: 'Classic hypertrophy split. Push, pull, and leg days repeated twice per week.',
-    days: [
-      { name: 'Push A',  focus: 'Chest · Shoulders · Triceps' },
-      { name: 'Pull A',  focus: 'Back · Biceps' },
-      { name: 'Legs A',  focus: 'Quads · Hamstrings · Calves' },
-      { name: 'Push B',  focus: 'Chest · Shoulders · Triceps' },
-      { name: 'Pull B',  focus: 'Back · Biceps' },
-      { name: 'Legs B',  focus: 'Quads · Hamstrings · Calves' },
-    ],
-  },
-  {
-    id: 'upper-lower',
-    name: 'Upper Lower',
-    daysPerWeek: 4,
-    difficulty: 'Beginner' as Difficulty,
-    description: 'Efficient 4-day split training upper and lower body twice a week.',
-    days: [
-      { name: 'Upper A', focus: 'Chest · Back · Shoulders · Arms' },
-      { name: 'Lower A', focus: 'Quads · Hamstrings · Glutes' },
-      { name: 'Upper B', focus: 'Chest · Back · Shoulders · Arms' },
-      { name: 'Lower B', focus: 'Quads · Hamstrings · Glutes' },
-    ],
-  },
-  {
-    id: 'full-body',
-    name: 'Full Body',
-    daysPerWeek: 3,
-    difficulty: 'Beginner' as Difficulty,
-    description: 'Three full-body sessions per week. Great for beginners and time-pressed athletes.',
-    days: [
-      { name: 'Full Body A', focus: 'Squat pattern · Horizontal push/pull' },
-      { name: 'Full Body B', focus: 'Hinge pattern · Vertical push/pull' },
-      { name: 'Full Body C', focus: 'Variation day' },
-    ],
-  },
-  {
-    id: 'bro-split',
-    name: 'Bro Split',
-    daysPerWeek: 5,
-    difficulty: 'Intermediate' as Difficulty,
-    description: 'One muscle group per day. High volume, classic bodybuilder style.',
-    days: [
-      { name: 'Chest Day',     focus: 'Chest' },
-      { name: 'Back Day',      focus: 'Back' },
-      { name: 'Shoulder Day',  focus: 'Shoulders · Traps' },
-      { name: 'Arms Day',      focus: 'Biceps · Triceps' },
-      { name: 'Legs Day',      focus: 'Quads · Hamstrings · Calves' },
-    ],
-  },
-  {
-    id: 'arnold',
-    name: 'Arnold Split',
-    daysPerWeek: 6,
-    difficulty: 'Advanced' as Difficulty,
-    description: "Used by Arnold Schwarzenegger. Chest & back, shoulders & arms, legs — each hit twice a week.",
-    days: [
-      { name: 'Chest & Back A',      focus: 'Chest · Back' },
-      { name: 'Shoulders & Arms A',  focus: 'Shoulders · Biceps · Triceps' },
-      { name: 'Legs A',              focus: 'Quads · Hamstrings · Calves' },
-      { name: 'Chest & Back B',      focus: 'Chest · Back' },
-      { name: 'Shoulders & Arms B',  focus: 'Shoulders · Biceps · Triceps' },
-      { name: 'Legs B',              focus: 'Quads · Hamstrings · Calves' },
-    ],
-  },
-];
+// ─── Plan card ────────────────────────────────────────────────────────────────
 
-const DIFFICULTY_COLOR: Record<Difficulty, string> = {
-  Beginner:     Colors.success,
-  Intermediate: Colors.primary,
-  Advanced:     Colors.error,
-};
+function PlanCard({
+  plan,
+  onStartDay,
+  onEdit,
+}: {
+  plan:         WorkoutPlan;
+  onStartDay:   (dayId: string) => Promise<void>;
+  onEdit:       () => void;
+}) {
+  const [expanded,    setExpanded]    = useState(false);
+  const [startingId,  setStartingId]  = useState<string | null>(null);
 
-// ─── Split card ───────────────────────────────────────────────────────────────
+  const sortedDays = [...plan.days].sort((a, b) => a.day_number - b.day_number);
 
-function SplitCard({ split }: { split: typeof PRESET_SPLITS[0] }) {
-  const [expanded, setExpanded] = useState(false);
-  const router = useRouter();
-  const color = DIFFICULTY_COLOR[split.difficulty];
+  async function handleStart(dayId: string) {
+    setStartingId(dayId);
+    await onStartDay(dayId);
+    setStartingId(null);
+  }
 
   return (
-    <View style={styles.splitCard}>
-      <TouchableOpacity style={styles.splitCardHeader} onPress={() => setExpanded((e) => !e)} activeOpacity={0.8}>
-        <View style={{ flex: 1 }}>
-          <View style={styles.splitTitleRow}>
-            <Text style={styles.splitName}>{split.name}</Text>
-            <View style={[styles.diffBadge, { backgroundColor: color + '22', borderColor: color + '55' }]}>
-              <Text style={[styles.diffBadgeText, { color }]}>{split.difficulty}</Text>
-            </View>
-          </View>
-          <Text style={styles.splitMeta}>{split.daysPerWeek} days / week · {split.days.length} sessions</Text>
-          <Text style={styles.splitDesc}>{split.description}</Text>
+    <View style={styles.planCard}>
+      {/* Header — always visible */}
+      <TouchableOpacity
+        style={styles.planCardHeader}
+        onPress={() => setExpanded((e) => !e)}
+        activeOpacity={0.8}>
+        <View style={styles.planIconBox}>
+          <IconSymbol name="dumbbell.fill" size={20} color={Colors.primary} />
+        </View>
+        <View style={styles.planInfo}>
+          <Text style={styles.planName}>{plan.name}</Text>
+          <Text style={styles.planMeta}>
+            {plan.description
+              ? plan.description
+              : plan.days_per_week
+                ? `${plan.days_per_week} days / week`
+                : `${plan.days.length} day${plan.days.length !== 1 ? 's' : ''}`}
+          </Text>
         </View>
         <IconSymbol
-          name={expanded ? 'xmark.circle.fill' : 'chevron.right'}
+          name={expanded ? 'chevron.up' : 'chevron.down'}
           size={18}
           color={Colors.onSurfaceVariant}
         />
       </TouchableOpacity>
 
+      {/* Expanded: day list */}
       {expanded && (
         <>
-          <View style={styles.splitDivider} />
-          <View style={styles.daysList}>
-            {split.days.map((day, i) => (
-              <View key={i} style={styles.dayRow}>
-                <View style={styles.dayNumber}>
-                  <Text style={styles.dayNumberText}>{i + 1}</Text>
+          <View style={styles.planDivider} />
+
+          {sortedDays.length === 0 ? (
+            <Text style={[styles.dayFocus, { padding: 16 }]}>
+              No days added yet — edit the plan to add training days.
+            </Text>
+          ) : (
+            <View style={styles.daysList}>
+              {sortedDays.map((day) => (
+                <View key={day.id} style={styles.dayRow}>
+                  <View style={styles.dayNumber}>
+                    <Text style={styles.dayNumberText}>{day.day_number}</Text>
+                  </View>
+                  <View style={styles.dayInfo}>
+                    <Text style={styles.dayName}>{day.name}</Text>
+                    {day.focus ? (
+                      <Text style={styles.dayFocus}>{day.focus}</Text>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.dayStartBtn}
+                    onPress={() => handleStart(day.id)}
+                    disabled={!!startingId}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    {startingId === day.id ? (
+                      <ActivityIndicator size="small" color={Colors.primary} />
+                    ) : (
+                      <IconSymbol name="play.fill" size={14} color={Colors.primary} />
+                    )}
+                  </TouchableOpacity>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.dayName}>{day.name}</Text>
-                  <Text style={styles.dayFocus}>{day.focus}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-          <TouchableOpacity style={styles.usePlanBtn} onPress={() => router.push('/start-workout')}>
-            <Text style={styles.usePlanBtnText}>Start with this Split</Text>
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity style={styles.editPlanRow} onPress={onEdit}>
+            <Text style={styles.editPlanText}>Edit Plan</Text>
+            <IconSymbol name="pencil" size={13} color={Colors.onSurfaceVariant} />
           </TouchableOpacity>
         </>
       )}
@@ -157,8 +133,10 @@ function SplitCard({ split }: { split: typeof PRESET_SPLITS[0] }) {
 
 export default function PlansScreen() {
   const router = useRouter();
+  const { startWorkoutFromPlan } = useWorkout();
+
   const [loading, setLoading] = useState(true);
-  const [plans, setPlans] = useState<WorkoutPlan[]>([]);
+  const [plans,   setPlans]   = useState<WorkoutPlan[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -176,25 +154,66 @@ export default function PlansScreen() {
       setLoading(true);
     }
 
-    // Background refresh
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
       const { data } = await supabase
         .from('workout_plans')
-        .select('id, name, days_per_week, description, is_active')
+        .select(`
+          id, name, days_per_week, description, is_active,
+          workout_plan_days(id, name, focus, day_number)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      const fresh = data ?? [];
+      const fresh: WorkoutPlan[] = (data ?? []).map((p: any) => ({
+        id:            p.id,
+        name:          p.name,
+        days_per_week: p.days_per_week,
+        description:   p.description,
+        is_active:     p.is_active,
+        days:          p.workout_plan_days ?? [],
+      }));
+
       setPlans(fresh);
       await setCached(CACHE_KEYS.PLANS, fresh);
     } catch {
-      // Silently fall back to cached data
+      // Fall back to cached data already displayed
     } finally {
       setLoading(false);
     }
+  }
+
+  // Load exercises for a plan day, pre-populate context, navigate to workout
+  async function startDayWorkout(dayId: string) {
+    const { data: planExs } = await supabase
+      .from('workout_plan_exercises')
+      .select('exercise_name, muscle_group, sets, reps, weight')
+      .eq('plan_day_id', dayId)
+      .order('sort_order');
+
+    const exercises: Exercise[] = (planExs ?? []).map((pe: any) => ({
+      id:     uid(),
+      name:   pe.exercise_name,
+      muscle: pe.muscle_group || 'Custom',
+      tag:    'Plan',
+    }));
+
+    const setsState: Record<string, SetRow[]> = {};
+    (planExs ?? []).forEach((pe: any, i: number) => {
+      setsState[exercises[i].id] = Array.from(
+        { length: Math.max(1, pe.sets || 3) },
+        () => ({
+          weight: pe.weight ? String(pe.weight) : '0',
+          reps:   pe.reps   ? String(pe.reps)   : '10',
+          done:   false,
+        })
+      );
+    });
+
+    startWorkoutFromPlan(exercises, setsState);
+    router.push('/start-workout' as any);
   }
 
   return (
@@ -206,50 +225,29 @@ export default function PlansScreen() {
           <Text style={styles.title}>Plans</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/plan-editor' as any)}>
             <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
-            <Text style={styles.addBtnText}>New Routine</Text>
+            <Text style={styles.addBtnText}>New Plan</Text>
           </TouchableOpacity>
         </View>
 
-        {/* My Routines */}
-        <Text style={styles.sectionLabel}>My Routines</Text>
-
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 24 }} />
+          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 40 }} />
         ) : plans.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No routines yet</Text>
-            <Text style={styles.emptySubtext}>Create your own or use a preset split below</Text>
+            <Text style={styles.emptyText}>No plans yet</Text>
+            <Text style={styles.emptySubtext}>
+              Tap "New Plan" to build your first training routine
+            </Text>
           </View>
         ) : (
           plans.map((plan) => (
-            <TouchableOpacity
+            <PlanCard
               key={plan.id}
-              style={styles.routineCard}
-              onPress={() => router.push({ pathname: '/plan-editor' as any, params: { planId: plan.id } })}>
-              <View style={styles.routineIconBox}>
-                <IconSymbol name="dumbbell.fill" size={20} color={Colors.primary} />
-              </View>
-              <View style={styles.routineInfo}>
-                <Text style={styles.routineName}>{plan.name}</Text>
-                <Text style={styles.routineMeta}>
-                  {plan.description ?? (plan.days_per_week ? `${plan.days_per_week}x / week` : 'Custom routine')}
-                </Text>
-              </View>
-              <View style={styles.routineRight}>
-                {plan.is_active && (
-                  <Text style={styles.routineLastDone}>Active</Text>
-                )}
-                <IconSymbol name="chevron.right" size={16} color={Colors.onSurfaceVariant} />
-              </View>
-            </TouchableOpacity>
+              plan={plan}
+              onStartDay={startDayWorkout}
+              onEdit={() => router.push({ pathname: '/plan-editor' as any, params: { planId: plan.id } })}
+            />
           ))
         )}
-
-        {/* Preset Splits */}
-        <Text style={styles.sectionLabel}>Preset Splits</Text>
-        {PRESET_SPLITS.map((split) => (
-          <SplitCard key={split.id} split={split} />
-        ))}
 
       </ScrollView>
     </SafeAreaView>
