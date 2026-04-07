@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { WorkoutProvider } from '@/contexts/WorkoutContext';
 import { setCached, CACHE_KEYS } from '@/lib/cache';
 import { flushWorkoutQueue } from '@/lib/offlineQueue';
+import { registerPushToken } from '@/lib/notifications';
 
 // Warm the exercise library cache so exercise search works offline.
 // Fire-and-forget — never blocks the UI.
@@ -38,8 +39,10 @@ export default function RootLayout() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
-      // Warm the exercise cache whenever a session is established
-      if (newSession) warmExerciseCache();
+      if (newSession) {
+        warmExerciseCache();
+        registerPushToken();
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -75,8 +78,11 @@ export default function RootLayout() {
           <Stack.Screen name="edit-routine"  options={{ headerShown: false }} />
           <Stack.Screen name="plan-editor"      options={{ headerShown: false }} />
           <Stack.Screen name="session-detail"  options={{ headerShown: false }} />
-          <Stack.Screen name="edit-profile"    options={{ headerShown: false }} />
-          <Stack.Screen name="modal"         options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="edit-profile"      options={{ headerShown: false }} />
+          <Stack.Screen name="set-availability" options={{ headerShown: false }} />
+          <Stack.Screen name="book-session"     options={{ headerShown: false }} />
+          <Stack.Screen name="bookings"         options={{ headerShown: false }} />
+          <Stack.Screen name="modal"            options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
         <StatusBar style="light" />
       </ThemeProvider>

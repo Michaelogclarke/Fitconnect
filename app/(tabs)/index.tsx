@@ -581,7 +581,7 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Quick actions */}
+            {/* Quick actions — row 1 */}
             <View style={trainerStyles.actionRow}>
               <TouchableOpacity
                 style={trainerStyles.actionCard}
@@ -606,6 +606,26 @@ export default function HomeScreen() {
                   <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color={Colors.success} />
                 </View>
                 <Text style={trainerStyles.actionLabel}>Messages</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick actions — row 2: booking */}
+            <View style={trainerStyles.actionRow}>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/set-availability' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.primaryDim + '22' }]}>
+                  <IconSymbol name="calendar.badge.plus" size={20} color={Colors.primaryDim} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>Availability</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/bookings' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.secondary + '22' }]}>
+                  <IconSymbol name="calendar.badge.checkmark" size={20} color={Colors.secondary} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>Bookings</Text>
               </TouchableOpacity>
             </View>
 
@@ -700,6 +720,21 @@ export default function HomeScreen() {
                 <Text style={styles.quickStartSub}>Add exercises as you go</Text>
               </View>
               <IconSymbol name="chevron.right" size={18} color={Colors.primary} />
+            </TouchableOpacity>
+
+            {/* Book a session */}
+            <TouchableOpacity
+              style={styles.quickStartCard}
+              onPress={() => router.push('/book-session' as any)}
+              activeOpacity={0.8}>
+              <View style={[styles.quickStartLeft, { backgroundColor: Colors.tertiary }]}>
+                <IconSymbol name="calendar.badge.plus" size={20} color={Colors.background} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.quickStartTitle}>Book a Session</Text>
+                <Text style={styles.quickStartSub}>Schedule time with your trainer</Text>
+              </View>
+              <IconSymbol name="chevron.right" size={18} color={Colors.tertiary} />
             </TouchableOpacity>
 
             {/* Quick stats */}
