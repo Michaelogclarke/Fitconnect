@@ -474,17 +474,21 @@ function ExerciseSection({
     if (!isResting) setRestExpanded(false);
   }, [isResting]);
 
-  // ── Previous performance ───────────────────────────────────────────────────
+  // ── Previous performance + PR tracking ────────────────────────────────────
   type PrevSet = { weight: number | null; reps: number | null };
-  const [prevSets, setPrevSets] = useState<PrevSet[] | null>(null);
+  const [prevSets,     setPrevSets]     = useState<PrevSet[] | null>(null);
+  const [prBestWeight, setPrBestWeight] = useState<number | null>(null);
+  const [prVisible,    setPrVisible]    = useState(false);
+  const prTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchPrev() {
+    async function fetchPrevAndPR() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || cancelled) return;
 
+        // Most recent session for this exercise (previous performance)
         const { data: sessions } = await supabase
           .from('workout_sessions')
           .select(`
@@ -498,20 +502,54 @@ function ExerciseSection({
           .order('started_at', { ascending: false })
           .limit(1);
 
-        if (cancelled || !sessions?.length) return;
+        if (!cancelled && sessions?.length) {
+          const rawSets = (sessions[0] as any).session_exercises?.[0]?.session_sets ?? [];
+          const completed: PrevSet[] = rawSets
+            .filter((s: any) => s.is_completed)
+            .sort((a: any, b: any) => a.set_number - b.set_number)
+            .map((s: any) => ({ weight: s.weight ?? null, reps: s.reps ?? null }));
+          setPrevSets(completed.length > 0 ? completed : null);
+        }
 
-        const rawSets = (sessions[0] as any).session_exercises?.[0]?.session_sets ?? [];
-        const completed: PrevSet[] = rawSets
-          .filter((s: any) => s.is_completed)
-          .sort((a: any, b: any) => a.set_number - b.set_number)
-          .map((s: any) => ({ weight: s.weight ?? null, reps: s.reps ?? null }));
+        // All-time best weight for this exercise
+        const { data: allSessions } = await supabase
+          .from('workout_sessions')
+          .select(`session_exercises!inner(exercise_name, session_sets(weight, is_completed))`)
+          .eq('user_id', user.id)
+          .eq('session_exercises.exercise_name', exercise.name);
 
-        if (!cancelled) setPrevSets(completed.length > 0 ? completed : null);
+        if (!cancelled) {
+          let best = 0;
+          for (const sess of allSessions ?? []) {
+            for (const ex of (sess as any).session_exercises) {
+              for (const set of ex.session_sets) {
+                if (set.is_completed && Number(set.weight) > best) best = Number(set.weight);
+              }
+            }
+          }
+          setPrBestWeight(best > 0 ? best : null);
+        }
       } catch {}
     }
-    fetchPrev();
+    fetchPrevAndPR();
     return () => { cancelled = true; };
   }, [exercise.name]);
+
+  function handleSetToggle(i: number) {
+    const wasNotDone = !sets[i].done;
+    onToggleSet(i);
+
+    if (wasNotDone && prBestWeight !== null) {
+      const w = parseFloat(sets[i].weight);
+      if (!isNaN(w) && w > prBestWeight) {
+        setPrBestWeight(w);
+        setPrVisible(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        if (prTimer.current) clearTimeout(prTimer.current);
+        prTimer.current = setTimeout(() => setPrVisible(false), 3000);
+      }
+    }
+  }
 
   return (
     <View style={styles.exerciseSection}>
@@ -544,6 +582,14 @@ function ExerciseSection({
           <Text style={styles.prevText} numberOfLines={1}>
             {prevSets.map((s) => `${s.weight ?? '—'}×${s.reps ?? '—'}`).join('  ·  ')}
           </Text>
+        </View>
+      )}
+
+      {/* PR celebration banner */}
+      {prVisible && (
+        <View style={styles.prBanner}>
+          <IconSymbol name="trophy.fill" size={14} color={Colors.primary} />
+          <Text style={styles.prBannerText}>New Personal Record!</Text>
         </View>
       )}
 
@@ -607,7 +653,7 @@ function ExerciseSection({
                       s.done    && styles.checkCircleDone,
                       isNext && !s.done && styles.checkCircleNext,
                     ]}
-                    onPress={() => onToggleSet(i)}>
+                    onPress={() => handleSetToggle(i)}>
                     {s.done && (
                       <IconSymbol name="checkmark" size={14} color={Colors.background} />
                     )}

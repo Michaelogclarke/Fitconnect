@@ -52,6 +52,7 @@ const MAPPING = {
   'clock':               'access-time',
   'trash.fill':          'delete',
   'rectangle.portrait.and.arrow.right': 'logout',
+  'magnifyingglass': 'search',
 } as IconMapping;
 
 /**

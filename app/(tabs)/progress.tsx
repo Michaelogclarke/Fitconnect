@@ -5,13 +5,14 @@ import {
   TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { Colors, Spacing } from '@/constants/theme';
 import { styles } from '@/styles/tabs/progress.styles';
+import { styles as hStyles } from '@/styles/tabs/history.styles';
 import { supabase } from '@/lib/supabase';
-import { formatVolume } from '@/lib/format';
+import { formatVolume, formatShortDate, formatDuration, weekLabel } from '@/lib/format';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,8 +21,64 @@ type PrEntry    = { exercise: string; weight: number; reps: number; date: string
 type VolEntry   = { week: string; value: number };
 type FreqEntry  = { muscle: string; sessions: number };
 
+type HistorySession = {
+  id:               string;
+  name:             string;
+  started_at:       string;
+  duration_seconds: number | null;
+  set_count:        number;
+  volume:           number;
+  exercises:        string[];
+};
+
+type WeekGroup = { week: string; sessions: HistorySession[] };
+
 const RANGE_OPTIONS = ['1W', '1M', '3M', 'All'] as const;
 type Range = typeof RANGE_OPTIONS[number];
+
+// ─── Session card (history) ───────────────────────────────────────────────────
+
+function SessionCard({ session, onPress }: { session: HistorySession; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={hStyles.sessionCard} onPress={onPress} activeOpacity={0.8}>
+      <View style={hStyles.sessionTop}>
+        <View style={hStyles.sessionIconBox}>
+          <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
+        </View>
+        <View style={hStyles.sessionInfo}>
+          <Text style={hStyles.sessionName}>{session.name}</Text>
+          <Text style={hStyles.sessionMeta}>
+            {formatShortDate(session.started_at)}
+            {session.duration_seconds ? ` · ${formatDuration(session.duration_seconds)}` : ''}
+          </Text>
+        </View>
+        <View style={hStyles.sessionRight}>
+          {session.volume > 0 && (
+            <Text style={hStyles.sessionVolume}>{formatVolume(session.volume)}</Text>
+          )}
+          <Text style={hStyles.sessionSets}>{session.set_count} sets</Text>
+        </View>
+      </View>
+
+      {session.exercises.length > 0 && (
+        <View style={hStyles.sessionDetail}>
+          <View style={hStyles.sessionDivider} />
+          {session.exercises.slice(0, 3).map((ex, i) => (
+            <View key={i} style={hStyles.exerciseRow}>
+              <View style={hStyles.exerciseDot} />
+              <Text style={hStyles.exerciseText}>{ex}</Text>
+            </View>
+          ))}
+          {session.exercises.length > 3 && (
+            <Text style={[hStyles.exerciseText, { marginLeft: 18, marginTop: 2 }]}>
+              +{session.exercises.length - 3} more
+            </Text>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
 
 // ─── Line chart ───────────────────────────────────────────────────────────────
 
@@ -216,19 +273,71 @@ function LogWeightModal({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProgressScreen() {
-  const [range,       setRange]       = useState<Range>('1M');
-  const [loading,     setLoading]     = useState(true);
-  const [bodyWeight,  setBodyWeight]  = useState<BwEntry[]>([]);
-  const [prs,         setPrs]         = useState<PrEntry[]>([]);
-  const [weeklyVol,   setWeeklyVol]   = useState<VolEntry[]>([]);
-  const [muscleFreq,  setMuscleFreq]  = useState<FreqEntry[]>([]);
-  const [showLogModal, setShowLogModal] = useState(false);
+  const router = useRouter();
+
+  const [range,          setRange]          = useState<Range>('1M');
+  const [loading,        setLoading]        = useState(true);
+  const [bodyWeight,     setBodyWeight]     = useState<BwEntry[]>([]);
+  const [prs,            setPrs]            = useState<PrEntry[]>([]);
+  const [weeklyVol,      setWeeklyVol]      = useState<VolEntry[]>([]);
+  const [muscleFreq,     setMuscleFreq]     = useState<FreqEntry[]>([]);
+  const [showLogModal,   setShowLogModal]   = useState(false);
+  const [historyGroups,  setHistoryGroups]  = useState<WeekGroup[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       loadProgress();
+      loadHistory();
     }, [range])
   );
+
+  async function loadHistory() {
+    setHistoryLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setHistoryLoading(false); return; }
+
+      const { data: sessions } = await supabase
+        .from('workout_sessions')
+        .select(`
+          id, name, started_at, duration_seconds,
+          session_exercises(
+            exercise_name,
+            session_sets(weight, reps, is_completed)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false });
+
+      const mapped: HistorySession[] = (sessions ?? []).map((s: any) => {
+        const allSets       = s.session_exercises.flatMap((e: any) => e.session_sets);
+        const completedSets = allSets.filter((st: any) => st.is_completed);
+        const volume        = completedSets.reduce(
+          (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
+        );
+        return {
+          id:               s.id,
+          name:             s.name,
+          started_at:       s.started_at,
+          duration_seconds: s.duration_seconds,
+          set_count:        completedSets.length,
+          volume,
+          exercises:        s.session_exercises.map((e: any) => e.exercise_name),
+        };
+      });
+
+      const grouped: WeekGroup[] = [];
+      for (const session of mapped) {
+        const label    = weekLabel(session.started_at);
+        const existing = grouped.find((g) => g.week === label);
+        if (existing) existing.sessions.push(session);
+        else grouped.push({ week: label, sessions: [session] });
+      }
+      setHistoryGroups(grouped);
+    } catch {}
+    setHistoryLoading(false);
+  }
 
   async function loadProgress() {
     setLoading(true);
@@ -478,6 +587,29 @@ export default function ProgressScreen() {
                   })}
                 </View>
               </>
+            )}
+
+            {/* Workout history */}
+            <Text style={styles.sectionLabel}>History</Text>
+            {historyLoading ? (
+              <ActivityIndicator color={Colors.primary} style={{ marginBottom: Spacing.lg }} />
+            ) : historyGroups.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyCardText}>No sessions logged yet</Text>
+              </View>
+            ) : (
+              historyGroups.map((group) => (
+                <View key={group.week}>
+                  <Text style={hStyles.weekLabel}>{group.week}</Text>
+                  {group.sessions.map((session) => (
+                    <SessionCard
+                      key={session.id}
+                      session={session}
+                      onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: session.id } })}
+                    />
+                  ))}
+                </View>
+              ))
             )}
           </>
         )}

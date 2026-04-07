@@ -124,6 +124,23 @@ export const styles = StyleSheet.create({
     opacity: 0.85,
   },
 
+  // ── PR banner ──────────────────────────────────────────────────────────────
+  prBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 7,
+    backgroundColor: Colors.primary + '1a',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.primary + '33',
+  },
+  prBannerText: {
+    ...Typography.labelLg,
+    color: Colors.primary,
+    fontWeight: '600' as const,
+  },
+
   // ── Sets table ─────────────────────────────────────────────────────────────
   setsSection: { paddingHorizontal: Spacing.lg, marginBottom: 4 },
   setsHeader: {

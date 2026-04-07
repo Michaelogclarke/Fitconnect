@@ -314,4 +314,45 @@ export const styles = StyleSheet.create({
     width: 80,
   },
   goalsUnit: { ...Typography.labelLg, color: Colors.onSurfaceVariant, width: 24 },
+
+  // ── Search bar ─────────────────────────────────────────────────────────────
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
+  searchBarInput: {
+    flex: 1,
+    ...Typography.titleMd,
+    color: Colors.onSurface,
+  },
+
+  // ── Quick-pick list (recent + search results) ──────────────────────────────
+  listSectionLabel: {
+    ...Typography.labelMd,
+    color: Colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: Spacing.xs,
+  },
+  quickPickItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginBottom: 4,
+    gap: Spacing.sm,
+  },
+  quickPickInfo: { flex: 1 },
+  quickPickName: { ...Typography.titleMd, color: Colors.onSurface },
+  quickPickMeta: { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  quickPickCals: { ...Typography.labelLg, color: Colors.primary },
 });

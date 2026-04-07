@@ -48,8 +48,17 @@ type FoodLog = {
 };
 
 type ScannedProduct = {
-  name:   string;
+  name:    string;
+  brand?:  string;
   per100g: { calories: number; protein_g: number; carbs_g: number; fat_g: number };
+};
+
+type RecentFood = {
+  name:      string;
+  calories:  number;
+  protein_g: number;
+  carbs_g:   number;
+  fat_g:     number;
 };
 
 type NutritionDayCache = { date: string; goals: NutritionGoals; logs: FoodLog[] };
@@ -314,6 +323,89 @@ function AddFoodModal({
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState('');
 
+  // Recent + search
+  const [recentFoods,   setRecentFoods]   = useState<RecentFood[]>([]);
+  const [searchQuery,   setSearchQuery]   = useState('');
+  const [searchResults, setSearchResults] = useState<ScannedProduct[]>([]);
+  const [searching,     setSearching]     = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load recent foods when modal opens
+  useEffect(() => {
+    if (!visible) return;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('food_logs')
+          .select('name, calories, protein_g, carbs_g, fat_g')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(30);
+        if (!data) return;
+        const seen = new Set<string>();
+        const unique: RecentFood[] = [];
+        for (const item of data) {
+          const key = item.name.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(item as RecentFood);
+            if (unique.length >= 6) break;
+          }
+        }
+        setRecentFoods(unique);
+      } catch {}
+    })();
+  }, [visible]);
+
+  function handleSearchChange(text: string) {
+    setSearchQuery(text);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (text.length < 2) { setSearchResults([]); setSearching(false); return; }
+    setSearching(true);
+    searchTimer.current = setTimeout(() => doSearch(text), 500);
+  }
+
+  async function doSearch(query: string) {
+    try {
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=10&fields=product_name,product_name_en,nutriments,brands&action=process`;
+      const res  = await fetch(url);
+      const json = await res.json();
+      const results: ScannedProduct[] = (json.products ?? [])
+        .map((p: any) => {
+          const n    = p.nutriments ?? {};
+          const name = (p.product_name_en || p.product_name || '').trim();
+          if (!name) return null;
+          return {
+            name,
+            brand: p.brands?.split(',')[0]?.trim() || undefined,
+            per100g: {
+              calories:  n['energy-kcal_100g'] ?? n['energy-kcal'] ?? 0,
+              protein_g: n.proteins_100g       ?? n.proteins       ?? 0,
+              carbs_g:   n.carbohydrates_100g  ?? n.carbohydrates  ?? 0,
+              fat_g:     n.fat_100g            ?? n.fat            ?? 0,
+            },
+          };
+        })
+        .filter(Boolean)
+        .filter((p: ScannedProduct) => p.per100g.calories > 0)
+        .slice(0, 6);
+      setSearchResults(results);
+    } catch {}
+    setSearching(false);
+  }
+
+  function handleRecentPick(food: RecentFood) {
+    setFoodName(food.name);
+    setCalories(String(food.calories));
+    setProtein(String(food.protein_g));
+    setCarbs(String(food.carbs_g));
+    setFat(String(food.fat_g));
+    setScannedProduct(null);
+    setPhase('configure');
+  }
+
   // Auto-recalculate macros when quantity changes (scanned products only)
   useEffect(() => {
     if (!scannedProduct) return;
@@ -336,6 +428,8 @@ function AddFoodModal({
     setFoodName(''); setQuantity('100'); setCalories('');
     setProtein(''); setCarbs(''); setFat('');
     setScannedProduct(null); setSaving(false); setError('');
+    setSearchQuery(''); setSearchResults([]);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     onClose();
   }
 
@@ -393,6 +487,75 @@ function AddFoodModal({
               <>
                 <Text style={styles.modalTitle}>Add Food</Text>
 
+                {/* Search bar */}
+                <View style={styles.searchBarContainer}>
+                  <IconSymbol name="magnifyingglass" size={16} color={Colors.onSurfaceVariant} />
+                  <TextInput
+                    style={styles.searchBarInput}
+                    value={searchQuery}
+                    onChangeText={handleSearchChange}
+                    placeholder="Search foods…"
+                    placeholderTextColor={Colors.onSurfaceVariant}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="search"
+                  />
+                  {searching && <ActivityIndicator size="small" color={Colors.onSurfaceVariant} />}
+                  {searchQuery.length > 0 && !searching && (
+                    <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }}>
+                      <IconSymbol name="xmark.circle.fill" size={16} color={Colors.onSurfaceVariant} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Search results or recent foods */}
+                {searchQuery.length >= 2 ? (
+                  <View>
+                    {searchResults.length > 0 ? (
+                      <>
+                        <Text style={styles.listSectionLabel}>Results</Text>
+                        {searchResults.map((result, i) => (
+                          <TouchableOpacity
+                            key={i}
+                            style={styles.quickPickItem}
+                            onPress={() => handleProductFound(result)}>
+                            <View style={styles.quickPickInfo}>
+                              <Text style={styles.quickPickName} numberOfLines={1}>{result.name}</Text>
+                              <Text style={styles.quickPickMeta}>
+                                {result.brand ? `${result.brand} · ` : ''}per 100g · {Math.round(result.per100g.calories)} kcal
+                              </Text>
+                            </View>
+                            <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+                          </TouchableOpacity>
+                        ))}
+                      </>
+                    ) : !searching ? (
+                      <Text style={[styles.mealEmptyText, { textAlign: 'center', paddingVertical: Spacing.sm }]}>
+                        No results found
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : recentFoods.length > 0 ? (
+                  <View>
+                    <Text style={styles.listSectionLabel}>Recent</Text>
+                    {recentFoods.map((food, i) => (
+                      <TouchableOpacity
+                        key={i}
+                        style={styles.quickPickItem}
+                        onPress={() => handleRecentPick(food)}>
+                        <View style={styles.quickPickInfo}>
+                          <Text style={styles.quickPickName} numberOfLines={1}>{food.name}</Text>
+                          <Text style={styles.quickPickMeta}>
+                            P {food.protein_g}g · C {food.carbs_g}g · F {food.fat_g}g
+                          </Text>
+                        </View>
+                        <Text style={styles.quickPickCals}>{food.calories} kcal</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+
+                {/* Method buttons */}
                 <TouchableOpacity
                   style={styles.methodBtn}
                   onPress={() => setShowScan(true)}>
