@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
@@ -35,13 +35,11 @@ type HistoryCache = {
 
 // ─── Session card ─────────────────────────────────────────────────────────────
 
-function SessionCard({ session }: { session: HistorySession }) {
-  const [expanded, setExpanded] = React.useState(false);
-
+function SessionCard({ session, onPress }: { session: HistorySession; onPress: () => void }) {
   return (
     <TouchableOpacity
       style={styles.sessionCard}
-      onPress={() => setExpanded((e) => !e)}
+      onPress={onPress}
       activeOpacity={0.8}>
 
       <View style={styles.sessionTop}>
@@ -63,15 +61,20 @@ function SessionCard({ session }: { session: HistorySession }) {
         </View>
       </View>
 
-      {expanded && session.exercises.length > 0 && (
+      {session.exercises.length > 0 && (
         <View style={styles.sessionDetail}>
           <View style={styles.sessionDivider} />
-          {session.exercises.map((ex, i) => (
+          {session.exercises.slice(0, 3).map((ex, i) => (
             <View key={i} style={styles.exerciseRow}>
               <View style={styles.exerciseDot} />
               <Text style={styles.exerciseText}>{ex}</Text>
             </View>
           ))}
+          {session.exercises.length > 3 && (
+            <Text style={[styles.exerciseText, { marginLeft: 18, marginTop: 2 }]}>
+              +{session.exercises.length - 3} more
+            </Text>
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -81,6 +84,7 @@ function SessionCard({ session }: { session: HistorySession }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
+  const router = useRouter();
   const [loading,       setLoading]       = useState(true);
   const [groups,        setGroups]        = useState<WeekGroup[]>([]);
   const [totalSessions, setTotalSessions] = useState(0);
@@ -196,7 +200,11 @@ export default function HistoryScreen() {
             <View key={group.week}>
               <Text style={styles.weekLabel}>{group.week}</Text>
               {group.sessions.map((session) => (
-                <SessionCard key={session.id} session={session} />
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: session.id } })}
+                />
               ))}
             </View>
           ))
