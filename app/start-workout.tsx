@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
   KeyboardAvoidingView,
@@ -53,7 +54,7 @@ function formatTime(s: number) {
 }
 
 
-const REST_SECONDS = 90;
+const REST_SECONDS = 120;
 
 // ─── SwipeableRow ─────────────────────────────────────────────────────────────
 
@@ -626,14 +627,15 @@ export default function StartWorkoutScreen() {
 
   // ── Persistent workout state from context ──────────────────────────────────
   const {
-    isActive, exercises, setsState, activeRest, elapsed, startedAt,
+    hydrated, isActive, exercises, setsState, activeRest, elapsed, startedAt,
     startWorkout, clearWorkout, setExercises, setSetsState, setActiveRest,
   } = useWorkout();
 
-  // Start a new workout on first mount (if none already running)
+  // Start a new workout only after AsyncStorage restore is done and no session is running
   useEffect(() => {
+    if (!hydrated) return;
     if (!isActive) startWorkout();
-  }, []);
+  }, [hydrated]);
 
   // ── Local UI state (resets on unmount — that's fine) ──────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
@@ -642,7 +644,8 @@ export default function StartWorkoutScreen() {
   const [numPadTarget, setNumPadTarget] = useState<NumPadTarget | null>(null);
   const [numPadValue,  setNumPadValue]  = useState('0');
 
-  const notifIdRef = useRef<string | null>(null);
+  const notifIdRef       = useRef<string | null>(null);
+  const restExerciseRef  = useRef<string>('');
 
   const [finishing, setFinishing] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -721,12 +724,35 @@ export default function StartWorkoutScreen() {
     cancelRestNotification();
   }, [cancelRestNotification]);
 
-  // Clamp to 5 s minimum so the chip doesn't vanish unexpectedly on -15
-  const adjustRest = useCallback((delta: number) => {
-    setActiveRest((prev) =>
-      prev ? { ...prev, endsAt: Math.max(Date.now() + 5000, prev.endsAt + delta * 1000) } : null
-    );
-  }, []);
+  // Clamp to 5 s minimum so the chip doesn't vanish unexpectedly on -15.
+  // Also reschedule the notification so it fires at the updated time.
+  const adjustRest = useCallback(async (delta: number) => {
+    if (!activeRest) return;
+    const newEndsAt = Math.max(Date.now() + 5000, activeRest.endsAt + delta * 1000);
+    setActiveRest({ ...activeRest, endsAt: newEndsAt });
+
+    // Reschedule notification to the new end time
+    if (notifIdRef.current) {
+      await Notifications.cancelScheduledNotificationAsync(notifIdRef.current).catch(() => {});
+      notifIdRef.current = null;
+    }
+    const remainingSecs = Math.max(1, Math.ceil((newEndsAt - Date.now()) / 1000));
+    try {
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Rest complete!',
+          body:  `Time to hit the next set — ${restExerciseRef.current}`,
+          sound: true,
+        },
+        trigger: {
+          type:    Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: remainingSecs,
+          repeats: false,
+        },
+      });
+      notifIdRef.current = id;
+    } catch {}
+  }, [activeRest]);
 
   // ── NumPad helpers ─────────────────────────────────────────────────────────
 
@@ -763,6 +789,7 @@ export default function StartWorkoutScreen() {
     }));
 
     if (!wasDone) {
+      restExerciseRef.current = exerciseName;
       setActiveRest({ exId, setIdx: idx, endsAt: Date.now() + REST_SECONDS * 1000 });
       scheduleRestNotification(exerciseName);
     } else if (activeRest?.exId === exId && activeRest.setIdx === idx) {
@@ -807,6 +834,27 @@ export default function StartWorkoutScreen() {
     setExercises((prev) => [...prev, exercise]);
     setSetsState((prev) => ({ ...prev, [exercise.id]: sets }));
     setShowAddModal(false);
+  }
+
+  // ── Cancel workout ────────────────────────────────────────────────────────────
+
+  function confirmCancelWorkout() {
+    Alert.alert(
+      'Cancel Workout?',
+      'Your progress will be lost and nothing will be saved.',
+      [
+        { text: 'Keep Going', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            cancelRestNotification();
+            clearWorkout();
+            router.replace('/(tabs)');
+          },
+        },
+      ]
+    );
   }
 
   // ── Save workout ─────────────────────────────────────────────────────────────
@@ -918,7 +966,7 @@ export default function StartWorkoutScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Top bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={confirmCancelWorkout}>
           <IconSymbol name="chevron.left" size={20} color={Colors.onSurface} />
         </TouchableOpacity>
         <View style={styles.topBarCenter}>
@@ -1011,6 +1059,10 @@ export default function StartWorkoutScreen() {
               {allDone ? 'Finish Workout' : 'Finish Early'}
             </Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.btnCancel} onPress={confirmCancelWorkout} disabled={finishing}>
+          <Text style={styles.btnCancelText}>Cancel Workout</Text>
         </TouchableOpacity>
       </View>
 

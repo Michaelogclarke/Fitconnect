@@ -320,6 +320,11 @@ export const styles = StyleSheet.create({
     borderColor: Colors.outlineVariant,
   },
   btnFinishDimmedText: { ...Typography.titleLg, color: Colors.onSurfaceVariant },
+  btnCancel: {
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  btnCancelText: { ...Typography.labelLg, color: Colors.error, opacity: 0.8 },
   saveErrorText: {
     ...Typography.labelLg,
     color: Colors.error,
