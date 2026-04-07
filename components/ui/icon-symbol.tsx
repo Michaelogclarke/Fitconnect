@@ -52,7 +52,9 @@ const MAPPING = {
   'clock':               'access-time',
   'trash.fill':          'delete',
   'rectangle.portrait.and.arrow.right': 'logout',
-  'magnifyingglass': 'search',
+  'magnifyingglass':  'search',
+  'figure.walk':      'directions-walk',
+  'plus':             'add',
 } as IconMapping;
 
 /**

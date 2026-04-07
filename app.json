@@ -12,7 +12,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.michaelog.fitconnect",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSHealthShareUsageDescription": "FitConnect reads your step count and active calories to show your daily activity progress."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true
       }
     },
     "android": {
@@ -32,6 +36,7 @@
     },
     "plugins": [
       "expo-router",
+      "react-native-health-connect",
       [
         "expo-notifications",
         {
@@ -56,6 +61,14 @@
           "backgroundColor": "#ffffff",
           "dark": {
             "backgroundColor": "#000000"
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
           }
         }
       ]

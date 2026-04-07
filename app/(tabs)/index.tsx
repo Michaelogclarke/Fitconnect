@@ -12,6 +12,13 @@ import { supabase } from '@/lib/supabase';
 import { formatSessionDate, formatDuration, formatVolume } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
+import {
+  initializeHealth,
+  hasStepsPermission,
+  requestHealthPermissions,
+  fetchTodayHealth,
+  type HealthSnapshot,
+} from '@/lib/health';
 
 const WEEKLY_GOAL_KEY = 'pref:weekly_goal';
 const WEEKLY_GOAL_OPTIONS = [2, 3, 4, 5, 6];
@@ -110,6 +117,9 @@ export default function HomeScreen() {
   const [longestStreak,  setLongestStreak]  = useState(0);
   const [weeklyGoal,     setWeeklyGoal]     = useState(4);
   const [showGoalPicker, setShowGoalPicker] = useState(false);
+  const [healthSnap,     setHealthSnap]     = useState<HealthSnapshot | null>(null);
+  const [healthReady,    setHealthReady]    = useState(false);   // true once we've checked
+  const [healthGranted,  setHealthGranted]  = useState(false);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -143,10 +153,39 @@ export default function HomeScreen() {
     await AsyncStorage.setItem(WEEKLY_GOAL_KEY, String(val));
   }
 
+  // Check health permissions + fetch data on every focus
+  async function checkHealth() {
+    try {
+      const available = await initializeHealth();
+      if (!available) { setHealthReady(true); return; }
+      const granted = await hasStepsPermission();
+      setHealthGranted(granted);
+      if (granted) {
+        const snap = await fetchTodayHealth();
+        setHealthSnap(snap);
+      }
+    } catch {}
+    setHealthReady(true);
+  }
+
+  async function connectHealth() {
+    try {
+      const available = await initializeHealth();
+      if (!available) return;
+      const granted = await requestHealthPermissions();
+      if (granted) {
+        setHealthGranted(true);
+        const snap = await fetchTodayHealth();
+        setHealthSnap(snap);
+      }
+    } catch {}
+  }
+
   // Reload whenever the tab comes into focus
   useFocusEffect(
     useCallback(() => {
       loadData();
+      checkHealth();
     }, [])
   );
 
@@ -397,6 +436,43 @@ export default function HomeScreen() {
                   : `${weekSessions} / ${weeklyGoal} sessions this week`}
               </Text>
             </TouchableOpacity>
+
+            {/* Steps / health card */}
+            {healthReady && (
+              healthGranted && healthSnap ? (
+                <View style={styles.stepsCard}>
+                  <View style={styles.stepsHeader}>
+                    <View style={styles.stepsLeft}>
+                      <IconSymbol name="figure.walk" size={16} color={Colors.primary} />
+                      <Text style={styles.stepsTitle}>Steps Today</Text>
+                    </View>
+                    <Text style={styles.stepsCount}>{healthSnap.steps.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.stepsBarTrack}>
+                    <View
+                      style={[
+                        styles.stepsBarFill,
+                        { width: `${Math.min(healthSnap.steps / 10000, 1) * 100}%` as any },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.stepsFooter}>
+                    {healthSnap.steps >= 10000
+                      ? 'Daily goal reached!'
+                      : `${(10000 - healthSnap.steps).toLocaleString()} steps to 10,000`}
+                    {healthSnap.activeCalories > 0
+                      ? `  ·  ${healthSnap.activeCalories} kcal burned`
+                      : ''}
+                  </Text>
+                </View>
+              ) : !healthGranted && (
+                <TouchableOpacity style={styles.stepsConnectCard} onPress={connectHealth} activeOpacity={0.8}>
+                  <IconSymbol name="figure.walk" size={18} color={Colors.onSurfaceVariant} />
+                  <Text style={styles.stepsConnectText}>Connect Health for step tracking</Text>
+                  <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+                </TouchableOpacity>
+              )
+            )}
 
             {/* Recent sessions */}
             <Text style={styles.sectionLabel}>Recent Sessions</Text>

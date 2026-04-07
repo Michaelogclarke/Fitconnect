@@ -186,6 +186,57 @@ export const styles = StyleSheet.create({
   },
   goalPickerOptionTextActive: { color: Colors.primary },
 
+  // ── Steps / health card ────────────────────────────────────────────────────
+  stepsCard: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+  },
+  stepsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  stepsLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  stepsTitle: { ...Typography.titleMd, color: Colors.onSurface },
+  stepsCount: { ...Typography.headlineMd, color: Colors.primary },
+  stepsBarTrack: {
+    height: 8,
+    backgroundColor: Colors.outlineVariant,
+    borderRadius: Radius.full,
+    overflow: 'hidden',
+    marginBottom: Spacing.xs,
+  },
+  stepsBarFill: {
+    height: '100%',
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.full,
+  },
+  stepsFooter: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  stepsConnectCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.surfaceContainer,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors.outlineVariant,
+  },
+  stepsConnectText: {
+    ...Typography.labelLg,
+    color: Colors.onSurfaceVariant,
+    flex: 1,
+  },
+
   // ── Recent sessions ────────────────────────────────────────────────────────
   recentCard: {
     flexDirection: 'row', alignItems: 'center',
