@@ -1,24 +1,70 @@
-import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { styles } from '@/styles/tabs/chat.styles';
+import { supabase } from '@/lib/supabase';
+import { initials } from '@/lib/format';
 
-const THREADS = [
-  { id: '1', name: 'Sarah Johnson', preview: 'How did the leg day go?', time: '2m', online: true, unread: 3 },
-  { id: '2', name: 'Marcus Reid', preview: 'Updated my nutrition plan', time: '14m', online: true, unread: 0 },
-  { id: '3', name: 'Emma Clarke', preview: 'See you at 6am tomorrow!', time: '1h', online: false, unread: 1 },
-  { id: '4', name: 'Tom Walsh', preview: 'Can we reschedule Friday?', time: '3h', online: false, unread: 0 },
-  { id: '5', name: 'Priya Patel', preview: 'PB on deadlifts today!!', time: '5h', online: false, unread: 0 },
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-function initials(name: string) {
-  return name.split(' ').map((n) => n[0]).join('');
+type Thread = {
+  threadId:      string;
+  otherUserId:   string;
+  otherName:     string;
+  lastMessage:   string | null;
+  lastMessageAt: string | null;
+  unreadCount:   number;
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatTime(iso: string | null): string {
+  if (!iso) return '';
+  const d    = new Date(iso);
+  const now  = new Date();
+  const diff = now.getTime() - d.getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1)  return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)  return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
 }
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function ChatScreen() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [threads, setThreads] = useState<Thread[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadThreads();
+    }, [])
+  );
+
+  async function loadThreads() {
+    setLoading(true);
+    const { data, error } = await supabase.rpc('get_thread_summaries');
+
+    if (!error && data) {
+      setThreads(data.map((row: any) => ({
+        threadId:      row.trainer_client_id,
+        otherUserId:   row.other_user_id,
+        otherName:     row.other_name ?? 'Unknown',
+        lastMessage:   row.last_message ?? null,
+        lastMessageAt: row.last_message_at ?? null,
+        unreadCount:   Number(row.unread_count ?? 0),
+      })));
+    }
+    setLoading(false);
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -29,38 +75,57 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {THREADS.map((t, idx) => (
-          <React.Fragment key={t.id}>
-            <TouchableOpacity style={styles.threadCard}>
-              <View style={styles.avatarWrap}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initials(t.name)}</Text>
+      {loading ? (
+        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+      ) : threads.length === 0 ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+          <IconSymbol name="bubble.left.and.bubble.right.fill" size={40} color={Colors.outlineVariant} />
+          <Text style={{ ...styles.title, fontSize: 18, marginTop: 16 }}>No conversations yet</Text>
+          <Text style={{ color: Colors.onSurfaceVariant, textAlign: 'center', marginTop: 8 }}>
+            Messages with your trainer or clients will appear here.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          {threads.map((t, idx) => (
+            <React.Fragment key={t.threadId}>
+              <TouchableOpacity
+                style={styles.threadCard}
+                onPress={() => router.push({
+                  pathname: '/conversation' as any,
+                  params: { threadId: t.threadId, otherName: t.otherName },
+                })}
+                activeOpacity={0.8}>
+                <View style={styles.avatarWrap}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{initials(t.otherName)}</Text>
+                  </View>
                 </View>
-                {t.online && <View style={styles.onlineDot} />}
-              </View>
-              <View style={styles.threadInfo}>
-                <View style={styles.threadRow}>
-                  <Text style={styles.threadName}>{t.name}</Text>
-                  <Text style={styles.threadTime}>{t.time}</Text>
+                <View style={styles.threadInfo}>
+                  <View style={styles.threadRow}>
+                    <Text style={styles.threadName}>{t.otherName}</Text>
+                    <Text style={styles.threadTime}>{formatTime(t.lastMessageAt)}</Text>
+                  </View>
+                  <View style={styles.threadRow}>
+                    <Text style={styles.threadPreview} numberOfLines={1}>
+                      {t.lastMessage ?? 'No messages yet'}
+                    </Text>
+                    {t.unreadCount > 0 && (
+                      <View style={styles.unreadBadge}>
+                        <Text style={styles.unreadText}>{t.unreadCount}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.threadRow}>
-                  <Text style={styles.threadPreview} numberOfLines={1}>{t.preview}</Text>
-                  {t.unread > 0 && (
-                    <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadText}>{t.unread}</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            </TouchableOpacity>
-            {idx < THREADS.length - 1 && <View style={styles.divider} />}
-          </React.Fragment>
-        ))}
-      </ScrollView>
+              </TouchableOpacity>
+              {idx < threads.length - 1 && <View style={styles.divider} />}
+            </React.Fragment>
+          ))}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

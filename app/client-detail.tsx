@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -35,6 +36,17 @@ type TrainerPlan = {
   id:   string;
   name: string;
 };
+
+type CheckIn = {
+  id:              string;
+  weekStart:       string;
+  sleepRating:     number;
+  energyRating:    number;
+  adherenceRating: number;
+  notes:           string | null;
+};
+
+const RATING_LABELS = ['', 'Very Poor', 'Poor', 'OK', 'Good', 'Excellent'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -126,13 +138,19 @@ export default function ClientDetailScreen() {
   const router = useRouter();
   const { clientId, clientName } = useLocalSearchParams<{ clientId: string; clientName: string }>();
 
-  const [loading,       setLoading]       = useState(true);
-  const [sessions,      setSessions]      = useState<Session[]>([]);
-  const [assignedPlan,  setAssignedPlan]  = useState<AssignedPlan | null>(null);
-  const [trainerPlans,  setTrainerPlans]  = useState<TrainerPlan[]>([]);
-  const [totalSessions, setTotalSessions] = useState(0);
-  const [lastWeight,    setLastWeight]    = useState<string | null>(null);
-  const [showPicker,    setShowPicker]    = useState(false);
+  const [loading,        setLoading]        = useState(true);
+  const [sessions,       setSessions]       = useState<Session[]>([]);
+  const [assignedPlan,   setAssignedPlan]   = useState<AssignedPlan | null>(null);
+  const [trainerPlans,   setTrainerPlans]   = useState<TrainerPlan[]>([]);
+  const [totalSessions,  setTotalSessions]  = useState(0);
+  const [lastWeight,     setLastWeight]     = useState<string | null>(null);
+  const [showPicker,     setShowPicker]     = useState(false);
+  const [checkIns,       setCheckIns]       = useState<CheckIn[]>([]);
+  const [threadId,       setThreadId]       = useState<string | null>(null);
+  const [sessionNotes,   setSessionNotes]   = useState<Record<string, string>>({});
+  const [noteModalId,    setNoteModalId]    = useState<string | null>(null);
+  const [noteText,       setNoteText]       = useState('');
+  const [savingNote,     setSavingNote]     = useState(false);
 
   useEffect(() => {
     if (clientId) loadClientData();
@@ -144,7 +162,7 @@ export default function ClientDetailScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !clientId) { setLoading(false); return; }
 
-    const [sessionsRes, weightRes, assignedRes, trainerPlansRes] = await Promise.all([
+    const [sessionsRes, weightRes, assignedRes, trainerPlansRes, linkRes] = await Promise.all([
       // Recent sessions
       supabase
         .from('workout_sessions')
@@ -178,15 +196,25 @@ export default function ClientDetailScreen() {
         .eq('user_id', user.id)
         .is('assigned_to', null)
         .order('created_at', { ascending: false }),
+
+      // Trainer-client link (for check-ins + messaging)
+      supabase
+        .from('trainer_clients')
+        .select('id')
+        .eq('trainer_id', user.id)
+        .eq('client_id', clientId)
+        .eq('status', 'active')
+        .maybeSingle(),
     ]);
 
     const rawSessions = sessionsRes.data ?? [];
-    setSessions(rawSessions.map((s: any) => ({
+    const mappedSessions: Session[] = rawSessions.map((s: any) => ({
       id:        s.id,
       name:      s.name,
       startedAt: s.started_at,
       duration:  s.duration_seconds,
-    })));
+    }));
+    setSessions(mappedSessions);
     setTotalSessions(rawSessions.length);
 
     if (weightRes.data) {
@@ -196,7 +224,75 @@ export default function ClientDetailScreen() {
     setAssignedPlan(assignedRes.data ?? null);
     setTrainerPlans((trainerPlansRes.data ?? []).map((p: any) => ({ id: p.id, name: p.name })));
 
+    const link = linkRes.data;
+    if (link) {
+      setThreadId(link.id);
+
+      // Load check-ins and session notes in parallel
+      const sessionIds = mappedSessions.map((s) => s.id);
+      const [checkInsRes, notesRes] = await Promise.all([
+        supabase
+          .from('check_ins')
+          .select('id, week_start, sleep_rating, energy_rating, adherence_rating, notes')
+          .eq('trainer_client_id', link.id)
+          .order('week_start', { ascending: false })
+          .limit(4),
+        sessionIds.length > 0
+          ? supabase
+              .from('session_notes')
+              .select('session_id, content')
+              .in('session_id', sessionIds)
+              .eq('trainer_id', user.id)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      setCheckIns((checkInsRes.data ?? []).map((c: any) => ({
+        id:              c.id,
+        weekStart:       c.week_start,
+        sleepRating:     c.sleep_rating,
+        energyRating:    c.energy_rating,
+        adherenceRating: c.adherence_rating,
+        notes:           c.notes,
+      })));
+
+      const notesMap: Record<string, string> = {};
+      ((notesRes as any).data ?? []).forEach((n: any) => {
+        notesMap[n.session_id] = n.content;
+      });
+      setSessionNotes(notesMap);
+    }
+
     setLoading(false);
+  }
+
+  async function handleSaveNote() {
+    if (!noteModalId || savingNote) return;
+    setSavingNote(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingNote(false); return; }
+
+    const content = noteText.trim();
+    if (content) {
+      await supabase
+        .from('session_notes')
+        .upsert(
+          { session_id: noteModalId, trainer_id: user.id, content, updated_at: new Date().toISOString() },
+          { onConflict: 'session_id,trainer_id' }
+        );
+      setSessionNotes((prev) => ({ ...prev, [noteModalId]: content }));
+    } else {
+      await supabase
+        .from('session_notes')
+        .delete()
+        .eq('session_id', noteModalId)
+        .eq('trainer_id', user.id);
+      setSessionNotes((prev) => { const n = { ...prev }; delete n[noteModalId]; return n; });
+    }
+
+    setSavingNote(false);
+    setNoteModalId(null);
+    setNoteText('');
   }
 
   const name = clientName ?? 'Client';
@@ -209,7 +305,15 @@ export default function ClientDetailScreen() {
           <IconSymbol name="chevron.left" size={24} color={Colors.onSurface} />
         </TouchableOpacity>
         <Text style={localStyles.headerTitle}>Client</Text>
-        <View style={{ width: 24 }} />
+        {threadId ? (
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: '/conversation' as any, params: { threadId, otherName: name } })}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <IconSymbol name="bubble.left.fill" size={22} color={Colors.primary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
       </View>
 
       <ScrollView
@@ -268,6 +372,42 @@ export default function ClientDetailScreen() {
               </View>
             </View>
 
+            {/* Weekly check-ins */}
+            {checkIns.length > 0 && (
+              <View style={localStyles.section}>
+                <Text style={localStyles.sectionTitle}>Weekly Check-Ins</Text>
+                <View style={localStyles.card}>
+                  {checkIns.map((ci, idx) => (
+                    <View
+                      key={ci.id}
+                      style={[
+                        localStyles.sessionRow,
+                        idx < checkIns.length - 1 && localStyles.sessionBorder,
+                        { flexDirection: 'column', alignItems: 'flex-start', gap: Spacing.xs },
+                      ]}>
+                      <Text style={localStyles.sessionName}>
+                        Week of {new Date(ci.weekStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
+                        <Text style={localStyles.sessionDate}>
+                          Sleep: <Text style={{ color: Colors.onSurface }}>{RATING_LABELS[ci.sleepRating]}</Text>
+                        </Text>
+                        <Text style={localStyles.sessionDate}>
+                          Energy: <Text style={{ color: Colors.onSurface }}>{RATING_LABELS[ci.energyRating]}</Text>
+                        </Text>
+                        <Text style={localStyles.sessionDate}>
+                          Plan: <Text style={{ color: Colors.onSurface }}>{RATING_LABELS[ci.adherenceRating]}</Text>
+                        </Text>
+                      </View>
+                      {ci.notes ? (
+                        <Text style={localStyles.sessionNotePreview} numberOfLines={2}>{ci.notes}</Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
             {/* Recent sessions */}
             <View style={localStyles.section}>
               <Text style={localStyles.sectionTitle}>Recent Sessions</Text>
@@ -287,10 +427,28 @@ export default function ClientDetailScreen() {
                       <View style={localStyles.sessionInfo}>
                         <Text style={localStyles.sessionName}>{s.name}</Text>
                         <Text style={localStyles.sessionDate}>{formatDate(s.startedAt)}</Text>
+                        {sessionNotes[s.id] ? (
+                          <Text style={localStyles.sessionNotePreview} numberOfLines={1}>
+                            {sessionNotes[s.id]}
+                          </Text>
+                        ) : null}
                       </View>
                       <Text style={localStyles.sessionDuration}>
                         {formatDuration(s.duration)}
                       </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setNoteModalId(s.id);
+                          setNoteText(sessionNotes[s.id] ?? '');
+                        }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{ marginLeft: Spacing.xs }}>
+                        <IconSymbol
+                          name="note.text"
+                          size={18}
+                          color={sessionNotes[s.id] ? Colors.primary : Colors.outlineVariant}
+                        />
+                      </TouchableOpacity>
                     </View>
                   ))}
                 </View>
@@ -299,6 +457,39 @@ export default function ClientDetailScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Session note modal */}
+      <Modal visible={!!noteModalId} animationType="slide" transparent onRequestClose={() => setNoteModalId(null)}>
+        <View style={noteStyles.backdrop}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setNoteModalId(null)} activeOpacity={1} />
+          <View style={noteStyles.sheet}>
+            <View style={noteStyles.handle} />
+            <Text style={noteStyles.title}>Session Note</Text>
+            <TextInput
+              style={noteStyles.input}
+              value={noteText}
+              onChangeText={setNoteText}
+              placeholder="Add a note for this session…"
+              placeholderTextColor={Colors.onSurfaceVariant}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+              autoFocus
+            />
+            <TouchableOpacity
+              style={[noteStyles.saveBtn, savingNote && noteStyles.saveBtnDisabled]}
+              onPress={handleSaveNote}
+              disabled={savingNote}>
+              {savingNote
+                ? <ActivityIndicator color={Colors.background} />
+                : <Text style={noteStyles.saveBtnText}>Save Note</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={noteStyles.cancelBtn} onPress={() => setNoteModalId(null)}>
+              <Text style={noteStyles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <PlanPickerModal
         visible={showPicker}
@@ -444,6 +635,70 @@ const localStyles = StyleSheet.create({
     color: Colors.onSurfaceVariant,
     padding: Spacing.md,
     textAlign: 'center',
+  },
+  sessionNotePreview: {
+    ...Typography.bodyMd,
+    color: Colors.onSurfaceVariant,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+});
+
+const noteStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  sheet: {
+    backgroundColor: Colors.surfaceContainer,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    padding: Spacing.xl,
+    paddingBottom: Spacing.xxxl,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.outlineVariant,
+    alignSelf: 'center',
+    marginBottom: Spacing.lg,
+  },
+  title: {
+    ...Typography.headlineMd,
+    color: Colors.onSurface,
+    marginBottom: Spacing.md,
+  },
+  input: {
+    backgroundColor: Colors.surfaceContainerHighest,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.outlineVariant,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    ...Typography.bodyMd,
+    color: Colors.onSurface,
+    minHeight: 120,
+    marginBottom: Spacing.md,
+  },
+  saveBtn: {
+    height: 50,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveBtnDisabled: { opacity: 0.45 },
+  saveBtnText: { ...Typography.titleLg, color: Colors.background },
+  cancelBtn: {
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelText: {
+    ...Typography.titleMd,
+    color: Colors.onSurfaceVariant,
   },
 });
 

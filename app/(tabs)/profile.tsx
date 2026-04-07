@@ -23,6 +23,12 @@ type PendingInvite = {
   trainerName: string;
 };
 
+type ActiveTrainer = {
+  linkId:      string;
+  trainerId:   string;
+  trainerName: string;
+};
+
 // ─── Static menu ─────────────────────────────────────────────────────────────
 
 const MENU_SECTIONS = [
@@ -53,6 +59,7 @@ export default function ProfileScreen() {
   const [role,           setRole]           = useState<'client' | 'trainer'>('client');
   const [totalSessions,  setTotalSessions]  = useState(0);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [activeTrainer,  setActiveTrainer]  = useState<ActiveTrainer | null>(null);
   const [acceptingId,    setAcceptingId]    = useState<string | null>(null);
 
   function applyData(d: ProfileCache) {
@@ -94,9 +101,12 @@ export default function ProfileScreen() {
       if (profile?.role) setRole(profile.role as 'client' | 'trainer');
       await setCached(CACHE_KEYS.PROFILE, fresh);
 
-      // Load pending invites (clients only)
+      // Load trainer-related data (clients only)
       if (profile?.role === 'client') {
-        await loadPendingInvites(user.id);
+        await Promise.all([
+          loadPendingInvites(user.id),
+          loadActiveTrainer(user.id),
+        ]);
       }
     } catch {
       // Silently fall back to cached data
@@ -127,6 +137,30 @@ export default function ProfileScreen() {
       trainerId:   l.trainer_id,
       trainerName: trainerMap[l.trainer_id] ?? 'Unknown Trainer',
     })));
+  }
+
+  async function loadActiveTrainer(userId: string) {
+    const { data: link } = await supabase
+      .from('trainer_clients')
+      .select('id, trainer_id')
+      .eq('client_id', userId)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle();
+
+    if (!link) { setActiveTrainer(null); return; }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', link.trainer_id)
+      .single();
+
+    setActiveTrainer({
+      linkId:      link.id,
+      trainerId:   link.trainer_id,
+      trainerName: profile?.full_name ?? 'Your Trainer',
+    });
   }
 
   async function handleAcceptInvite(linkId: string) {
@@ -180,6 +214,44 @@ export default function ProfileScreen() {
             </>
           )}
         </View>
+
+        {/* Active trainer section (clients only) */}
+        {activeTrainer && (
+          <View style={inviteStyles.section}>
+            <Text style={styles.sectionTitle}>Your Trainer</Text>
+            <View style={styles.menuCard}>
+              <View style={[inviteStyles.inviteRow, { borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant }]}>
+                <View style={inviteStyles.avatar}>
+                  <Text style={inviteStyles.avatarText}>{initials(activeTrainer.trainerName)}</Text>
+                </View>
+                <View style={inviteStyles.inviteInfo}>
+                  <Text style={inviteStyles.trainerName}>{activeTrainer.trainerName}</Text>
+                  <Text style={inviteStyles.inviteLabel}>Personal Trainer</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity
+                  style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: Colors.outlineVariant }]}
+                  onPress={() => router.push({
+                    pathname: '/conversation' as any,
+                    params: { threadId: activeTrainer.linkId, otherName: activeTrainer.trainerName },
+                  })}>
+                  <IconSymbol name="bubble.left.fill" size={16} color={Colors.primary} />
+                  <Text style={inviteStyles.trainerActionText}>Message</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={inviteStyles.trainerAction}
+                  onPress={() => router.push({
+                    pathname: '/check-in' as any,
+                    params: { threadId: activeTrainer.linkId, trainerName: activeTrainer.trainerName },
+                  })}>
+                  <IconSymbol name="checkmark.circle.fill" size={16} color={Colors.primary} />
+                  <Text style={inviteStyles.trainerActionText}>Check-In</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Pending trainer invites (clients only) */}
         {pendingInvites.length > 0 && (
@@ -328,5 +400,17 @@ const inviteStyles = StyleSheet.create({
   declineBtnText: {
     ...Typography.labelLg,
     color: Colors.onSurfaceVariant,
+  },
+  trainerAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.md,
+  },
+  trainerActionText: {
+    ...Typography.titleMd,
+    color: Colors.primary,
   },
 });

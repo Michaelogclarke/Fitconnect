@@ -20,19 +20,32 @@ export default function TabLayout() {
   const insets  = useSafeAreaInsets();
   const { isActive, elapsed, exercises, activeRest } = useWorkout();
 
-  const [role, setRole] = useState<'client' | 'trainer' | null>(null);
+  const [role,     setRole]     = useState<'client' | 'trainer' | null>(null);
+  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          if (data?.role) setRole(data.role as 'client' | 'trainer');
-        });
+        .single();
+
+      const r = profile?.role as 'client' | 'trainer' | undefined;
+      if (r) setRole(r);
+
+      if (r === 'trainer') {
+        setShowChat(true);
+      } else {
+        // Clients only see chat if they have an active trainer
+        const { count } = await supabase
+          .from('trainer_clients')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', user.id)
+          .eq('status', 'active');
+        setShowChat((count ?? 0) > 0);
+      }
     });
   }, []);
 
@@ -119,9 +132,18 @@ export default function TabLayout() {
           }}
         />
 
+        {/* Chat — visible for trainers and clients with an active trainer */}
+        <Tabs.Screen
+          name="chat"
+          options={{
+            title: 'Messages',
+            href: showChat ? undefined : null,
+            tabBarIcon: ({ color }) => <IconSymbol size={24} name="bubble.left.and.bubble.right.fill" color={color} />,
+          }}
+        />
+
         {/* Hide legacy tabs from the bar */}
         <Tabs.Screen name="workouts" options={{ href: null }} />
-        <Tabs.Screen name="chat"     options={{ href: null }} />
       </Tabs>
 
       {/* Active workout banner — floats above the tab bar */}
