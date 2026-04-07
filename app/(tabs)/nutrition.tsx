@@ -423,7 +423,7 @@ function AddFoodModal({
 
   async function doSearch(query: string) {
     try {
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=10&fields=product_name,product_name_en,nutriments,brands&action=process`;
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=20&sort_by=unique_scans_n&fields=product_name,product_name_en,nutriments,brands&action=process`;
       const res  = await fetch(url);
       const json = await res.json();
       const results: ScannedProduct[] = (json.products ?? [])

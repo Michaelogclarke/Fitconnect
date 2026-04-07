@@ -14,13 +14,14 @@ import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
 import {
   initializeHealth,
-  hasStepsPermission,
+  healthConnectNeedsInstall,
   requestHealthPermissions,
   fetchTodayHealth,
   type HealthSnapshot,
 } from '@/lib/health';
 
-const WEEKLY_GOAL_KEY = 'pref:weekly_goal';
+const WEEKLY_GOAL_KEY    = 'pref:weekly_goal';
+const HEALTH_CONNECTED_KEY = 'pref:health_connected';
 const WEEKLY_GOAL_OPTIONS = [2, 3, 4, 5, 6];
 
 // ─── Streak helpers ───────────────────────────────────────────────────────────
@@ -118,8 +119,7 @@ export default function HomeScreen() {
   const [weeklyGoal,     setWeeklyGoal]     = useState(4);
   const [showGoalPicker, setShowGoalPicker] = useState(false);
   const [healthSnap,     setHealthSnap]     = useState<HealthSnapshot | null>(null);
-  const [healthReady,    setHealthReady]    = useState(false);   // true once we've checked
-  const [healthGranted,  setHealthGranted]  = useState(false);
+  const [healthConnected, setHealthConnected] = useState(false);  // persisted via AsyncStorage
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -135,10 +135,19 @@ export default function HomeScreen() {
     setLongestStreak(d.longestStreak);
   }
 
-  // Load weekly goal from storage once on mount
+  // Load weekly goal + health connected state from storage once on mount
   useEffect(() => {
     AsyncStorage.getItem(WEEKLY_GOAL_KEY).then((val) => {
       if (val) setWeeklyGoal(Number(val));
+    });
+    AsyncStorage.getItem(HEALTH_CONNECTED_KEY).then(async (val) => {
+      if (val === 'true') {
+        setHealthConnected(true);
+        try {
+          const snap = await fetchTodayHealth();
+          if (snap) setHealthSnap(snap);
+        } catch {}
+      }
     });
   }, []);
 
@@ -153,39 +162,44 @@ export default function HomeScreen() {
     await AsyncStorage.setItem(WEEKLY_GOAL_KEY, String(val));
   }
 
-  // Check health permissions + fetch data on every focus
-  async function checkHealth() {
-    try {
-      const available = await initializeHealth();
-      if (!available) { setHealthReady(true); return; }
-      const granted = await hasStepsPermission();
-      setHealthGranted(granted);
-      if (granted) {
-        const snap = await fetchTodayHealth();
-        setHealthSnap(snap);
-      }
-    } catch {}
-    setHealthReady(true);
-  }
-
   async function connectHealth() {
     try {
+      const needsInstall = await healthConnectNeedsInstall();
+      if (needsInstall) {
+        Alert.alert(
+          'Health Connect Required',
+          'Install the Health Connect app from the Play Store to sync your steps and activity.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       const available = await initializeHealth();
-      if (!available) return;
+      if (!available) {
+        Alert.alert(
+          'Health Not Available',
+          'Health Connect is not available on this device.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       const granted = await requestHealthPermissions();
       if (granted) {
-        setHealthGranted(true);
+        await AsyncStorage.setItem(HEALTH_CONNECTED_KEY, 'true');
+        setHealthConnected(true);
         const snap = await fetchTodayHealth();
-        setHealthSnap(snap);
+        if (snap) setHealthSnap(snap);
       }
-    } catch {}
+    } catch {
+      Alert.alert('Error', 'Could not connect to Health. Please try again.');
+    }
   }
 
   // Reload whenever the tab comes into focus
   useFocusEffect(
     useCallback(() => {
       loadData();
-      checkHealth();
     }, [])
   );
 
@@ -438,8 +452,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             {/* Steps / health card */}
-            {healthReady && (
-              healthGranted && healthSnap ? (
+            {healthConnected && healthSnap ? (
                 <View style={styles.stepsCard}>
                   <View style={styles.stepsHeader}>
                     <View style={styles.stepsLeft}>
@@ -465,13 +478,12 @@ export default function HomeScreen() {
                       : ''}
                   </Text>
                 </View>
-              ) : !healthGranted && (
-                <TouchableOpacity style={styles.stepsConnectCard} onPress={connectHealth} activeOpacity={0.8}>
-                  <IconSymbol name="figure.walk" size={18} color={Colors.onSurfaceVariant} />
-                  <Text style={styles.stepsConnectText}>Connect Health for step tracking</Text>
-                  <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
-                </TouchableOpacity>
-              )
+            ) : (
+              <TouchableOpacity style={styles.stepsConnectCard} onPress={connectHealth} activeOpacity={0.8}>
+                <IconSymbol name="figure.walk" size={18} color={Colors.onSurfaceVariant} />
+                <Text style={styles.stepsConnectText}>Connect Health for step tracking</Text>
+                <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+              </TouchableOpacity>
             )}
 
             {/* Recent sessions */}
