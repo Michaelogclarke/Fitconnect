@@ -45,7 +45,13 @@ const MAPPING = {
   'flame.fill': 'local-fire-department',
   'heart.fill': 'favorite',
   'lock.fill': 'lock',
-  'camera.fill': 'camera-alt',
+  'camera.fill':         'camera-alt',
+  'fork.knife':          'restaurant',
+  'barcode.viewfinder':  'qr-code-scanner',
+  'gearshape.fill':      'settings',
+  'clock':               'access-time',
+  'trash.fill':          'delete',
+  'rectangle.portrait.and.arrow.right': 'logout',
 } as IconMapping;
 
 /**

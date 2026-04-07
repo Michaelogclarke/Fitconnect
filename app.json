@@ -41,6 +41,13 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "FitConnect needs camera access to scan food barcodes.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

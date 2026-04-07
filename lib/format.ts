@@ -52,6 +52,12 @@ export function weekLabel(isoString: string): string {
   return `${fmt(weekStart)} – ${fmt(weekEnd)}`;
 }
 
+// ─── Local date string (YYYY-MM-DD) ───────────────────────────────────────────
+
+export function toLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // ─── Initials ─────────────────────────────────────────────────────────────────
 
 export function initials(name: string): string {

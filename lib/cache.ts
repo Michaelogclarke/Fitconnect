@@ -3,11 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ─── Cache key constants ──────────────────────────────────────────────────────
 
 export const CACHE_KEYS = {
-  EXERCISES: 'cache:exercises',
-  HOME_DATA:  'cache:home_data',
-  HISTORY:    'cache:history',
-  PLANS:      'cache:plans',
-  PROFILE:    'cache:profile',
+  EXERCISES:     'cache:exercises',
+  HOME_DATA:     'cache:home_data',
+  HISTORY:       'cache:history',
+  PLANS:         'cache:plans',
+  PROFILE:       'cache:profile',
+  NUTRITION_DAY: 'cache:nutrition_day',
 } as const;
 
 // ─── Internal types ───────────────────────────────────────────────────────────
