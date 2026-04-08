@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.michaelog.fitconnect",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSHealthShareUsageDescription": "FitConnect reads your step count and active calories to show your daily activity progress."
+        "NSHealthShareUsageDescription": "FitConnect reads your step count and active calories to show your daily activity progress.",
+        "NSHealthUpdateUsageDescription": "FitConnect writes workout and activity data to Apple Health to keep your fitness records in sync."
       },
       "entitlements": {
         "com.apple.developer.healthkit": true
