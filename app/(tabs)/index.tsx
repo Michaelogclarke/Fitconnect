@@ -12,16 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { formatSessionDate, formatDuration, formatVolume, initials } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
-import {
-  initializeHealth,
-  healthConnectNeedsInstall,
-  requestHealthPermissions,
-  fetchTodayHealth,
-  type HealthSnapshot,
-} from '@/lib/health';
-
 const WEEKLY_GOAL_KEY    = 'pref:weekly_goal';
-const HEALTH_CONNECTED_KEY = 'pref:health_connected';
 const WEEKLY_GOAL_OPTIONS = [2, 3, 4, 5, 6];
 
 // ─── Streak helpers ───────────────────────────────────────────────────────────
@@ -138,8 +129,7 @@ export default function HomeScreen() {
   const [longestStreak,  setLongestStreak]  = useState(0);
   const [weeklyGoal,     setWeeklyGoal]     = useState(4);
   const [showGoalPicker, setShowGoalPicker] = useState(false);
-  const [healthSnap,     setHealthSnap]     = useState<HealthSnapshot | null>(null);
-  const [healthConnected, setHealthConnected] = useState(false);
+  const [hasActiveTrainer, setHasActiveTrainer] = useState(false);
   const [trainerData,    setTrainerData]    = useState<TrainerDashData | null>(null);
   const [trainerMode,    setTrainerMode]    = useState<'clients' | 'own'>('clients');
   const [ownLoading,     setOwnLoading]     = useState(false);
@@ -159,19 +149,10 @@ export default function HomeScreen() {
     setLongestStreak(d.longestStreak);
   }
 
-  // Load weekly goal + health connected state from storage once on mount
+  // Load weekly goal from storage once on mount
   useEffect(() => {
     AsyncStorage.getItem(WEEKLY_GOAL_KEY).then((val) => {
       if (val) setWeeklyGoal(Number(val));
-    });
-    AsyncStorage.getItem(HEALTH_CONNECTED_KEY).then(async (val) => {
-      if (val === 'true') {
-        setHealthConnected(true);
-        try {
-          const snap = await fetchTodayHealth();
-          if (snap) setHealthSnap(snap);
-        } catch {}
-      }
     });
   }, []);
 
@@ -186,39 +167,6 @@ export default function HomeScreen() {
     await AsyncStorage.setItem(WEEKLY_GOAL_KEY, String(val));
   }
 
-  async function connectHealth() {
-    try {
-      const needsInstall = await healthConnectNeedsInstall();
-      if (needsInstall) {
-        Alert.alert(
-          'Health Connect Required',
-          'Install the Health Connect app from the Play Store to sync your steps and activity.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const available = await initializeHealth();
-      if (!available) {
-        Alert.alert(
-          'Health Not Available',
-          'Health Connect is not available on this device.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const granted = await requestHealthPermissions();
-      if (granted) {
-        await AsyncStorage.setItem(HEALTH_CONNECTED_KEY, 'true');
-        setHealthConnected(true);
-        const snap = await fetchTodayHealth();
-        if (snap) setHealthSnap(snap);
-      }
-    } catch {
-      Alert.alert('Error', 'Could not connect to Health. Please try again.');
-    }
-  }
 
   // Reload whenever the tab comes into focus
   useFocusEffect(
@@ -322,6 +270,16 @@ export default function HomeScreen() {
       const { currentStreak, longestStreak } = computeStreaks(
         (allDateRows ?? []).map((r: any) => r.started_at)
       );
+
+      // Check if client has an active trainer (controls Book Session visibility)
+      const { data: trainerLink } = await supabase
+        .from('trainer_clients')
+        .select('id')
+        .eq('client_id', user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+      setHasActiveTrainer(!!trainerLink);
 
       const fresh: HomeData = {
         userName, recentSessions, weekSessions, weekVolume,
@@ -593,14 +551,6 @@ export default function HomeScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={trainerStyles.actionCard}
-                onPress={() => router.push('/(tabs)/plans' as any)}>
-                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.tertiary + '22' }]}>
-                  <IconSymbol name="doc.on.doc.fill" size={20} color={Colors.tertiary} />
-                </View>
-                <Text style={trainerStyles.actionLabel}>Templates</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={trainerStyles.actionCard}
                 onPress={() => router.push('/(tabs)/chat' as any)}>
                 <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.success + '22' }]}>
                   <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color={Colors.success} />
@@ -609,7 +559,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Quick actions — row 2: booking */}
+            {/* Quick actions — row 2 */}
             <View style={trainerStyles.actionRow}>
               <TouchableOpacity
                 style={trainerStyles.actionCard}
@@ -722,20 +672,22 @@ export default function HomeScreen() {
               <IconSymbol name="chevron.right" size={18} color={Colors.primary} />
             </TouchableOpacity>
 
-            {/* Book a session */}
-            <TouchableOpacity
-              style={styles.quickStartCard}
-              onPress={() => router.push('/book-session' as any)}
-              activeOpacity={0.8}>
-              <View style={[styles.quickStartLeft, { backgroundColor: Colors.tertiary }]}>
-                <IconSymbol name="calendar.badge.plus" size={20} color={Colors.background} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.quickStartTitle}>Book a Session</Text>
-                <Text style={styles.quickStartSub}>Schedule time with your trainer</Text>
-              </View>
-              <IconSymbol name="chevron.right" size={18} color={Colors.tertiary} />
-            </TouchableOpacity>
+            {/* Book a session — only for clients with an active trainer */}
+            {role !== 'trainer' && hasActiveTrainer && (
+              <TouchableOpacity
+                style={styles.quickStartCard}
+                onPress={() => router.push('/book-session' as any)}
+                activeOpacity={0.8}>
+                <View style={[styles.quickStartLeft, { backgroundColor: Colors.tertiary }]}>
+                  <IconSymbol name="calendar.badge.plus" size={20} color={Colors.background} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.quickStartTitle}>Book a Session</Text>
+                  <Text style={styles.quickStartSub}>Schedule time with your trainer</Text>
+                </View>
+                <IconSymbol name="chevron.right" size={18} color={Colors.tertiary} />
+              </TouchableOpacity>
+            )}
 
             {/* Quick stats */}
             <View style={styles.statsRow}>
@@ -782,40 +734,6 @@ export default function HomeScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Steps / health card */}
-            {healthConnected && healthSnap ? (
-                <View style={styles.stepsCard}>
-                  <View style={styles.stepsHeader}>
-                    <View style={styles.stepsLeft}>
-                      <IconSymbol name="figure.walk" size={16} color={Colors.primary} />
-                      <Text style={styles.stepsTitle}>Steps Today</Text>
-                    </View>
-                    <Text style={styles.stepsCount}>{healthSnap.steps.toLocaleString()}</Text>
-                  </View>
-                  <View style={styles.stepsBarTrack}>
-                    <View
-                      style={[
-                        styles.stepsBarFill,
-                        { width: `${Math.min(healthSnap.steps / 10000, 1) * 100}%` as any },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.stepsFooter}>
-                    {healthSnap.steps >= 10000
-                      ? 'Daily goal reached!'
-                      : `${(10000 - healthSnap.steps).toLocaleString()} steps to 10,000`}
-                    {healthSnap.activeCalories > 0
-                      ? `  ·  ${healthSnap.activeCalories} kcal burned`
-                      : ''}
-                  </Text>
-                </View>
-            ) : (
-              <TouchableOpacity style={styles.stepsConnectCard} onPress={connectHealth} activeOpacity={0.8}>
-                <IconSymbol name="figure.walk" size={18} color={Colors.onSurfaceVariant} />
-                <Text style={styles.stepsConnectText}>Connect Health for step tracking</Text>
-                <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
-              </TouchableOpacity>
-            )}
 
             {/* Recent sessions */}
             <Text style={styles.sectionLabel}>Recent Sessions</Text>

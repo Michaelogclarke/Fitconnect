@@ -44,11 +44,16 @@ function buildHours(): HourOption[] {
 
 const HOURS = buildHours();
 
-type DayState = { enabled: boolean; startHour: number; endHour: number };
+type Break    = { startHour: number; endHour: number };
+type DayState = { enabled: boolean; startHour: number; endHour: number; breaks: Break[] };
+
+type PickerState =
+  | { dow: number; which: 'start' | 'end' }
+  | { dow: number; which: 'break-start' | 'break-end'; breakIndex: number };
 
 function defaultDays(): Record<number, DayState> {
   return Object.fromEntries(
-    DAYS_CONFIG.map(({ dow }) => [dow, { enabled: false, startHour: 9, endHour: 17 }])
+    DAYS_CONFIG.map(({ dow }) => [dow, { enabled: false, startHour: 9, endHour: 17, breaks: [] }])
   );
 }
 
@@ -66,6 +71,19 @@ function hourLabel(h: number): string {
   return `${h12}:00 ${ampm}`;
 }
 
+/** Convert a day's working hours + breaks into insertable time slot rows. */
+function dayToSlots(d: DayState): Array<{ startHour: number; endHour: number }> {
+  const sorted = [...d.breaks].sort((a, b) => a.startHour - b.startHour);
+  const slots: Array<{ startHour: number; endHour: number }> = [];
+  let cursor = d.startHour;
+  for (const brk of sorted) {
+    if (brk.startHour > cursor) slots.push({ startHour: cursor, endHour: brk.startHour });
+    cursor = brk.endHour;
+  }
+  if (cursor < d.endHour) slots.push({ startHour: cursor, endHour: d.endHour });
+  return slots.length > 0 ? slots : [{ startHour: d.startHour, endHour: d.endHour }];
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function SetAvailabilityScreen() {
@@ -74,7 +92,7 @@ export default function SetAvailabilityScreen() {
   const [days,    setDays]    = useState<Record<number, DayState>>(defaultDays());
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [picker,  setPicker]  = useState<{ dow: number; which: 'start' | 'end' } | null>(null);
+  const [picker,  setPicker]  = useState<PickerState | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -84,15 +102,33 @@ export default function SetAvailabilityScreen() {
       const { data } = await supabase
         .from('pt_availability')
         .select('day_of_week, start_time, end_time')
-        .eq('trainer_id', user.id);
+        .eq('trainer_id', user.id)
+        .order('start_time', { ascending: true });
 
       if (data?.length) {
-        const next = defaultDays();
+        // Group slots by day, then infer breaks from gaps
+        const grouped: Record<number, Array<{ start: number; end: number }>> = {};
         for (const row of data) {
-          next[row.day_of_week] = {
+          if (!grouped[row.day_of_week]) grouped[row.day_of_week] = [];
+          grouped[row.day_of_week].push({
+            start: timeStrToHour(row.start_time),
+            end:   timeStrToHour(row.end_time),
+          });
+        }
+
+        const next = defaultDays();
+        for (const [dowStr, slots] of Object.entries(grouped)) {
+          const dow    = Number(dowStr);
+          const sorted = slots.sort((a, b) => a.start - b.start);
+          const breaks: Break[] = [];
+          for (let i = 0; i < sorted.length - 1; i++) {
+            breaks.push({ startHour: sorted[i].end, endHour: sorted[i + 1].start });
+          }
+          next[dow] = {
             enabled:   true,
-            startHour: timeStrToHour(row.start_time),
-            endHour:   timeStrToHour(row.end_time),
+            startHour: sorted[0].start,
+            endHour:   sorted[sorted.length - 1].end,
+            breaks,
           };
         }
         setDays(next);
@@ -105,16 +141,41 @@ export default function SetAvailabilityScreen() {
     setDays((prev) => ({ ...prev, [dow]: { ...prev[dow], enabled: !prev[dow].enabled } }));
   }
 
-  function applyTime(dow: number, which: 'start' | 'end', hour: number) {
+  function addBreak(dow: number) {
     setDays((prev) => {
-      const d = { ...prev[dow] };
-      if (which === 'start') {
+      const d   = prev[dow];
+      const mid = Math.floor((d.startHour + d.endHour) / 2);
+      return { ...prev, [dow]: { ...d, breaks: [...d.breaks, { startHour: mid, endHour: Math.min(mid + 1, d.endHour) }] } };
+    });
+  }
+
+  function removeBreak(dow: number, index: number) {
+    setDays((prev) => {
+      const d = prev[dow];
+      return { ...prev, [dow]: { ...d, breaks: d.breaks.filter((_, i) => i !== index) } };
+    });
+  }
+
+  function applyTime(hour: number) {
+    if (!picker) return;
+    setDays((prev) => {
+      const d = { ...prev[picker.dow], breaks: [...prev[picker.dow].breaks] };
+      if (picker.which === 'start') {
         d.startHour = hour;
         if (d.endHour <= hour) d.endHour = hour + 1;
-      } else {
+      } else if (picker.which === 'end') {
         d.endHour = hour;
+      } else if (picker.which === 'break-start') {
+        const brk = { ...d.breaks[picker.breakIndex] };
+        brk.startHour = hour;
+        if (brk.endHour <= hour) brk.endHour = Math.min(hour + 1, d.endHour);
+        d.breaks[picker.breakIndex] = brk;
+      } else if (picker.which === 'break-end') {
+        const brk = { ...d.breaks[picker.breakIndex] };
+        brk.endHour = hour;
+        d.breaks[picker.breakIndex] = brk;
       }
-      return { ...prev, [dow]: d };
+      return { ...prev, [picker.dow]: d };
     });
     setPicker(null);
   }
@@ -126,24 +187,55 @@ export default function SetAvailabilityScreen() {
 
     await supabase.from('pt_availability').delete().eq('trainer_id', user.id);
 
-    const rows = DAYS_CONFIG
-      .filter(({ dow }) => days[dow].enabled)
-      .map(({ dow }) => ({
-        trainer_id:  user.id,
-        day_of_week: dow,
-        start_time:  hourToTimeStr(days[dow].startHour),
-        end_time:    hourToTimeStr(days[dow].endHour),
-      }));
-
-    if (rows.length > 0) {
-      await supabase.from('pt_availability').insert(rows);
+    const rows: Array<{ trainer_id: string; day_of_week: number; start_time: string; end_time: string }> = [];
+    for (const { dow } of DAYS_CONFIG) {
+      if (!days[dow].enabled) continue;
+      for (const slot of dayToSlots(days[dow])) {
+        rows.push({
+          trainer_id:  user.id,
+          day_of_week: dow,
+          start_time:  hourToTimeStr(slot.startHour),
+          end_time:    hourToTimeStr(slot.endHour),
+        });
+      }
     }
+
+    if (rows.length > 0) await supabase.from('pt_availability').insert(rows);
 
     setSaving(false);
     router.back();
   }
 
+  // Derive what hours are valid/selected for the current picker
   const pickerDay = picker ? days[picker.dow] : null;
+
+  function isDisabled(value: number): boolean {
+    if (!picker || !pickerDay) return false;
+    if (picker.which === 'end')         return value <= pickerDay.startHour;
+    if (picker.which === 'start')       return false;
+    const brk = pickerDay.breaks[(picker as any).breakIndex];
+    if (picker.which === 'break-start') return value <= pickerDay.startHour || value >= pickerDay.endHour;
+    if (picker.which === 'break-end')   return value <= brk.startHour || value > pickerDay.endHour;
+    return false;
+  }
+
+  function isSelected(value: number): boolean {
+    if (!picker || !pickerDay) return false;
+    if (picker.which === 'start') return value === pickerDay.startHour;
+    if (picker.which === 'end')   return value === pickerDay.endHour;
+    const brk = pickerDay.breaks[(picker as any).breakIndex];
+    if (picker.which === 'break-start') return value === brk.startHour;
+    if (picker.which === 'break-end')   return value === brk.endHour;
+    return false;
+  }
+
+  function pickerTitle(): string {
+    if (!picker) return '';
+    if (picker.which === 'start')       return 'Start Time';
+    if (picker.which === 'end')         return 'End Time';
+    if (picker.which === 'break-start') return 'Break Start';
+    return 'Break End';
+  }
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -167,28 +259,63 @@ export default function SetAvailabilityScreen() {
           {DAYS_CONFIG.map(({ label, dow }) => {
             const d = days[dow];
             return (
-              <View key={dow} style={s.dayRow}>
-                <Switch
-                  value={d.enabled}
-                  onValueChange={() => toggle(dow)}
-                  trackColor={{ false: Colors.outlineVariant, true: Colors.primary + '55' }}
-                  thumbColor={d.enabled ? Colors.primary : Colors.onSurfaceVariant}
-                />
-                <Text style={[s.dayLabel, !d.enabled && s.dayLabelOff]}>{label}</Text>
-                {d.enabled && (
-                  <View style={s.timePair}>
-                    <TouchableOpacity
-                      style={s.timeChip}
-                      onPress={() => setPicker({ dow, which: 'start' })}>
-                      <Text style={s.timeChipText}>{hourLabel(d.startHour)}</Text>
-                    </TouchableOpacity>
-                    <Text style={s.timeDash}>–</Text>
-                    <TouchableOpacity
-                      style={s.timeChip}
-                      onPress={() => setPicker({ dow, which: 'end' })}>
-                      <Text style={s.timeChipText}>{hourLabel(d.endHour)}</Text>
+              <View key={dow} style={s.dayCard}>
+                {/* Top row: toggle + label + working hours */}
+                <View style={s.dayTop}>
+                  <Switch
+                    value={d.enabled}
+                    onValueChange={() => toggle(dow)}
+                    trackColor={{ false: Colors.outlineVariant, true: Colors.primary + '55' }}
+                    thumbColor={d.enabled ? Colors.primary : Colors.onSurfaceVariant}
+                  />
+                  <Text style={[s.dayLabel, !d.enabled && s.dayLabelOff]}>{label}</Text>
+                  {d.enabled && (
+                    <View style={s.timePair}>
+                      <TouchableOpacity
+                        style={s.timeChip}
+                        onPress={() => setPicker({ dow, which: 'start' })}>
+                        <Text style={s.timeChipText}>{hourLabel(d.startHour)}</Text>
+                      </TouchableOpacity>
+                      <Text style={s.timeDash}>–</Text>
+                      <TouchableOpacity
+                        style={s.timeChip}
+                        onPress={() => setPicker({ dow, which: 'end' })}>
+                        <Text style={s.timeChipText}>{hourLabel(d.endHour)}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+
+                {/* Breaks */}
+                {d.enabled && d.breaks.map((brk, i) => (
+                  <View key={i} style={s.breakRow}>
+                    <IconSymbol name="clock" size={14} color={Colors.onSurfaceVariant} />
+                    <Text style={s.breakLabel}>Break</Text>
+                    <View style={s.timePair}>
+                      <TouchableOpacity
+                        style={s.timeChip}
+                        onPress={() => setPicker({ dow, which: 'break-start', breakIndex: i })}>
+                        <Text style={s.timeChipText}>{hourLabel(brk.startHour)}</Text>
+                      </TouchableOpacity>
+                      <Text style={s.timeDash}>–</Text>
+                      <TouchableOpacity
+                        style={s.timeChip}
+                        onPress={() => setPicker({ dow, which: 'break-end', breakIndex: i })}>
+                        <Text style={s.timeChipText}>{hourLabel(brk.endHour)}</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity onPress={() => removeBreak(dow, i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <IconSymbol name="xmark.circle.fill" size={18} color={Colors.onSurfaceVariant} />
                     </TouchableOpacity>
                   </View>
+                ))}
+
+                {/* Add break button */}
+                {d.enabled && (
+                  <TouchableOpacity style={s.addBreakBtn} onPress={() => addBreak(dow)}>
+                    <IconSymbol name="plus" size={14} color={Colors.primary} />
+                    <Text style={s.addBreakText}>Add Break</Text>
+                  </TouchableOpacity>
                 )}
               </View>
             );
@@ -209,29 +336,20 @@ export default function SetAvailabilityScreen() {
       <Modal visible={!!picker} transparent animationType="slide">
         <Pressable style={s.overlay} onPress={() => setPicker(null)}>
           <Pressable style={s.sheet} onPress={() => {}}>
-            <Text style={s.sheetTitle}>
-              {picker?.which === 'start' ? 'Start Time' : 'End Time'}
-            </Text>
+            <Text style={s.sheetTitle}>{pickerTitle()}</Text>
             <FlatList
               data={HOURS}
               keyExtractor={(item) => String(item.value)}
               style={{ maxHeight: 320 }}
               renderItem={({ item }) => {
-                if (!picker || !pickerDay) return null;
-                const isDisabled = picker.which === 'end' && item.value <= pickerDay.startHour;
-                const isSelected = picker.which === 'start'
-                  ? item.value === pickerDay.startHour
-                  : item.value === pickerDay.endHour;
+                const disabled = isDisabled(item.value);
+                const selected = isSelected(item.value);
                 return (
                   <TouchableOpacity
-                    style={[
-                      s.pickOption,
-                      isSelected && s.pickOptionSel,
-                      isDisabled && s.pickOptionDim,
-                    ]}
-                    onPress={() => !isDisabled && applyTime(picker.dow, picker.which, item.value)}
-                    disabled={isDisabled}>
-                    <Text style={[s.pickOptionText, isSelected && s.pickOptionTextSel]}>
+                    style={[s.pickOption, selected && s.pickOptionSel, disabled && s.pickOptionDim]}
+                    onPress={() => !disabled && applyTime(item.value)}
+                    disabled={disabled}>
+                    <Text style={[s.pickOptionText, selected && s.pickOptionTextSel]}>
                       {item.label}
                     </Text>
                   </TouchableOpacity>
@@ -257,12 +375,16 @@ const s = StyleSheet.create({
   title:    { ...Typography.titleLg, color: Colors.onSurface },
   scroll:   { padding: Spacing.lg, gap: Spacing.sm },
   subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginBottom: Spacing.md },
-  dayRow: {
-    flexDirection: 'row', alignItems: 'center',
+
+  dayCard: {
     backgroundColor: Colors.surfaceContainer,
     borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
-    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    gap: Spacing.xs,
+  },
+  dayTop: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
   },
   dayLabel:    { ...Typography.bodyMd, color: Colors.onSurface, flex: 1 },
   dayLabelOff: { color: Colors.onSurfaceVariant },
@@ -273,6 +395,21 @@ const s = StyleSheet.create({
   },
   timeChipText: { ...Typography.labelMd, color: Colors.primary },
   timeDash:     { ...Typography.labelMd, color: Colors.onSurfaceVariant },
+
+  breakRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: Spacing.xs,
+    paddingLeft: 52, // align under day label
+  },
+  breakLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, flex: 1 },
+
+  addBreakBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingLeft: 52,
+    paddingVertical: Spacing.xs,
+  },
+  addBreakText: { ...Typography.labelMd, color: Colors.primary },
+
   saveBtn: {
     marginTop: Spacing.xl, backgroundColor: Colors.primary,
     borderRadius: Radius.lg, paddingVertical: Spacing.md, alignItems: 'center',
@@ -284,10 +421,10 @@ const s = StyleSheet.create({
     borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
     padding: Spacing.lg, paddingBottom: 40,
   },
-  sheetTitle:       { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md },
-  pickOption:       { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: Radius.md },
-  pickOptionSel:    { backgroundColor: Colors.primary + '22' },
-  pickOptionDim:    { opacity: 0.3 },
-  pickOptionText:   { ...Typography.bodyMd, color: Colors.onSurface },
-  pickOptionTextSel:{ color: Colors.primary, fontWeight: '600' },
+  sheetTitle:        { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md },
+  pickOption:        { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: Radius.md },
+  pickOptionSel:     { backgroundColor: Colors.primary + '22' },
+  pickOptionDim:     { opacity: 0.3 },
+  pickOptionText:    { ...Typography.bodyMd, color: Colors.onSurface },
+  pickOptionTextSel: { color: Colors.primary, fontWeight: '600' },
 });

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -178,6 +178,29 @@ export default function ProfileScreen() {
     setPendingInvites((prev) => prev.filter((i) => i.linkId !== linkId));
   }
 
+  async function handleDisconnectTrainer() {
+    if (!activeTrainer) return;
+    Alert.alert(
+      'Remove Trainer',
+      `Disconnect from ${activeTrainer.trainerName}? You'll lose access to messages and session booking.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.from('trainer_clients').delete().eq('id', activeTrainer.linkId);
+            if (error) {
+              Alert.alert('Error', error.message);
+            } else {
+              setActiveTrainer(null);
+            }
+          },
+        },
+      ]
+    );
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut();
   }
@@ -240,13 +263,19 @@ export default function ProfileScreen() {
                   <Text style={inviteStyles.trainerActionText}>Message</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={inviteStyles.trainerAction}
+                  style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: Colors.outlineVariant }]}
                   onPress={() => router.push({
                     pathname: '/check-in' as any,
                     params: { threadId: activeTrainer.linkId, trainerName: activeTrainer.trainerName },
                   })}>
                   <IconSymbol name="checkmark.circle.fill" size={16} color={Colors.primary} />
                   <Text style={inviteStyles.trainerActionText}>Check-In</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={inviteStyles.trainerAction}
+                  onPress={handleDisconnectTrainer}>
+                  <IconSymbol name="xmark.circle.fill" size={16} color={Colors.error} />
+                  <Text style={[inviteStyles.trainerActionText, { color: Colors.error }]}>Remove</Text>
                 </TouchableOpacity>
               </View>
             </View>
