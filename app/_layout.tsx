@@ -86,8 +86,12 @@ export default function RootLayout() {
           <Stack.Screen name="bookings"         options={{ headerShown: false }} />
           <Stack.Screen name="modal"            options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="spotify-auth"    options={{ headerShown: false }} />
-          <Stack.Screen name="privacy-policy"  options={{ headerShown: false }} />
-          <Stack.Screen name="terms"           options={{ headerShown: false }} />
+          <Stack.Screen name="privacy-policy"         options={{ headerShown: false }} />
+          <Stack.Screen name="terms"                options={{ headerShown: false }} />
+          <Stack.Screen name="body-weight-log"      options={{ headerShown: false }} />
+          <Stack.Screen name="achievements"         options={{ headerShown: false }} />
+          <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+          <Stack.Screen name="progress-photos"      options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="light" />
       </ThemeProvider>

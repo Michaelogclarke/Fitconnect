@@ -109,7 +109,7 @@ export default function TermsScreen() {
 
         <Section title="10. Contact">
           <Body>
-            For questions about these Terms, contact us at: support@fitconnect.app
+            For questions about these Terms, contact us at: mocupsolutions@gmail.com
           </Body>
         </Section>
 

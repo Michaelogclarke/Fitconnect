@@ -110,7 +110,7 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="10. Contact Us">
           <Body>
-            If you have any questions about this Privacy Policy or your data, please contact us at: support@fitconnect.app
+            If you have any questions about this Privacy Policy or your data, please contact us at: mocupsolutions@gmail.com
           </Body>
         </Section>
 

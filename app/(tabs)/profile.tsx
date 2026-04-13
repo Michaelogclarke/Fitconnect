@@ -36,16 +36,16 @@ const MENU_SECTIONS = [
   {
     title: 'Fitness',
     items: [
-      { label: 'Progress Photos',  icon: 'camera.fill'    as const, route: null },
-      { label: 'Body Weight Log',  icon: 'scalemass.fill' as const, route: null },
-      { label: 'Achievements',     icon: 'trophy.fill'    as const, route: null },
+      { label: 'Progress Photos',  icon: 'camera.fill'    as const, route: '/progress-photos'       as const },
+      { label: 'Body Weight Log',  icon: 'scalemass.fill' as const, route: '/body-weight-log'        as const },
+      { label: 'Achievements',     icon: 'trophy.fill'    as const, route: '/achievements'           as const },
     ],
   },
   {
     title: 'Account',
     items: [
-      { label: 'Edit Profile',    icon: 'pencil'    as const, route: '/edit-profile'   as const },
-      { label: 'Notifications',   icon: 'bell.fill' as const, route: null },
+      { label: 'Edit Profile',    icon: 'pencil'    as const, route: '/edit-profile'          as const },
+      { label: 'Notifications',   icon: 'bell.fill' as const, route: '/notification-settings' as const },
     ],
   },
   {
@@ -231,7 +231,7 @@ export default function ProfileScreen() {
               if (error) throw error;
               await supabase.auth.signOut();
             } catch {
-              Alert.alert('Error', 'Failed to delete account. Please try again or contact support@fitconnect.app');
+              Alert.alert('Error', 'Failed to delete account. Please try again or contact mocupsolutions@gmail.com');
             }
           },
         },
