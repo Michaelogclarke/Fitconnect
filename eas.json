@@ -14,7 +14,7 @@
     "preview": {
       "distribution": "internal",
       "cache": {
-        "key": "preview-v1"
+        "key": "preview-v2"
       }
     },
     "production": {

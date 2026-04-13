@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal,
+  ActivityIndicator, KeyboardAvoidingView, Modal, Platform,
   RefreshControl, ScrollView, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
