@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal,
-  Platform, RefreshControl, ScrollView, Text, TextInput,
+  RefreshControl, ScrollView, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
 import { NumericInput } from '@/components/ui/numeric-input';
@@ -284,7 +284,6 @@ export default function ProgressScreen() {
   const [recentSessions, setRecentSessions] = useState<HistorySession[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [refreshing,     setRefreshing]     = useState(false);
-
   useFocusEffect(
     useCallback(() => {
       loadProgress();

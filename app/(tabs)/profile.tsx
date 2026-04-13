@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -9,6 +9,7 @@ import { styles } from '@/styles/tabs/profile.styles';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
+import { useSpotify } from '@/contexts/SpotifyContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,9 +44,15 @@ const MENU_SECTIONS = [
   {
     title: 'Account',
     items: [
-      { label: 'Edit Profile',       icon: 'pencil'    as const, route: '/edit-profile' as const },
-      { label: 'Notifications',      icon: 'bell.fill' as const, route: null },
-      { label: 'Privacy & Security', icon: 'lock.fill' as const, route: null },
+      { label: 'Edit Profile',    icon: 'pencil'    as const, route: '/edit-profile'   as const },
+      { label: 'Notifications',   icon: 'bell.fill' as const, route: null },
+    ],
+  },
+  {
+    title: 'Legal',
+    items: [
+      { label: 'Privacy Policy',  icon: 'lock.fill'        as const, route: '/privacy-policy' as const },
+      { label: 'Terms of Service', icon: 'bookmark.fill'   as const, route: '/terms'           as const },
     ],
   },
 ];
@@ -61,6 +68,7 @@ export default function ProfileScreen() {
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [activeTrainer,  setActiveTrainer]  = useState<ActiveTrainer | null>(null);
   const [acceptingId,    setAcceptingId]    = useState<string | null>(null);
+  const { isConnected: spotifyConnected, connect: connectSpotify, disconnect: disconnectSpotify, playerState } = useSpotify();
 
   function applyData(d: ProfileCache) {
     setFullName(d.fullName);
@@ -203,6 +211,32 @@ export default function ProfileScreen() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+  }
+
+  async function handleDeleteAccount() {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all your data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              const { error } = await supabase.functions.invoke('delete-account', {
+                headers: { Authorization: `Bearer ${session?.access_token}` },
+              });
+              if (error) throw error;
+              await supabase.auth.signOut();
+            } catch {
+              Alert.alert('Error', 'Failed to delete account. Please try again or contact support@fitconnect.app');
+            }
+          },
+        },
+      ],
+    );
   }
 
   const displayName = fullName || (role === 'trainer' ? 'Trainer' : 'Athlete');
@@ -353,17 +387,65 @@ export default function ProfileScreen() {
           </View>
         ))}
 
-        {/* Sign out */}
+        {/* Music */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Music</Text>
+          <View style={styles.menuCard}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={spotifyConnected ? disconnectSpotify : connectSpotify}
+              activeOpacity={0.7}>
+              <View style={[styles.menuIconBox, { backgroundColor: '#1DB95422' }]}>
+                <IconSymbol name="music.note" size={18} color="#1DB954" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuLabel}>Spotify</Text>
+                {spotifyConnected && playerState?.track ? (
+                  <Text style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }} numberOfLines={1}>
+                    {playerState.track.name} · {playerState.track.artist}
+                  </Text>
+                ) : (
+                  <Text style={{ ...Typography.labelMd, color: spotifyConnected ? Colors.success : Colors.onSurfaceVariant }}>
+                    {spotifyConnected ? 'Connected — tap to disconnect' : 'Tap to connect'}
+                  </Text>
+                )}
+              </View>
+              <View style={{
+                backgroundColor: spotifyConnected ? '#1DB95422' : Colors.surfaceContainerHighest,
+                paddingHorizontal: Spacing.sm,
+                paddingVertical: 3,
+                borderRadius: Radius.full,
+              }}>
+                <Text style={{ ...Typography.labelMd, color: spotifyConnected ? '#1DB954' : Colors.onSurfaceVariant }}>
+                  {spotifyConnected ? 'Connected' : 'Connect'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Sign out + Delete account */}
         <View style={styles.section}>
           <View style={styles.menuCard}>
-            <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+            <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]} onPress={handleSignOut}>
               <View style={styles.menuIconBox}>
                 <IconSymbol name="rectangle.portrait.and.arrow.right" size={18} color={Colors.error} />
               </View>
               <Text style={[styles.menuLabel, { color: Colors.error }]}>Sign Out</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
+              <View style={styles.menuIconBox}>
+                <IconSymbol name="trash" size={18} color={Colors.error} />
+              </View>
+              <Text style={[styles.menuLabel, { color: Colors.error }]}>Delete Account</Text>
+            </TouchableOpacity>
           </View>
         </View>
+
+        {/* Version */}
+        <Text style={{ textAlign: 'center', color: Colors.onSurfaceVariant, fontSize: 12, marginBottom: Spacing.xl }}>
+          FitConnect v1.0.0
+        </Text>
 
       </ScrollView>
     </SafeAreaView>

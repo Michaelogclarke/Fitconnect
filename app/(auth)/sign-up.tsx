@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { Linking } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { styles } from '@/styles/auth.styles';
 import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
@@ -171,6 +172,14 @@ export default function SignUpScreen() {
               : <Text style={styles.primaryBtnText}>Create Account</Text>}
           </TouchableOpacity>
         </View>
+
+        {/* Legal */}
+        <Text style={{ textAlign: 'center', color: Colors.onSurfaceVariant, fontSize: 12, marginBottom: Spacing.md, lineHeight: 18 }}>
+          By creating an account you agree to our{' '}
+          <Text style={{ color: Colors.primary }} onPress={() => router.push('/terms' as any)}>Terms of Service</Text>
+          {' '}and{' '}
+          <Text style={{ color: Colors.primary }} onPress={() => router.push('/privacy-policy' as any)}>Privacy Policy</Text>
+        </Text>
 
         {/* Switch to sign in */}
         <View style={styles.switchRow}>

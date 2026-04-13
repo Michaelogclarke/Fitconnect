@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 
 import { supabase } from '@/lib/supabase';
 import { WorkoutProvider } from '@/contexts/WorkoutContext';
+import { SpotifyProvider } from '@/contexts/SpotifyContext';
 import { setCached, CACHE_KEYS } from '@/lib/cache';
 import { flushWorkoutQueue } from '@/lib/offlineQueue';
 import { registerPushToken } from '@/lib/notifications';
@@ -70,6 +71,7 @@ export default function RootLayout() {
 
   return (
     <WorkoutProvider>
+      <SpotifyProvider>
       <ThemeProvider value={DarkTheme}>
         <Stack>
           <Stack.Screen name="(tabs)"        options={{ headerShown: false }} />
@@ -83,9 +85,13 @@ export default function RootLayout() {
           <Stack.Screen name="book-session"     options={{ headerShown: false }} />
           <Stack.Screen name="bookings"         options={{ headerShown: false }} />
           <Stack.Screen name="modal"            options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="spotify-auth"    options={{ headerShown: false }} />
+          <Stack.Screen name="privacy-policy"  options={{ headerShown: false }} />
+          <Stack.Screen name="terms"           options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="light" />
       </ThemeProvider>
+      </SpotifyProvider>
     </WorkoutProvider>
   );
 }

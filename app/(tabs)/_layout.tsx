@@ -5,8 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { SpotifyMiniPlayer, MINI_PLAYER_HEIGHT } from '@/components/SpotifyMiniPlayer';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import { useWorkout } from '@/contexts/WorkoutContext';
+import { useSpotify } from '@/contexts/SpotifyContext';
 import { supabase } from '@/lib/supabase';
 
 function formatTime(s: number) {
@@ -19,6 +21,8 @@ export default function TabLayout() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const { isActive, elapsed, exercises, activeRest } = useWorkout();
+  const { playerState: spotifyState } = useSpotify();
+  const spotifyVisible = !!(spotifyState?.track);
 
   const [role,     setRole]     = useState<'client' | 'trainer' | null>(null);
   const [showChat, setShowChat] = useState(false);
@@ -60,8 +64,13 @@ export default function TabLayout() {
     ? Math.max(0, Math.ceil((activeRest.endsAt - Date.now()) / 1000))
     : 0;
 
-  // Tab bar is 56px tall; sit the banner just above it with an 8px gap
-  const bannerBottom = 56 + insets.bottom + 8;
+  // Base position just above the tab bar
+  const baseBottom    = 56 + insets.bottom + 8;
+  // Mini player sits at base; workout banner stacks above it when both are visible
+  const miniPlayerBottom = baseBottom;
+  const bannerBottom  = spotifyVisible
+    ? baseBottom + MINI_PLAYER_HEIGHT + 8
+    : baseBottom;
 
   return (
     <View style={{ flex: 1 }}>
@@ -198,6 +207,9 @@ export default function TabLayout() {
           <IconSymbol name="chevron.right" size={16} color={Colors.primary} />
         </TouchableOpacity>
       )}
+
+      {/* Spotify mini player — floats above the tab bar */}
+      <SpotifyMiniPlayer bottom={miniPlayerBottom} />
     </View>
   );
 }
