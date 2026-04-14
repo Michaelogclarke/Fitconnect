@@ -51,9 +51,9 @@ const MENU_SECTIONS = [
   {
     title: 'Account',
     items: [
-      { label: 'Edit Profile',    icon: 'pencil'          as const, route: '/edit-profile'          as const },
-      { label: 'Notifications',   icon: 'bell.fill'       as const, route: '/notification-settings' as const },
-      { label: 'App Settings',    icon: 'gearshape.fill'  as const, route: '/app-settings'          as const },
+      { label: 'Edit Profile',        icon: 'pencil'         as const, route: '/edit-profile'    as const },
+      { label: 'Notifications',       icon: 'bell.fill'      as const, route: '/notifications'   as const },
+      { label: 'App Settings',        icon: 'gearshape.fill' as const, route: '/app-settings'    as const },
     ],
   },
   {
@@ -88,6 +88,7 @@ export default function ProfileScreen() {
     trainerAction:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, paddingVertical: Spacing.md },
     trainerActionText: { ...Typography.titleMd, color: C.primary },
   }), [C]);
+  const [unreadCount,      setUnreadCount]      = useState(0);
   const [loading,          setLoading]          = useState(true);
   const [fullName,         setFullName]         = useState('');
   const [role,             setRole]             = useState<'client' | 'trainer'>('client');
@@ -125,10 +126,12 @@ export default function ProfileScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const [{ data: profile }, { count }] = await Promise.all([
+      const [{ data: profile }, { count }, { count: unread }] = await Promise.all([
         supabase.from('profiles').select('full_name, role, is_dev').eq('id', user.id).single(),
         supabase.from('workout_sessions').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).is('read_at', null),
       ]);
+      setUnreadCount(unread ?? 0);
 
       const fresh: ProfileCache = {
         fullName:      profile?.full_name ?? '',
@@ -484,28 +487,44 @@ export default function ProfileScreen() {
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             <View style={styles.menuCard}>
-              {section.items.map((item, idx) => (
-                <TouchableOpacity
-                  key={item.label}
-                  style={[
-                    styles.menuItem,
-                    idx < section.items.length - 1 && styles.menuItemBorder,
-                  ]}
-                  onPress={() => item.route && router.push(item.route as any)}
-                  activeOpacity={item.route ? 0.7 : 1}>
-                  <View style={styles.menuIconBox}>
-                    <IconSymbol name={item.icon} size={18} color={item.route ? C.primary : C.onSurfaceVariant} />
-                  </View>
-                  <Text style={[styles.menuLabel, !item.route && { color: C.onSurfaceVariant }]}>
-                    {item.label}
-                  </Text>
-                  <IconSymbol
-                    name="chevron.right"
-                    size={16}
-                    color={item.route ? C.onSurfaceVariant : C.outlineVariant}
-                  />
-                </TouchableOpacity>
-              ))}
+              {section.items.map((item, idx) => {
+                const isNotifItem = item.label === 'Notifications';
+                const badge = isNotifItem && unreadCount > 0 ? unreadCount : 0;
+                return (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[
+                      styles.menuItem,
+                      idx < section.items.length - 1 && styles.menuItemBorder,
+                    ]}
+                    onPress={() => item.route && router.push(item.route as any)}
+                    activeOpacity={item.route ? 0.7 : 1}>
+                    <View style={styles.menuIconBox}>
+                      <IconSymbol name={item.icon} size={18} color={item.route ? C.primary : C.onSurfaceVariant} />
+                    </View>
+                    <Text style={[styles.menuLabel, !item.route && { color: C.onSurfaceVariant }]}>
+                      {item.label}
+                    </Text>
+                    {badge > 0 ? (
+                      <View style={{
+                        backgroundColor: C.error, borderRadius: Radius.full,
+                        minWidth: 20, height: 20, paddingHorizontal: 5,
+                        justifyContent: 'center', alignItems: 'center', marginRight: Spacing.xs,
+                      }}>
+                        <Text style={{ ...Typography.labelMd, color: '#fff', fontWeight: '700' }}>
+                          {badge > 99 ? '99+' : badge}
+                        </Text>
+                      </View>
+                    ) : (
+                      <IconSymbol
+                        name="chevron.right"
+                        size={16}
+                        color={item.route ? C.onSurfaceVariant : C.outlineVariant}
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         ))}

@@ -18,7 +18,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import { sendPushNotification } from '@/lib/notifications';
+import { sendPushNotification, insertNotification } from '@/lib/notifications';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -241,11 +241,11 @@ export default function BookSessionScreen() {
 
     if (!error) {
       setBooked((prev) => [...prev, { starts_at: startsAt.toISOString() }]);
-      await sendPushNotification(
-        trainerId,
-        'New Booking Request',
-        `Session requested for ${slotDisplayLabel(selectedDay, confirm.hour)}`,
-      );
+      const label = slotDisplayLabel(selectedDay, confirm.hour);
+      await Promise.all([
+        sendPushNotification(trainerId, 'New Booking Request', `Session requested for ${label}`),
+        insertNotification(trainerId, 'booking_request', 'New Booking Request', `Session requested for ${label}`),
+      ]);
     }
 
     setSubmitting(false);

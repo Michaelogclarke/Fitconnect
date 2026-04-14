@@ -15,7 +15,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
-import { sendPushNotification } from '@/lib/notifications';
+import { sendPushNotification, insertNotification } from '@/lib/notifications';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -177,11 +177,11 @@ export default function BookingsScreen() {
       .update({ status: 'confirmed', updated_at: new Date().toISOString() })
       .eq('id', bookingId);
 
-    await sendPushNotification(
-      clientId,
-      'Booking Confirmed',
-      `Your session on ${new Date(startsAt).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} has been confirmed!`,
-    );
+    const dateStr = new Date(startsAt).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+    await Promise.all([
+      sendPushNotification(clientId, 'Booking Confirmed', `Your session on ${dateStr} has been confirmed!`),
+      insertNotification(clientId, 'booking_confirmed', 'Booking Confirmed', `Your session on ${dateStr} has been confirmed!`),
+    ]);
     loadBookings();
   }
 
@@ -195,11 +195,11 @@ export default function BookingsScreen() {
             .update({ status: 'cancelled', updated_at: new Date().toISOString() })
             .eq('id', bookingId);
 
-          await sendPushNotification(
-            clientId,
-            'Booking Declined',
-            `Your session request for ${new Date(startsAt).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} was not accepted.`,
-          );
+          const dateStr = new Date(startsAt).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+          await Promise.all([
+            sendPushNotification(clientId, 'Booking Declined', `Your session request for ${dateStr} was not accepted.`),
+            insertNotification(clientId, 'booking_declined', 'Booking Declined', `Your session request for ${dateStr} was not accepted.`),
+          ]);
           loadBookings();
         },
       },
@@ -215,11 +215,11 @@ export default function BookingsScreen() {
             .from('bookings')
             .update({ status: 'cancelled', updated_at: new Date().toISOString() })
             .eq('id', bookingId);
-          await sendPushNotification(
-            trainerId,
-            'Booking Cancelled',
-            `A client has cancelled their session on ${new Date(startsAt).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}.`,
-          );
+          const dateStr = new Date(startsAt).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+          await Promise.all([
+            sendPushNotification(trainerId, 'Booking Cancelled', `A client has cancelled their session on ${dateStr}.`),
+            insertNotification(trainerId, 'booking_cancelled', 'Booking Cancelled', `A client has cancelled their session on ${dateStr}.`),
+          ]);
           loadBookings();
         },
       },
@@ -239,11 +239,10 @@ export default function BookingsScreen() {
               .from('bookings')
               .update({ status: 'cancelled', updated_at: new Date().toISOString() })
               .eq('id', bookingId);
-            await sendPushNotification(
-              clientId,
-              'Session Cancelled',
-              `Your trainer has cancelled the session on ${dateStr}. Please rebook at a new time.`,
-            );
+            await Promise.all([
+              sendPushNotification(clientId, 'Session Cancelled', `Your trainer has cancelled the session on ${dateStr}. Please rebook at a new time.`),
+              insertNotification(clientId, 'booking_cancelled', 'Session Cancelled', `Your trainer has cancelled the session on ${dateStr}. Please rebook at a new time.`),
+            ]);
             loadBookings();
           },
         },

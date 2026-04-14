@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { AppState, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
@@ -26,9 +26,18 @@ export default function TabLayout() {
   const { playerState: spotifyState } = useSpotify();
   const spotifyVisible = !!(spotifyState?.track);
 
-  const [role,        setRole]        = useState<'client' | 'trainer' | null>(null);
-  const [showTrainer, setShowTrainer] = useState(false);
+  const [role,         setRole]         = useState<'client' | 'trainer' | null>(null);
+  const [showTrainer,  setShowTrainer]  = useState(false);
   const [clientUserId, setClientUserId] = useState<string | null>(null);
+
+  async function checkTrainerTab(userId: string) {
+    const { count } = await supabase
+      .from('trainer_clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('client_id', userId)
+      .eq('status', 'active');
+    setShowTrainer((count ?? 0) > 0);
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -44,34 +53,18 @@ export default function TabLayout() {
 
       if (r !== 'trainer') {
         setClientUserId(user.id);
-        const { count } = await supabase
-          .from('trainer_clients')
-          .select('*', { count: 'exact', head: true })
-          .eq('client_id', user.id)
-          .eq('status', 'active');
-        setShowTrainer((count ?? 0) > 0);
+        checkTrainerTab(user.id);
       }
     });
   }, []);
 
-  // Reactively show/hide Trainer tab when trainer_clients changes
+  // Recheck trainer tab visibility whenever the app comes back to the foreground
   useEffect(() => {
     if (!clientUserId) return;
-    const channel = supabase
-      .channel(`trainer-tab:${clientUserId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'trainer_clients',
-        filter: `client_id=eq.${clientUserId}`,
-      }, async () => {
-        const { count } = await supabase
-          .from('trainer_clients')
-          .select('*', { count: 'exact', head: true })
-          .eq('client_id', clientUserId)
-          .eq('status', 'active');
-        setShowTrainer((count ?? 0) > 0);
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const { remove } = AppState.addEventListener('change', (state) => {
+      if (state === 'active') checkTrainerTab(clientUserId);
+    });
+    return remove;
   }, [clientUserId]);
 
   // Tick to keep rest countdown on the banner fresh

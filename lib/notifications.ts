@@ -50,3 +50,24 @@ export async function sendPushNotification(
     });
   } catch {}
 }
+
+export type NotificationType =
+  | 'booking_request'
+  | 'booking_confirmed'
+  | 'booking_cancelled'
+  | 'booking_declined'
+  | 'trainer_invite'
+  | 'trainer_request'
+  | 'trainer_accepted';
+
+export async function insertNotification(
+  userId: string,
+  type:   NotificationType,
+  title:  string,
+  body:   string,
+  data:   Record<string, unknown> = {},
+): Promise<void> {
+  try {
+    await supabase.from('notifications').insert({ user_id: userId, type, title, body, data });
+  } catch {}
+}

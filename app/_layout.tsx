@@ -108,6 +108,7 @@ function AppShell() {
             <Stack.Screen name="body-weight-log"      options={{ headerShown: false }} />
             <Stack.Screen name="achievements"         options={{ headerShown: false }} />
             <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+            <Stack.Screen name="notifications"         options={{ headerShown: false }} />
             <Stack.Screen name="progress-photos"      options={{ headerShown: false }} />
             <Stack.Screen name="client-onboarding"   options={{ headerShown: false }} />
             <Stack.Screen name="onboarding"           options={{ headerShown: false, gestureEnabled: false }} />
