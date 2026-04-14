@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container:     { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: 120 },
@@ -18,7 +20,7 @@ export function useStyles() {
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  headerTitle: { ...Typography.headlineLg, color: C.onSurface },
+  headerTitle: { ...T.headlineLg, color: C.onSurface },
   headerRight:  { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   goalsBtn: {
     width: 36, height: 36, borderRadius: Radius.full,
@@ -39,7 +41,7 @@ export function useStyles() {
     backgroundColor: C.surfaceContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  dateText: { ...Typography.titleMd, color: C.onSurface, minWidth: 80, textAlign: 'center' },
+  dateText: { ...T.titleMd, color: C.onSurface, minWidth: 80, textAlign: 'center' },
 
   // ── Summary card ───────────────────────────────────────────────────────────
   summaryCard: {
@@ -55,10 +57,10 @@ export function useStyles() {
     gap: Spacing.xs,
     marginBottom: Spacing.md,
   },
-  calorieNum:    { ...Typography.displayMd, color: C.onSurface },
-  calorieSep:    { ...Typography.titleMd, color: C.onSurfaceVariant },
-  calorieGoal:   { ...Typography.titleMd, color: C.onSurfaceVariant },
-  calorieLabel:  { ...Typography.labelLg, color: C.onSurfaceVariant, marginLeft: 4 },
+  calorieNum:    { ...T.displayMd, color: C.onSurface },
+  calorieSep:    { ...T.titleMd, color: C.onSurfaceVariant },
+  calorieGoal:   { ...T.titleMd, color: C.onSurfaceVariant },
+  calorieLabel:  { ...T.labelLg, color: C.onSurfaceVariant, marginLeft: 4 },
   calorieBar: {
     height: 6, borderRadius: Radius.full,
     backgroundColor: C.surfaceContainerHighest,
@@ -71,7 +73,7 @@ export function useStyles() {
     borderRadius: Radius.full,
   },
   calorieRemaining: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     textAlign: 'right',
     marginBottom: Spacing.md,
     marginTop: -Spacing.xs,
@@ -81,7 +83,7 @@ export function useStyles() {
     gap: Spacing.md,
   },
   macroItem:  { flex: 1 },
-  macroLabel: { ...Typography.labelMd, color: C.onSurfaceVariant, marginBottom: 4 },
+  macroLabel: { ...T.labelMd, color: C.onSurfaceVariant, marginBottom: 4 },
   macroBar: {
     height: 6, borderRadius: Radius.full,
     backgroundColor: C.surfaceContainerHighest,
@@ -92,8 +94,8 @@ export function useStyles() {
     height: '100%',
     borderRadius: Radius.full,
   },
-  macroValue: { ...Typography.labelLg, color: C.onSurface },
-  macroGoal:  { ...Typography.labelMd, color: C.onSurfaceVariant },
+  macroValue: { ...T.labelLg, color: C.onSurface },
+  macroGoal:  { ...T.labelMd, color: C.onSurfaceVariant },
 
   // ── Meal section ───────────────────────────────────────────────────────────
   mealSection:   { marginHorizontal: Spacing.lg, marginTop: Spacing.lg },
@@ -104,19 +106,19 @@ export function useStyles() {
     marginBottom: Spacing.sm,
   },
   mealLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  mealCals: { ...Typography.labelLg, color: C.onSurfaceVariant },
+  mealCals: { ...T.labelLg, color: C.onSurfaceVariant },
   mealEmpty: {
     backgroundColor: C.surfaceContainer,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
   },
-  mealEmptyText: { ...Typography.labelLg, color: C.outlineVariant },
+  mealEmptyText: { ...T.labelLg, color: C.outlineVariant },
 
   // ── Food row ───────────────────────────────────────────────────────────────
   foodRowContainer: {
@@ -134,7 +136,7 @@ export function useStyles() {
     backgroundColor: C.surfaceContainer,
   },
   foodInfo:    { flex: 1 },
-  foodName:    { ...Typography.titleMd, color: C.onSurface },
+  foodName:    { ...T.titleMd, color: C.onSurface },
   foodMacroRow: {
     flexDirection: 'row',
     gap: 6,
@@ -147,8 +149,8 @@ export function useStyles() {
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  foodMacroText: { ...Typography.labelMd, fontWeight: '600' as const },
-  foodCals:    { ...Typography.titleMd, color: C.primary },
+  foodMacroText: { ...T.labelMd, fontWeight: '600' as const },
+  foodCals:    { ...T.titleMd, color: C.primary },
   deleteAction: {
     backgroundColor: C.error,
     justifyContent: 'center',
@@ -188,9 +190,9 @@ export function useStyles() {
     paddingBottom: Spacing.xxxl,
     gap: Spacing.md,
   },
-  modalTitle:    { ...Typography.headlineMd, color: C.onSurface },
-  modalSubtitle: { ...Typography.bodyMd, color: C.onSurfaceVariant },
-  modalError:    { ...Typography.labelLg, color: C.error },
+  modalTitle:    { ...T.headlineMd, color: C.onSurface },
+  modalSubtitle: { ...T.bodyMd, color: C.onSurfaceVariant },
+  modalError:    { ...T.labelLg, color: C.error },
 
   // ── Method picker (phase 1) ────────────────────────────────────────────────
   methodBtn: {
@@ -208,8 +210,8 @@ export function useStyles() {
     backgroundColor: C.primary + '22',
     justifyContent: 'center', alignItems: 'center',
   },
-  methodBtnTitle: { ...Typography.titleMd, color: C.onSurface },
-  methodBtnSub:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  methodBtnTitle: { ...T.titleMd, color: C.onSurface },
+  methodBtnSub:   { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Add food form (phase 2) ────────────────────────────────────────────────
   formCard: {
@@ -230,14 +232,14 @@ export function useStyles() {
   fieldRowLast: {
     borderBottomWidth: 0,
   },
-  fieldLabel: { ...Typography.titleMd, color: C.onSurface, width: 80 },
+  fieldLabel: { ...T.titleMd, color: C.onSurface, width: 80 },
   fieldInput: {
     flex: 1,
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     textAlign: 'right',
   },
-  fieldUnit:  { ...Typography.labelLg, color: C.onSurfaceVariant },
+  fieldUnit:  { ...T.labelLg, color: C.onSurfaceVariant },
 
   // ── Meal type pills ────────────────────────────────────────────────────────
   mealPills: {
@@ -257,7 +259,7 @@ export function useStyles() {
     backgroundColor: C.primary + '22',
     borderColor: C.primary + '66',
   },
-  mealPillText:       { ...Typography.labelLg, color: C.onSurfaceVariant },
+  mealPillText:       { ...T.labelLg, color: C.onSurfaceVariant },
   mealPillTextActive: { color: C.primary },
 
   // ── Modal action buttons ───────────────────────────────────────────────────
@@ -267,13 +269,13 @@ export function useStyles() {
     backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.md, alignItems: 'center',
   },
-  modalCancelText: { ...Typography.titleMd, color: C.onSurfaceVariant },
+  modalCancelText: { ...T.titleMd, color: C.onSurfaceVariant },
   modalSaveBtn: {
     flex: 2, paddingVertical: Spacing.md,
     backgroundColor: C.primary,
     borderRadius: Radius.md, alignItems: 'center',
   },
-  modalSaveText: { ...Typography.titleMd, color: C.background },
+  modalSaveText: { ...T.titleMd, color: C.background },
 
   // ── Barcode scanner ────────────────────────────────────────────────────────
   scannerContainer: { flex: 1, backgroundColor: '#000' },
@@ -306,8 +308,8 @@ export function useStyles() {
     paddingHorizontal: Spacing.lg,
     alignItems: 'center',
   },
-  scannerStatusText: { ...Typography.titleMd, color: '#fff', textAlign: 'center' },
-  scannerStatusSub:  { ...Typography.labelLg, color: 'rgba(255,255,255,0.65)', marginTop: 4 },
+  scannerStatusText: { ...T.titleMd, color: '#fff', textAlign: 'center' },
+  scannerStatusSub:  { ...T.labelLg, color: 'rgba(255,255,255,0.65)', marginTop: 4 },
   scannerNotFound: {
     backgroundColor: C.error + 'dd',
     borderRadius: Radius.md,
@@ -327,14 +329,14 @@ export function useStyles() {
     minHeight: 50,
   },
   goalsRowLast: { borderBottomWidth: 0 },
-  goalsLabel:   { ...Typography.titleMd, color: C.onSurface, flex: 1 },
+  goalsLabel:   { ...T.titleMd, color: C.onSurface, flex: 1 },
   goalsInput: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     textAlign: 'right',
     width: 80,
   },
-  goalsUnit: { ...Typography.labelLg, color: C.onSurfaceVariant, width: 24 },
+  goalsUnit: { ...T.labelLg, color: C.onSurfaceVariant, width: 24 },
 
   // ── Pick tabs (Recent / Saved) ─────────────────────────────────────────────
   pickTabRow: {
@@ -356,7 +358,7 @@ export function useStyles() {
     backgroundColor: C.primary + '22',
     borderColor: C.primary,
   },
-  pickTabText: { ...Typography.labelLg, color: C.onSurfaceVariant },
+  pickTabText: { ...T.labelLg, color: C.onSurfaceVariant },
   pickTabTextActive: { color: C.primary },
   pickTabBadge: {
     backgroundColor: C.primary,
@@ -367,7 +369,7 @@ export function useStyles() {
     alignItems: 'center',
     paddingHorizontal: 4,
   },
-  pickTabBadgeText: { ...Typography.labelMd, color: C.background, fontSize: 10 },
+  pickTabBadgeText: { ...T.labelMd, color: C.background, fontSize: 10 },
 
   // ── Fixed-height results container ────────────────────────────────────────
   pickResultsArea: {
@@ -396,13 +398,13 @@ export function useStyles() {
   },
   searchBarInput: {
     flex: 1,
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
   },
 
   // ── Quick-pick list (recent + search results) ──────────────────────────────
   listSectionLabel: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -419,8 +421,8 @@ export function useStyles() {
     gap: Spacing.sm,
   },
   quickPickInfo: { flex: 1 },
-  quickPickName: { ...Typography.titleMd, color: C.onSurface },
-  quickPickMeta: { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
-  quickPickCals: { ...Typography.labelLg, color: C.primary },
-}), [C]);
+  quickPickName: { ...T.titleMd, color: C.onSurface },
+  quickPickMeta: { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  quickPickCals: { ...T.labelLg, color: C.primary },
+}), [C, T]);
 }

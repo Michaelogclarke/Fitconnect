@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -200,6 +200,7 @@ export default function PlansScreen() {
   const { startWorkoutFromPlan } = useWorkout();
 
   const [loading,        setLoading]        = useState(true);
+  const [refreshing,     setRefreshing]     = useState(false);
   const [plans,          setPlans]          = useState<WorkoutPlan[]>([]);
   const [isTrainer,      setIsTrainer]      = useState(false);
   const [activeClients,  setActiveClients]  = useState<ActiveClient[]>([]);
@@ -334,9 +335,18 @@ export default function PlansScreen() {
     router.push('/start-workout' as any);
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadPlans();
+    setRefreshing(false);
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}>
 
         {/* Header */}
         <View style={styles.header}>

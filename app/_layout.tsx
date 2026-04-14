@@ -5,14 +5,18 @@ import { useEffect, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { Session } from '@supabase/supabase-js';
 import 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 
 import { supabase } from '@/lib/supabase';
 import { WorkoutProvider } from '@/contexts/WorkoutContext';
 import { SpotifyProvider } from '@/contexts/SpotifyContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { PrefsProvider } from '@/contexts/PrefsContext';
 import { setCached, CACHE_KEYS } from '@/lib/cache';
 import { flushWorkoutQueue } from '@/lib/offlineQueue';
 import { registerPushToken } from '@/lib/notifications';
+import { ONBOARDING_KEY } from './onboarding';
 
 async function warmExerciseCache(): Promise<void> {
   try {
@@ -27,7 +31,9 @@ async function warmExerciseCache(): Promise<void> {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <AppShell />
+      <PrefsProvider>
+        <AppShell />
+      </PrefsProvider>
     </ThemeProvider>
   );
 }
@@ -60,9 +66,25 @@ function AppShell() {
   useEffect(() => {
     if (session === undefined) return;
     const inAuthGroup = segments[0] === '(auth)';
-    if (!session && !inAuthGroup) router.replace('/(auth)/sign-in');
-    else if (session && inAuthGroup) router.replace('/(tabs)');
+    if (!session && !inAuthGroup) {
+      router.replace('/(auth)/sign-in');
+    } else if (session && inAuthGroup) {
+      AsyncStorage.getItem(ONBOARDING_KEY).then((done) => {
+        if (done === 'true') router.replace('/(tabs)');
+        else router.replace('/onboarding' as any);
+      });
+    }
   }, [session, segments]);
+
+  // ── Notification deep-linking ─────────────────────────────────────────────
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const screen = response.notification.request.content.data?.screen as string | undefined;
+      if (screen === 'start-workout') router.push('/start-workout' as any);
+      else if (screen === 'home') router.replace('/(tabs)');
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <WorkoutProvider>
@@ -87,6 +109,8 @@ function AppShell() {
             <Stack.Screen name="achievements"         options={{ headerShown: false }} />
             <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
             <Stack.Screen name="progress-photos"      options={{ headerShown: false }} />
+            <Stack.Screen name="client-onboarding"   options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding"           options={{ headerShown: false, gestureEnabled: false }} />
           </Stack>
           <StatusBar style={isDark ? 'light' : 'dark'} />
         </NavThemeProvider>

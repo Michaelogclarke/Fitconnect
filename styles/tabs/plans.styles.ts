@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
@@ -18,7 +20,7 @@ export function useStyles() {
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  title: { ...Typography.headlineLg, color: C.onSurface },
+  title: { ...T.headlineLg, color: C.onSurface },
   addBtn: {
     flexDirection: 'row', alignItems: 'center',
     gap: Spacing.xs,
@@ -27,11 +29,11 @@ export function useStyles() {
     borderWidth: 1, borderColor: C.primary + '44',
     paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
   },
-  addBtnText: { ...Typography.labelLg, color: C.primary },
+  addBtnText: { ...T.labelLg, color: C.primary },
 
   // ── Section label ──────────────────────────────────────────────────────────
   sectionLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -51,8 +53,8 @@ export function useStyles() {
     borderStyle: 'dashed',
     borderColor: C.outlineVariant,
   },
-  emptyText:    { ...Typography.titleMd, color: C.onSurface, marginBottom: Spacing.xs },
-  emptySubtext: { ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' as const },
+  emptyText:    { ...T.titleMd, color: C.onSurface, marginBottom: Spacing.xs },
+  emptySubtext: { ...T.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' as const },
   emptyCreateBtn: {
     marginTop: Spacing.lg,
     backgroundColor: C.primary,
@@ -63,7 +65,7 @@ export function useStyles() {
     alignItems: 'center' as const,
     gap: Spacing.xs,
   },
-  emptyCreateText: { ...Typography.titleMd, color: C.background },
+  emptyCreateText: { ...T.titleMd, color: C.background },
 
   // ── Plan card ──────────────────────────────────────────────────────────────
   planCard: {
@@ -85,8 +87,8 @@ export function useStyles() {
     justifyContent: 'center', alignItems: 'center',
   },
   planInfo: { flex: 1 },
-  planName:    { ...Typography.titleLg, color: C.onSurface },
-  planMeta:    { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  planName:    { ...T.titleLg, color: C.onSurface },
+  planMeta:    { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Expanded days list ─────────────────────────────────────────────────────
   planDivider: {
@@ -107,10 +109,10 @@ export function useStyles() {
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
-  dayNumberText: { ...Typography.labelLg, color: C.primary },
+  dayNumberText: { ...T.labelLg, color: C.primary },
   dayInfo: { flex: 1 },
-  dayName:  { ...Typography.titleMd, color: C.onSurface },
-  dayFocus: { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  dayName:  { ...T.titleMd, color: C.onSurface },
+  dayFocus: { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
   dayStartBtn: {
     width: 36, height: 36,
     borderRadius: Radius.full,
@@ -131,6 +133,6 @@ export function useStyles() {
     paddingTop: Spacing.xs,
     gap: Spacing.xs,
   },
-  editPlanText: { ...Typography.labelLg, color: C.onSurfaceVariant },
-}), [C]);
+  editPlanText: { ...T.labelLg, color: C.onSurfaceVariant },
+}), [C, T]);
 }

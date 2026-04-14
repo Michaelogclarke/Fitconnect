@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
@@ -18,8 +20,8 @@ export function useStyles() {
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
   },
-  greeting: { ...Typography.headlineLg, color: C.onSurface },
-  date:     { ...Typography.bodyMd, color: C.onSurfaceVariant, marginTop: 2 },
+  greeting: { ...T.headlineLg, color: C.onSurface },
+  date:     { ...T.bodyMd, color: C.onSurfaceVariant, marginTop: 2 },
   iconBtn: {
     width: 40, height: 40, borderRadius: Radius.full,
     backgroundColor: C.surfaceContainer,
@@ -28,7 +30,7 @@ export function useStyles() {
 
   // ── Section label ──────────────────────────────────────────────────────────
   sectionLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -58,10 +60,10 @@ export function useStyles() {
     alignItems: 'center',
   },
   streakMid: { flex: 1 },
-  streakTitle: { ...Typography.titleLg, color: C.primary },
-  streakSub:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  streakTitle: { ...T.titleLg, color: C.primary },
+  streakSub:   { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
   streakCount: {
-    ...Typography.displayMd,
+    ...T.displayMd,
     color: C.primary,
     opacity: 0.25,
   },
@@ -83,8 +85,8 @@ export function useStyles() {
     backgroundColor: C.primary,
     justifyContent: 'center', alignItems: 'center',
   },
-  quickStartTitle: { ...Typography.titleMd, color: C.onSurface },
-  quickStartSub:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  quickStartTitle: { ...T.titleMd, color: C.onSurface },
+  quickStartSub:   { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Empty state ────────────────────────────────────────────────────────────
   emptyCard: {
@@ -95,8 +97,8 @@ export function useStyles() {
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  emptyText: { ...Typography.titleMd, color: C.onSurface },
-  emptySub:  { ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
+  emptyText: { ...T.titleMd, color: C.onSurface },
+  emptySub:  { ...T.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
 
   // ── Quick stats ────────────────────────────────────────────────────────────
   statsRow: {
@@ -111,8 +113,8 @@ export function useStyles() {
     borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
   },
-  statValue: { ...Typography.headlineMd, color: C.primary },
-  statLabel: { ...Typography.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
+  statValue: { ...T.headlineMd, color: C.primary },
+  statLabel: { ...T.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Weekly goal card ───────────────────────────────────────────────────────
   weeklyGoalCard: {
@@ -130,8 +132,8 @@ export function useStyles() {
     gap: Spacing.xs,
     marginBottom: Spacing.sm,
   },
-  weeklyGoalTitle: { ...Typography.titleMd, color: C.onSurface, flex: 1 },
-  weeklyGoalTapHint: { ...Typography.labelMd, color: C.onSurfaceVariant },
+  weeklyGoalTitle: { ...T.titleMd, color: C.onSurface, flex: 1 },
+  weeklyGoalTapHint: { ...T.labelMd, color: C.onSurfaceVariant },
   weeklyGoalDots: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -144,7 +146,7 @@ export function useStyles() {
   },
   weeklyGoalDotFilled: { backgroundColor: C.primary },
   weeklyGoalDotEmpty:  { backgroundColor: C.outlineVariant },
-  weeklyGoalCount: { ...Typography.labelLg, color: C.onSurfaceVariant },
+  weeklyGoalCount: { ...T.labelLg, color: C.onSurfaceVariant },
 
   // ── Weekly goal picker modal ───────────────────────────────────────────────
   goalPickerOverlay: {
@@ -160,8 +162,8 @@ export function useStyles() {
     borderRadius: Radius.xl,
     padding: Spacing.xl,
   },
-  goalPickerTitle: { ...Typography.titleLg, color: C.onSurface, marginBottom: Spacing.xs },
-  goalPickerSub:   { ...Typography.bodyMd, color: C.onSurfaceVariant, marginBottom: Spacing.lg },
+  goalPickerTitle: { ...T.titleLg, color: C.onSurface, marginBottom: Spacing.xs },
+  goalPickerSub:   { ...T.bodyMd, color: C.onSurfaceVariant, marginBottom: Spacing.lg },
   goalPickerOptions: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -180,11 +182,11 @@ export function useStyles() {
     borderColor: C.primary,
   },
   goalPickerOptionText: {
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
   },
   goalPickerOptionLabel: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     marginTop: 2,
   },
@@ -207,8 +209,8 @@ export function useStyles() {
     marginBottom: Spacing.sm,
   },
   stepsLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  stepsTitle: { ...Typography.titleMd, color: C.onSurface },
-  stepsCount: { ...Typography.headlineMd, color: C.primary },
+  stepsTitle: { ...T.titleMd, color: C.onSurface },
+  stepsCount: { ...T.headlineMd, color: C.primary },
   stepsBarTrack: {
     height: 8,
     backgroundColor: C.outlineVariant,
@@ -221,7 +223,7 @@ export function useStyles() {
     backgroundColor: C.primary,
     borderRadius: Radius.full,
   },
-  stepsFooter: { ...Typography.labelLg, color: C.onSurfaceVariant },
+  stepsFooter: { ...T.labelLg, color: C.onSurfaceVariant },
   stepsConnectCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -236,7 +238,7 @@ export function useStyles() {
     borderColor: C.outlineVariant,
   },
   stepsConnectText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     flex: 1,
   },
@@ -256,9 +258,9 @@ export function useStyles() {
     justifyContent: 'center', alignItems: 'center',
   },
   recentInfo: { flex: 1 },
-  recentName:   { ...Typography.titleMd, color: C.onSurface },
-  recentMeta:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
-  recentVolume: { ...Typography.labelLg, color: C.primary },
+  recentName:   { ...T.titleMd, color: C.onSurface },
+  recentMeta:   { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  recentVolume: { ...T.labelLg, color: C.primary },
 
   recentRight: { alignItems: 'flex-end', gap: 6 },
   recentDoAgainBtn: {
@@ -271,6 +273,6 @@ export function useStyles() {
     borderWidth: 1,
     borderColor: C.primary + '44',
   },
-  recentDoAgainText: { ...Typography.labelMd, color: C.primary },
-}), [C]);
+  recentDoAgainText: { ...T.labelMd, color: C.primary },
+}), [C, T]);
 }

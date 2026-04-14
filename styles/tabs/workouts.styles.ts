@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
@@ -16,11 +18,11 @@ export function useStyles() {
     paddingBottom: Spacing.md,
   },
   title: {
-    ...Typography.displayMd,
+    ...T.displayMd,
     color: C.onSurface,
   },
   subtitle: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     marginTop: Spacing.xs,
   },
@@ -36,7 +38,7 @@ export function useStyles() {
     gap: Spacing.sm,
   },
   searchText: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     flex: 1,
   },
@@ -56,7 +58,7 @@ export function useStyles() {
     backgroundColor: C.primary,
   },
   filterChipText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
   },
   filterChipTextActive: {
@@ -90,11 +92,11 @@ export function useStyles() {
     flex: 1,
   },
   workoutName: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.onSurface,
   },
   workoutMeta: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     marginTop: 2,
   },
@@ -105,7 +107,7 @@ export function useStyles() {
     backgroundColor: C.primary + '22',
   },
   workoutBadgeText: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.primary,
   },
   logBtn: {
@@ -118,8 +120,8 @@ export function useStyles() {
     marginBottom: Spacing.md,
   },
   logBtnText: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.background,
   },
-}), [C]);
+}), [C, T]);
 }

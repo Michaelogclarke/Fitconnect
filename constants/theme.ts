@@ -6,6 +6,7 @@
 
 export const DarkColors = {
   background:               '#0e0e0e',
+  onPrimary:                '#000000',
   surfaceContainerLow:      '#131313',
   surfaceContainer:         '#1a1a1a',
   surfaceContainerHigh:     '#20201f',
@@ -27,6 +28,7 @@ export const DarkColors = {
 
 export const LightColors = {
   background:               '#f5f6fa',
+  onPrimary:                '#ffffff',
   surfaceContainerLow:      '#eeeff3',
   surfaceContainer:         '#e6e8ed',
   surfaceContainerHigh:     '#dddfe5',

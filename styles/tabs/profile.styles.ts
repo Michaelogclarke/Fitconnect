@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
@@ -39,11 +41,11 @@ export function useStyles() {
     color: C.primary,
   },
   userName: {
-    ...Typography.headlineLg,
+    ...T.headlineLg,
     color: C.onSurface,
   },
   userRole: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     marginTop: Spacing.xs,
   },
@@ -57,11 +59,11 @@ export function useStyles() {
     alignItems: 'center',
   },
   statValue: {
-    ...Typography.headlineLg,
+    ...T.headlineLg,
     color: C.primary,
   },
   statLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     marginTop: 2,
   },
@@ -70,7 +72,7 @@ export function useStyles() {
     marginBottom: Spacing.lg,
   },
   sectionTitle: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     marginBottom: Spacing.sm,
@@ -101,7 +103,7 @@ export function useStyles() {
     alignItems: 'center',
   },
   menuLabel: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     flex: 1,
   },
@@ -121,13 +123,13 @@ export function useStyles() {
     borderColor: C.primary + '40',
   },
   streakText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.primary,
     flex: 1,
   },
   streakCount: {
-    ...Typography.displayMd,
+    ...T.displayMd,
     color: C.primary,
   },
-}), [C]);
+}), [C, T]);
 }

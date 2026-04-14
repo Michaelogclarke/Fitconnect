@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container:     { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
@@ -18,14 +20,14 @@ export function useStyles() {
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  title: { ...Typography.headlineLg, color: C.onSurface },
+  title: { ...T.headlineLg, color: C.onSurface },
   rangeRow: { flexDirection: 'row', gap: 4 },
   rangeBtn: {
     paddingHorizontal: Spacing.sm, paddingVertical: 5,
     borderRadius: Radius.sm,
   },
   rangeBtnActive:     { backgroundColor: C.primary + '22' },
-  rangeBtnText:       { ...Typography.labelLg, color: C.onSurfaceVariant },
+  rangeBtnText:       { ...T.labelLg, color: C.onSurfaceVariant },
   rangeBtnTextActive: { color: C.primary },
 
   // ── Section label row ──────────────────────────────────────────────────────
@@ -38,7 +40,7 @@ export function useStyles() {
     marginBottom: Spacing.sm,
   },
   sectionLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -57,13 +59,13 @@ export function useStyles() {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
   },
-  logWeightText: { ...Typography.labelLg, color: C.primary },
+  logWeightText: { ...T.labelLg, color: C.primary },
   viewAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
   },
-  viewAllText: { ...Typography.labelLg, color: C.primary },
+  viewAllText: { ...T.labelLg, color: C.primary },
 
   // ── Body weight card ───────────────────────────────────────────────────────
   bwCard: {
@@ -78,16 +80,16 @@ export function useStyles() {
     alignItems: 'flex-start',
     marginBottom: Spacing.lg,
   },
-  bwCurrent: { ...Typography.displayMd, color: C.onSurface },
-  bwChange:  { ...Typography.labelLg, marginTop: 2 },
-  bwBarLabel: { ...Typography.labelMd, color: C.onSurfaceVariant, fontSize: 10 },
+  bwCurrent: { ...T.displayMd, color: C.onSurface },
+  bwChange:  { ...T.labelLg, marginTop: 2 },
+  bwBarLabel: { ...T.labelMd, color: C.onSurfaceVariant, fontSize: 10 },
   bwEmpty: {
     paddingVertical: Spacing.xl,
     alignItems: 'center',
     gap: Spacing.xs,
   },
-  bwEmptyText: { ...Typography.titleMd, color: C.onSurface },
-  bwEmptyHint: { ...Typography.bodyMd, color: C.onSurfaceVariant },
+  bwEmptyText: { ...T.titleMd, color: C.onSurface },
+  bwEmptyHint: { ...T.bodyMd, color: C.onSurfaceVariant },
 
   // ── PRs card ───────────────────────────────────────────────────────────────
   prCard: {
@@ -112,16 +114,16 @@ export function useStyles() {
     alignItems: 'center',
   },
   prInfo:     { flex: 1 },
-  prExercise: { ...Typography.titleMd, color: C.onSurface },
-  prDate:     { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
-  prWeight:   { ...Typography.headlineMd, color: C.primary },
+  prExercise: { ...T.titleMd, color: C.onSurface },
+  prDate:     { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  prWeight:   { ...T.headlineMd, color: C.primary },
 
   // ── Empty card ─────────────────────────────────────────────────────────────
   emptyCard: {
     padding: Spacing.lg,
     alignItems: 'center',
   },
-  emptyCardText: { ...Typography.bodyMd, color: C.onSurfaceVariant },
+  emptyCardText: { ...T.bodyMd, color: C.onSurfaceVariant },
 
   // ── Weekly volume chart ────────────────────────────────────────────────────
   volCard: {
@@ -137,7 +139,7 @@ export function useStyles() {
     height: 100,
   },
   volBarGroup: { flex: 1, alignItems: 'center', gap: 4 },
-  volBarValue: { ...Typography.labelMd, color: C.onSurfaceVariant },
+  volBarValue: { ...T.labelMd, color: C.onSurfaceVariant },
   volBarTrack: {
     width: 28, flex: 1,
     backgroundColor: C.surfaceContainerHighest,
@@ -150,7 +152,7 @@ export function useStyles() {
     backgroundColor: C.primary,
     borderRadius: Radius.sm,
   },
-  volBarLabel: { ...Typography.labelMd, color: C.onSurfaceVariant },
+  volBarLabel: { ...T.labelMd, color: C.onSurfaceVariant },
 
   // ── Muscle frequency ───────────────────────────────────────────────────────
   freqCard: {
@@ -161,7 +163,7 @@ export function useStyles() {
     gap: Spacing.md,
   },
   freqRow:     { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  freqLabel:   { ...Typography.titleMd, color: C.onSurface, width: 80 },
+  freqLabel:   { ...T.titleMd, color: C.onSurface, width: 80 },
   freqBarTrack: {
     flex: 1, height: 8, borderRadius: Radius.full,
     backgroundColor: C.surfaceContainerHighest,
@@ -172,7 +174,7 @@ export function useStyles() {
     backgroundColor: C.primary,
     borderRadius: Radius.full,
   },
-  freqCount: { ...Typography.labelLg, color: C.primary, width: 28, textAlign: 'right' },
+  freqCount: { ...T.labelLg, color: C.primary, width: 28, textAlign: 'right' },
 
   // ── Log Weight Modal ───────────────────────────────────────────────────────
   modalOverlay: {
@@ -188,7 +190,7 @@ export function useStyles() {
     paddingBottom: Spacing.xxxl,
     gap: Spacing.md,
   },
-  modalTitle: { ...Typography.headlineMd, color: C.onSurface },
+  modalTitle: { ...T.headlineMd, color: C.onSurface },
   modalInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -198,7 +200,7 @@ export function useStyles() {
   },
   modalInput: {
     flex: 1,
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
@@ -208,8 +210,8 @@ export function useStyles() {
     paddingVertical: Spacing.md,
     backgroundColor: C.primary + '22',
   },
-  modalUnit:  { ...Typography.titleMd, color: C.primary },
-  modalError: { ...Typography.labelLg, color: C.error },
+  modalUnit:  { ...T.titleMd, color: C.primary },
+  modalError: { ...T.labelLg, color: C.error },
   modalActions: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -222,7 +224,7 @@ export function useStyles() {
     borderRadius: Radius.md,
     alignItems: 'center',
   },
-  modalCancelText: { ...Typography.titleMd, color: C.onSurfaceVariant },
+  modalCancelText: { ...T.titleMd, color: C.onSurfaceVariant },
   modalSaveBtn: {
     flex: 2,
     paddingVertical: Spacing.md,
@@ -230,6 +232,6 @@ export function useStyles() {
     borderRadius: Radius.md,
     alignItems: 'center',
   },
-  modalSaveText: { ...Typography.titleMd, color: '#fff' },
-}), [C]);
+  modalSaveText: { ...T.titleMd, color: '#fff' },
+}), [C, T]);
 }

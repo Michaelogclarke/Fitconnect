@@ -47,6 +47,29 @@ type CheckIn = {
   notes:           string | null;
 };
 
+type Onboarding = {
+  goals:        string[];
+  experience:   string | null;
+  trainingDays: number | null;
+  injuries:     string | null;
+  medical:      string | null;
+};
+
+const GOAL_LABELS: Record<string, string> = {
+  weight_loss:     'Lose Weight',
+  muscle_gain:     'Build Muscle',
+  strength:        'Get Stronger',
+  endurance:       'Improve Endurance',
+  general_fitness: 'General Fitness',
+  sport:           'Sport Performance',
+};
+
+const EXPERIENCE_LABELS: Record<string, string> = {
+  beginner:     'Beginner',
+  intermediate: 'Intermediate',
+  advanced:     'Advanced',
+};
+
 const RATING_LABELS = ['', 'Very Poor', 'Poor', 'OK', 'Good', 'Excellent'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -409,6 +432,7 @@ export default function ClientDetailScreen() {
   const [noteModalId,    setNoteModalId]    = useState<string | null>(null);
   const [noteText,       setNoteText]       = useState('');
   const [savingNote,     setSavingNote]     = useState(false);
+  const [onboarding,     setOnboarding]     = useState<Onboarding | null>(null);
 
   useEffect(() => {
     if (clientId) loadClientData();
@@ -486,9 +510,9 @@ export default function ClientDetailScreen() {
     if (link) {
       setThreadId(link.id);
 
-      // Load check-ins and session notes in parallel
+      // Load check-ins, session notes, and onboarding in parallel
       const sessionIds = mappedSessions.map((s) => s.id);
-      const [checkInsRes, notesRes] = await Promise.all([
+      const [checkInsRes, notesRes, onboardingRes] = await Promise.all([
         supabase
           .from('check_ins')
           .select('id, week_start, sleep_rating, energy_rating, adherence_rating, notes')
@@ -502,6 +526,11 @@ export default function ClientDetailScreen() {
               .in('session_id', sessionIds)
               .eq('trainer_id', user.id)
           : Promise.resolve({ data: [] }),
+        supabase
+          .from('client_onboarding')
+          .select('goals, experience, training_days, injuries, medical_notes')
+          .eq('user_id', clientId)
+          .maybeSingle(),
       ]);
 
       setCheckIns((checkInsRes.data ?? []).map((c: any) => ({
@@ -518,6 +547,17 @@ export default function ClientDetailScreen() {
         notesMap[n.session_id] = n.content;
       });
       setSessionNotes(notesMap);
+
+      const ob = (onboardingRes as any).data;
+      if (ob) {
+        setOnboarding({
+          goals:        ob.goals ?? [],
+          experience:   ob.experience,
+          trainingDays: ob.training_days,
+          injuries:     ob.injuries,
+          medical:      ob.medical_notes,
+        });
+      }
     }
 
     setLoading(false);
@@ -606,6 +646,77 @@ export default function ClientDetailScreen() {
                   {sessions[0] ? formatDate(sessions[0].startedAt) : '—'}
                 </Text>
                 <Text style={localStyles.statLabel}>Last Session</Text>
+              </View>
+            </View>
+
+            {/* Fitness profile / onboarding */}
+            <View style={localStyles.section}>
+              <Text style={localStyles.sectionTitle}>Fitness Profile</Text>
+              <View style={localStyles.card}>
+                {onboarding ? (
+                  <View style={{ padding: Spacing.md, gap: Spacing.md }}>
+                    {/* Goals */}
+                    {onboarding.goals.length > 0 && (
+                      <View>
+                        <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant, marginBottom: Spacing.xs }}>GOALS</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
+                          {onboarding.goals.map((g) => (
+                            <View key={g} style={{
+                              paddingHorizontal: Spacing.sm, paddingVertical: 3,
+                              borderRadius: Radius.full,
+                              backgroundColor: C.primary + '22',
+                              borderWidth: 1, borderColor: C.primary + '44',
+                            }}>
+                              <Text style={{ ...Typography.labelLg, color: C.primary, fontWeight: '600' }}>
+                                {GOAL_LABELS[g] ?? g}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                    {/* Experience + days */}
+                    <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
+                      {onboarding.experience && (
+                        <View>
+                          <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant }}>EXPERIENCE</Text>
+                          <Text style={{ ...Typography.titleMd, color: C.onSurface, marginTop: 2 }}>
+                            {EXPERIENCE_LABELS[onboarding.experience] ?? onboarding.experience}
+                          </Text>
+                        </View>
+                      )}
+                      {onboarding.trainingDays != null && (
+                        <View>
+                          <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant }}>FREQUENCY</Text>
+                          <Text style={{ ...Typography.titleMd, color: C.onSurface, marginTop: 2 }}>
+                            {onboarding.trainingDays}×/week
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    {/* Injuries */}
+                    {onboarding.injuries ? (
+                      <View>
+                        <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant, marginBottom: Spacing.xs }}>INJURIES / LIMITATIONS</Text>
+                        <Text style={{ ...Typography.bodyMd, color: C.onSurface }}>{onboarding.injuries}</Text>
+                      </View>
+                    ) : null}
+                    {/* Medical */}
+                    {onboarding.medical ? (
+                      <View>
+                        <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant, marginBottom: Spacing.xs }}>MEDICAL NOTES</Text>
+                        <Text style={{ ...Typography.bodyMd, color: C.onSurface }}>{onboarding.medical}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : (
+                  <View style={{ padding: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                    <IconSymbol name="person.text.rectangle.fill" size={18} color={C.outlineVariant} />
+                    <Text style={{ ...Typography.bodyMd, color: C.onSurfaceVariant, flex: 1 }}>
+                      Client hasn't filled in their fitness profile yet
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 

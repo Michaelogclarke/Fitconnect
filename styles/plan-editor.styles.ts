@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
 
@@ -29,7 +31,7 @@ export function useStyles() {
   },
   titleInput: {
     flex: 1,
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
     paddingVertical: 0,
   },
@@ -42,7 +44,7 @@ export function useStyles() {
     alignItems: 'center',
     minWidth: 56,
   },
-  saveBtnText: { ...Typography.titleMd, color: C.background },
+  saveBtnText: { ...T.titleMd, color: C.background },
 
   // ── Scroll ──────────────────────────────────────────────────────────────────
   scroll: { flex: 1 },
@@ -53,7 +55,7 @@ export function useStyles() {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.md,
     marginBottom: Spacing.sm,
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     paddingVertical: Spacing.sm,
   },
@@ -70,8 +72,8 @@ export function useStyles() {
     borderStyle: 'dashed',
     borderColor: C.outlineVariant,
   },
-  emptyDaysText:  { ...Typography.titleMd, color: C.onSurface, marginBottom: Spacing.xs },
-  emptyDaysSub:   { ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
+  emptyDaysText:  { ...T.titleMd, color: C.onSurface, marginBottom: Spacing.xs },
+  emptyDaysSub:   { ...T.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
 
   // ── Day card ─────────────────────────────────────────────────────────────────
   dayCard: {
@@ -102,15 +104,15 @@ export function useStyles() {
     alignItems: 'center',
     flexShrink: 0,
   },
-  dayNumberText:  { ...Typography.labelLg, color: C.primary },
+  dayNumberText:  { ...T.labelLg, color: C.primary },
   dayNameInput: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.onSurface,
     padding: 0,
     marginBottom: 2,
   },
   dayFocusInput: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     padding: 0,
   },
@@ -129,9 +131,9 @@ export function useStyles() {
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.md,
   },
-  dayCollapsedText: { ...Typography.labelLg, color: C.onSurfaceVariant },
+  dayCollapsedText: { ...T.labelLg, color: C.onSurfaceVariant },
   dayCollapsedExs: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     marginTop: 2,
   },
@@ -150,10 +152,10 @@ export function useStyles() {
     paddingVertical: Spacing.sm,
     gap: Spacing.sm,
   },
-  exName:  { ...Typography.titleMd, color: C.onSurface },
+  exName:  { ...T.titleMd, color: C.onSurface },
   exChips: { flexDirection: 'row', gap: Spacing.xs, marginTop: 4, flexWrap: 'wrap' },
   exChip: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.full,
@@ -200,12 +202,12 @@ export function useStyles() {
     paddingVertical: Spacing.xs,
   },
   inlineLabel: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     marginBottom: 4,
   },
   inlineInput: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     padding: 0,
   },
@@ -224,7 +226,7 @@ export function useStyles() {
     borderColor: C.primary + '55',
     gap: Spacing.xs,
   },
-  addExerciseInDayText: { ...Typography.labelLg, color: C.primary },
+  addExerciseInDayText: { ...T.labelLg, color: C.primary },
 
   // ── Add day button ───────────────────────────────────────────────────────────
   addDayBtn: {
@@ -240,11 +242,11 @@ export function useStyles() {
     borderColor: C.primary + '55',
     gap: Spacing.sm,
   },
-  addDayBtnText: { ...Typography.titleMd, color: C.primary },
+  addDayBtnText: { ...T.titleMd, color: C.primary },
 
   // ── Error text ───────────────────────────────────────────────────────────────
   saveErrorText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.error,
     textAlign: 'center',
     marginTop: Spacing.md,
@@ -275,7 +277,7 @@ export function useStyles() {
     marginBottom: Spacing.lg,
   },
   modalTitle: {
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
     marginBottom: Spacing.md,
     paddingHorizontal: Spacing.lg,
@@ -295,7 +297,7 @@ export function useStyles() {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalTitleInRow: { ...Typography.headlineMd, color: C.onSurface, flex: 1 },
+  modalTitleInRow: { ...T.headlineMd, color: C.onSurface, flex: 1 },
 
   // search bar
   searchBarWrap: {
@@ -311,7 +313,7 @@ export function useStyles() {
   searchBarInput: {
     flex: 1,
     paddingVertical: Spacing.sm,
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
   },
 
@@ -326,9 +328,9 @@ export function useStyles() {
     borderBottomWidth: 1,
     borderBottomColor: C.outlineVariant,
   },
-  exerciseListName:   { ...Typography.titleMd, color: C.onSurface, flex: 1 },
+  exerciseListName:   { ...T.titleMd, color: C.onSurface, flex: 1 },
   exerciseListMuscle: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.primary,
     backgroundColor: C.primary + '18',
     paddingHorizontal: Spacing.sm,
@@ -343,9 +345,9 @@ export function useStyles() {
     paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
   },
-  createCustomText: { ...Typography.titleMd, color: C.primary, flex: 1 },
+  createCustomText: { ...T.titleMd, color: C.primary, flex: 1 },
   listEmptyText: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     textAlign: 'center',
     paddingVertical: Spacing.xl,
@@ -354,7 +356,7 @@ export function useStyles() {
 
   // configure phase fields
   fieldLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     marginBottom: Spacing.xs,
     marginTop: Spacing.md,
@@ -364,7 +366,7 @@ export function useStyles() {
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
   },
   fieldRow:  { flexDirection: 'row', gap: Spacing.sm },
@@ -382,7 +384,7 @@ export function useStyles() {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalCancelText: { ...Typography.titleMd, color: C.onSurfaceVariant },
+  modalCancelText: { ...T.titleMd, color: C.onSurfaceVariant },
   modalAddBtn: {
     flex: 2,
     height: 50,
@@ -391,6 +393,6 @@ export function useStyles() {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalAddText: { ...Typography.titleLg, color: C.background },
-}), [C]);
+  modalAddText: { ...T.titleLg, color: C.background },
+}), [C, T]);
 }

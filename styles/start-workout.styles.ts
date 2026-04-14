@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export const DELETE_WIDTH = 72;
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
@@ -31,8 +33,8 @@ export function useStyles() {
     alignItems: 'center',
   },
   topBarCenter: { flex: 1 },
-  topBarTitle: { ...Typography.titleLg, color: C.onSurface },
-  topBarSub: { ...Typography.labelMd, color: C.onSurfaceVariant },
+  topBarTitle: { ...T.titleLg, color: C.onSurface },
+  topBarSub: { ...T.labelMd, color: C.onSurfaceVariant },
   timerBadge: {
     backgroundColor: C.primary + '22',
     borderRadius: Radius.md,
@@ -42,7 +44,7 @@ export function useStyles() {
     borderColor: C.primary + '44',
   },
   timerText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.primary,
     fontVariant: ['tabular-nums'],
   },
@@ -58,8 +60,8 @@ export function useStyles() {
     alignItems: 'center',
     marginBottom: Spacing.xs,
   },
-  progressLabel: { ...Typography.labelLg, color: C.onSurfaceVariant },
-  progressCount: { ...Typography.labelLg, color: C.primary },
+  progressLabel: { ...T.labelLg, color: C.onSurfaceVariant },
+  progressCount: { ...T.labelLg, color: C.primary },
   progressTrack: {
     height: 4,
     backgroundColor: C.outlineVariant,
@@ -85,7 +87,7 @@ export function useStyles() {
     gap: Spacing.sm,
   },
   exerciseNameInput: {
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
     flex: 1,
     padding: 0,
@@ -96,7 +98,7 @@ export function useStyles() {
     borderRadius: Radius.full,
     backgroundColor: C.primary + '22',
   },
-  muscleChipText: { ...Typography.labelMd, color: C.primary },
+  muscleChipText: { ...T.labelMd, color: C.primary },
   sectionProgressBadge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
@@ -107,7 +109,7 @@ export function useStyles() {
     gap: 4,
   },
   sectionProgressBadgeDone: { backgroundColor: C.primary + '22' },
-  sectionProgressText: { ...Typography.labelMd, color: C.onSurfaceVariant },
+  sectionProgressText: { ...T.labelMd, color: C.onSurfaceVariant },
   sectionProgressTextDone: { color: C.primary },
 
   // ── Previous performance strip ─────────────────────────────────────────────
@@ -122,7 +124,7 @@ export function useStyles() {
     borderBottomColor: C.outlineVariant,
   },
   prevText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     flex: 1,
     opacity: 0.85,
@@ -140,7 +142,7 @@ export function useStyles() {
     borderBottomColor: C.primary + '33',
   },
   prBannerText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.primary,
     fontWeight: '600' as const,
   },
@@ -154,7 +156,7 @@ export function useStyles() {
     marginBottom: Spacing.xs,
   },
   setHeaderCell: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
   },
@@ -182,7 +184,7 @@ export function useStyles() {
   },
   setRowDone: { opacity: 0.5 },
   setNumber: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     width: 20,
     textAlign: 'center',
@@ -201,20 +203,20 @@ export function useStyles() {
   inputBoxActive: { borderColor: C.primary + '88' },
   inputReadOnly: { borderColor: 'transparent', backgroundColor: 'transparent' },
   weightInput: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     width: 56,
     padding: 0,
     textAlign: 'center',
   },
   weightUnit: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     width: 20,
     textAlign: 'center',
   },
   repsInput: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     width: 44,
     padding: 0,
@@ -255,7 +257,7 @@ export function useStyles() {
     paddingVertical: 4,
   },
   restChipText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.primary,
     fontVariant: ['tabular-nums'],
   },
@@ -277,7 +279,7 @@ export function useStyles() {
     borderRadius: Radius.lg,
   },
   swipeDeleteText: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: '#fff',
     marginTop: 3,
   },
@@ -301,7 +303,7 @@ export function useStyles() {
     borderColor: C.primary + '55',
     gap: Spacing.xs,
   },
-  addSetBtnText: { ...Typography.labelLg, color: C.primary },
+  addSetBtnText: { ...T.labelLg, color: C.primary },
 
   sectionDivider: {
     height: 1,
@@ -322,7 +324,7 @@ export function useStyles() {
     borderColor: C.primary + '55',
     gap: Spacing.sm,
   },
-  addExerciseBtnText: { ...Typography.titleMd, color: C.primary },
+  addExerciseBtnText: { ...T.titleMd, color: C.primary },
 
   // ── Bottom bar ─────────────────────────────────────────────────────────────
   bottomBar: {
@@ -339,8 +341,8 @@ export function useStyles() {
     justifyContent: 'space-between',
     marginBottom: Spacing.xs,
   },
-  bottomProgressText: { ...Typography.labelLg, color: C.onSurfaceVariant },
-  bottomProgressCount: { ...Typography.labelLg, color: C.primary },
+  bottomProgressText: { ...T.labelLg, color: C.onSurfaceVariant },
+  bottomProgressCount: { ...T.labelLg, color: C.primary },
   btnFinish: {
     height: 52,
     borderRadius: Radius.md,
@@ -348,7 +350,7 @@ export function useStyles() {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  btnFinishText: { ...Typography.titleLg, color: C.background },
+  btnFinishText: { ...T.titleLg, color: C.background },
   btnFinishDimmed: {
     height: 52,
     borderRadius: Radius.md,
@@ -358,14 +360,14 @@ export function useStyles() {
     borderWidth: 1,
     borderColor: C.outlineVariant,
   },
-  btnFinishDimmedText: { ...Typography.titleLg, color: C.onSurfaceVariant },
+  btnFinishDimmedText: { ...T.titleLg, color: C.onSurfaceVariant },
   btnCancel: {
     alignItems: 'center',
     paddingVertical: Spacing.sm,
   },
-  btnCancelText: { ...Typography.labelLg, color: C.error, opacity: 0.8 },
+  btnCancelText: { ...T.labelLg, color: C.error, opacity: 0.8 },
   saveErrorText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.error,
     textAlign: 'center',
     marginBottom: Spacing.xs,
@@ -410,8 +412,8 @@ export function useStyles() {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalTitle: { ...Typography.headlineMd, color: C.onSurface, marginBottom: Spacing.lg },
-  modalTitleInRow: { ...Typography.headlineMd, color: C.onSurface, flex: 1 },
+  modalTitle: { ...T.headlineMd, color: C.onSurface, marginBottom: Spacing.lg },
+  modalTitleInRow: { ...T.headlineMd, color: C.onSurface, flex: 1 },
 
   // Search bar
   searchBarWrap: {
@@ -427,7 +429,7 @@ export function useStyles() {
   searchBarInput: {
     flex: 1,
     paddingVertical: Spacing.sm,
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
   },
 
@@ -445,12 +447,12 @@ export function useStyles() {
     borderBottomColor: C.outlineVariant,
   },
   exerciseListName: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     flex: 1,
   },
   exerciseListMuscle: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.primary,
     backgroundColor: C.primary + '18',
     paddingHorizontal: Spacing.sm,
@@ -466,12 +468,12 @@ export function useStyles() {
     gap: Spacing.sm,
   },
   createCustomText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.primary,
     flex: 1,
   },
   emptyListText: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     textAlign: 'center',
     paddingVertical: Spacing.xl,
@@ -487,13 +489,13 @@ export function useStyles() {
     marginHorizontal: Spacing.lg,
   },
   selectedExerciseName: {
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
     marginBottom: 4,
   },
 
   fieldLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     marginBottom: Spacing.xs,
     marginTop: Spacing.md,
@@ -503,7 +505,7 @@ export function useStyles() {
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
   },
   fieldRow: { flexDirection: 'row', gap: Spacing.sm },
@@ -517,7 +519,7 @@ export function useStyles() {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalCancelText: { ...Typography.titleMd, color: C.onSurfaceVariant },
+  modalCancelText: { ...T.titleMd, color: C.onSurfaceVariant },
   modalAddBtn: {
     flex: 2,
     height: 50,
@@ -526,7 +528,7 @@ export function useStyles() {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalAddText: { ...Typography.titleLg, color: C.background },
+  modalAddText: { ...T.titleLg, color: C.background },
 
   // ── Rest timer — adjust buttons ────────────────────────────────────────────
   restAdjustBtn: {
@@ -535,7 +537,7 @@ export function useStyles() {
     borderRadius: Radius.sm,
     backgroundColor: C.primary + '30',
   },
-  restAdjustBtnText: { ...Typography.labelLg, color: C.primary },
+  restAdjustBtnText: { ...T.labelLg, color: C.primary },
 
   // ── Numpad ─────────────────────────────────────────────────────────────────
   numPadBackdrop: {
@@ -560,7 +562,7 @@ export function useStyles() {
     marginBottom: Spacing.sm,
   },
   numPadLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textAlign: 'center' as const,
     marginBottom: Spacing.xs,
@@ -594,7 +596,7 @@ export function useStyles() {
     backgroundColor: C.surfaceContainerHighest,
   },
   numPadKeyText: {
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
   },
   numPadDoneBtn: {
@@ -605,7 +607,7 @@ export function useStyles() {
     alignItems: 'center' as const,
     marginTop: Spacing.xs,
   },
-  numPadDoneBtnText: { ...Typography.titleLg, color: C.background },
+  numPadDoneBtnText: { ...T.titleLg, color: C.background },
 
   // ── Workout saved overlay ──────────────────────────────────────────────────
   savedOverlay: {
@@ -629,10 +631,10 @@ export function useStyles() {
     backgroundColor: C.primary + '22',
     justifyContent: 'center', alignItems: 'center',
   },
-  savedTitle: { ...Typography.headlineMd, color: C.onSurface },
+  savedTitle: { ...T.headlineMd, color: C.onSurface },
   savedStatsRow: { flexDirection: 'row', gap: Spacing.lg, marginTop: Spacing.xs },
   savedStat: { alignItems: 'center', minWidth: 60 },
-  savedStatValue: { ...Typography.headlineMd, color: C.primary },
-  savedStatLabel: { ...Typography.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
-}), [C]);
+  savedStatValue: { ...T.headlineMd, color: C.primary },
+  savedStatLabel: { ...T.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
+}), [C, T]);
 }

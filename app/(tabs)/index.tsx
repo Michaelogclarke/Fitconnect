@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { usePrefs } from '@/contexts/PrefsContext';
 import { useStyles } from '@/styles/tabs/index.styles';
 import { supabase } from '@/lib/supabase';
 import { formatSessionDate, formatDuration, formatVolume, initials } from '@/lib/format';
@@ -120,6 +121,7 @@ export default function HomeScreen() {
   const styles = useStyles();
   const router = useRouter();
   const { isActive, startWorkoutFromPlan } = useWorkout();
+  const { homeCards } = usePrefs();
 
   const trainerStyles = useMemo(() => StyleSheet.create({
     actionRow: {
@@ -240,6 +242,7 @@ export default function HomeScreen() {
   const [trainerMode,    setTrainerMode]    = useState<'clients' | 'own'>('clients');
   const [ownLoading,     setOwnLoading]     = useState(false);
   const [ownDataLoaded,  setOwnDataLoaded]  = useState(false);
+  const [refreshing,     setRefreshing]     = useState(false);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -261,6 +264,12 @@ export default function HomeScreen() {
       if (val) setWeeklyGoal(Number(val));
     });
   }, []);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }
 
   async function openGoalPicker() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -604,7 +613,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}>
 
         {/* Header */}
         <View style={styles.header}>
@@ -746,7 +758,7 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* Streak banner */}
-            {currentStreak > 0 && (
+            {homeCards.streak && currentStreak > 0 && (
               <View style={styles.streakCard}>
                 <View style={styles.streakLeft}>
                   <IconSymbol name="flame.fill" size={28} color={C.primary} />
@@ -796,7 +808,7 @@ export default function HomeScreen() {
             )}
 
             {/* Quick stats */}
-            <View style={styles.statsRow}>
+            {homeCards.quickStats && <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={styles.statValue}>{weekSessions}</Text>
                 <Text style={styles.statLabel}>This week</Text>
@@ -809,78 +821,83 @@ export default function HomeScreen() {
                 <Text style={styles.statValue}>{totalSessions}</Text>
                 <Text style={styles.statLabel}>All time</Text>
               </View>
-            </View>
+            </View>}
 
             {/* Weekly goal */}
-            <TouchableOpacity
-              style={styles.weeklyGoalCard}
-              onLongPress={openGoalPicker}
-              delayLongPress={400}
-              activeOpacity={0.8}>
-              <View style={styles.weeklyGoalHeader}>
-                <IconSymbol name="trophy.fill" size={16} color={C.primary} />
-                <Text style={styles.weeklyGoalTitle}>Weekly Goal</Text>
-                <Text style={styles.weeklyGoalTapHint}>Hold to change · {weeklyGoal}×/week</Text>
-              </View>
-              <View style={styles.weeklyGoalDots}>
-                {Array.from({ length: weeklyGoal }).map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.weeklyGoalDot,
-                      i < weekSessions ? styles.weeklyGoalDotFilled : styles.weeklyGoalDotEmpty,
-                    ]}
-                  />
-                ))}
-              </View>
-              <Text style={styles.weeklyGoalCount}>
-                {weekSessions >= weeklyGoal
-                  ? `Goal reached! ${weekSessions} / ${weeklyGoal} sessions`
-                  : `${weekSessions} / ${weeklyGoal} sessions this week`}
-              </Text>
-            </TouchableOpacity>
-
+            {homeCards.weeklyGoal && (
+              <TouchableOpacity
+                style={styles.weeklyGoalCard}
+                onLongPress={openGoalPicker}
+                delayLongPress={400}
+                activeOpacity={0.8}>
+                <View style={styles.weeklyGoalHeader}>
+                  <IconSymbol name="trophy.fill" size={16} color={C.primary} />
+                  <Text style={styles.weeklyGoalTitle}>Weekly Goal</Text>
+                  <Text style={styles.weeklyGoalTapHint}>Hold to change · {weeklyGoal}×/week</Text>
+                </View>
+                <View style={styles.weeklyGoalDots}>
+                  {Array.from({ length: weeklyGoal }).map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.weeklyGoalDot,
+                        i < weekSessions ? styles.weeklyGoalDotFilled : styles.weeklyGoalDotEmpty,
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Text style={styles.weeklyGoalCount}>
+                  {weekSessions >= weeklyGoal
+                    ? `Goal reached! ${weekSessions} / ${weeklyGoal} sessions`
+                    : `${weekSessions} / ${weeklyGoal} sessions this week`}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* Recent sessions */}
-            <Text style={styles.sectionLabel}>Recent Sessions</Text>
+            {homeCards.recentSessions && (
+              <>
+                <Text style={styles.sectionLabel}>Recent Sessions</Text>
 
-            {recentSessions.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <IconSymbol name="dumbbell.fill" size={28} color={C.outlineVariant} />
-                <Text style={styles.emptyText}>No sessions yet</Text>
-                <Text style={styles.emptySub}>Complete your first workout to see it here</Text>
-              </View>
-            ) : (
-              recentSessions.map((s) => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={styles.recentCard}
-                  onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: s.id } })}
-                  activeOpacity={0.8}>
-                  <View style={styles.recentIconBox}>
-                    <IconSymbol name="dumbbell.fill" size={18} color={C.primary} />
+                {recentSessions.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <IconSymbol name="dumbbell.fill" size={28} color={C.outlineVariant} />
+                    <Text style={styles.emptyText}>No sessions yet</Text>
+                    <Text style={styles.emptySub}>Complete your first workout to see it here</Text>
                   </View>
-                  <View style={styles.recentInfo}>
-                    <Text style={styles.recentName}>{s.name}</Text>
-                    <Text style={styles.recentMeta}>
-                      {formatSessionDate(s.started_at)}
-                      {s.duration_seconds ? ` · ${formatDuration(s.duration_seconds)}` : ''}
-                      {s.set_count > 0 ? ` · ${s.set_count} sets` : ''}
-                    </Text>
-                  </View>
-                  <View style={styles.recentRight}>
-                    {s.volume > 0 && (
-                      <Text style={styles.recentVolume}>{formatVolume(s.volume)}</Text>
-                    )}
+                ) : (
+                  recentSessions.map((s) => (
                     <TouchableOpacity
-                      style={styles.recentDoAgainBtn}
-                      onPress={() => doAgain(s.id)}>
-                      <IconSymbol name="play.fill" size={10} color={C.primary} />
-                      <Text style={styles.recentDoAgainText}>Do Again</Text>
+                      key={s.id}
+                      style={styles.recentCard}
+                      onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: s.id } })}
+                      activeOpacity={0.8}>
+                      <View style={styles.recentIconBox}>
+                        <IconSymbol name="dumbbell.fill" size={18} color={C.primary} />
+                      </View>
+                      <View style={styles.recentInfo}>
+                        <Text style={styles.recentName}>{s.name}</Text>
+                        <Text style={styles.recentMeta}>
+                          {formatSessionDate(s.started_at)}
+                          {s.duration_seconds ? ` · ${formatDuration(s.duration_seconds)}` : ''}
+                          {s.set_count > 0 ? ` · ${s.set_count} sets` : ''}
+                        </Text>
+                      </View>
+                      <View style={styles.recentRight}>
+                        {s.volume > 0 && (
+                          <Text style={styles.recentVolume}>{formatVolume(s.volume)}</Text>
+                        )}
+                        <TouchableOpacity
+                          style={styles.recentDoAgainBtn}
+                          onPress={() => doAgain(s.id)}>
+                          <IconSymbol name="play.fill" size={10} color={C.primary} />
+                          <Text style={styles.recentDoAgainText}>Do Again</Text>
+                        </TouchableOpacity>
+                      </View>
                     </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              ))
+                  ))
+                )}
+              </>
             )}
           </>
         )}

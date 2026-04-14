@@ -16,12 +16,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NumericInput } from '@/components/ui/numeric-input';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/contexts/ThemeContext';
+import { usePrefs } from '@/contexts/PrefsContext';
 import { DELETE_WIDTH, useStyles } from '@/styles/start-workout.styles';
 import { supabase } from '@/lib/supabase';
 import { useWorkout, Exercise, SetRow, ActiveRest } from '@/contexts/WorkoutContext';
@@ -56,7 +58,7 @@ function formatTime(s: number) {
 }
 
 
-const REST_SECONDS = 120;
+// REST_SECONDS is now read from PrefsContext at runtime
 
 // ─── SwipeableRow ─────────────────────────────────────────────────────────────
 
@@ -454,6 +456,7 @@ function ExerciseSection({
   exercise, sets, activeRest,
   onUpdateSet, onToggleSet, onAddSet, onDeleteSet, onDeleteExercise,
   onSkipRest, onAdjustRest, onOpenNumPad, isLast,
+  note, onNoteChange, restSeconds, onCycleRest,
 }: {
   exercise:          Exercise;
   sets:              SetRow[];
@@ -467,9 +470,16 @@ function ExerciseSection({
   onAdjustRest:      (delta: number) => void;
   onOpenNumPad:      (setIdx: number, field: 'weight' | 'reps', currentValue: string) => void;
   isLast:            boolean;
+  note:              string;
+  onNoteChange:      (text: string) => void;
+  restSeconds:       number;
+  onCycleRest:       (seconds: number) => void;
 }) {
   const C = useColors();
   const styles = useStyles();
+  const { weightIncrement } = usePrefs();
+  const [editingRest, setEditingRest] = useState(false);
+  const [restInput,   setRestInput]   = useState('');
   const doneCount  = sets.filter((s) => s.done).length;
   const allDone    = doneCount === sets.length && sets.length > 0;
   const nextSetIdx = sets.findIndex((s) => !s.done);
@@ -567,19 +577,81 @@ function ExerciseSection({
           <Text style={styles.muscleChipText}>{exercise.muscle}</Text>
         </View>
         <View style={[styles.sectionProgressBadge, allDone && styles.sectionProgressBadgeDone]}>
-          {allDone && (
-            <IconSymbol name="checkmark.circle.fill" size={12} color={C.primary} />
-          )}
+          {allDone && <IconSymbol name="checkmark.circle.fill" size={12} color={C.primary} />}
           <Text style={[styles.sectionProgressText, allDone && styles.sectionProgressTextDone]}>
             {doneCount}/{sets.length}
           </Text>
         </View>
+
+        {/* Per-exercise rest — tap to edit */}
+        {editingRest ? (
+          <TextInput
+            autoFocus
+            keyboardType="number-pad"
+            value={restInput}
+            onChangeText={setRestInput}
+            onBlur={() => {
+              const v = parseInt(restInput);
+              if (v > 0) onCycleRest(v);
+              setEditingRest(false);
+            }}
+            style={{
+              width: 52,
+              fontSize: 11,
+              fontWeight: '600',
+              color: C.primary,
+              paddingHorizontal: 7,
+              paddingVertical: 4,
+              borderRadius: 8,
+              backgroundColor: C.surfaceContainerHigh,
+              borderWidth: 1,
+              borderColor: C.primary,
+              textAlign: 'center',
+            }}
+          />
+        ) : (
+          <TouchableOpacity
+            onPress={() => { setRestInput(String(restSeconds)); setEditingRest(true); }}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 3,
+              paddingHorizontal: 7, paddingVertical: 4,
+              borderRadius: 8, backgroundColor: C.surfaceContainerHigh,
+              borderWidth: 1, borderColor: C.outlineVariant,
+            }}>
+            <IconSymbol name="timer" size={11} color={C.primary} />
+            <Text style={{ fontSize: 11, fontWeight: '600', color: C.primary }}>{restSeconds}s</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           onPress={onDeleteExercise}
           style={{ padding: 8 }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <IconSymbol name="trash.fill" size={16} color={C.error} />
         </TouchableOpacity>
+      </View>
+
+      {/* Exercise note — below header, above prev performance */}
+      <View style={{ marginHorizontal: 12, marginBottom: 6 }}>
+        <TextInput
+          style={{
+            color: C.onSurface,
+            fontSize: 13,
+            paddingVertical: 6,
+            paddingHorizontal: 10,
+            backgroundColor: note ? C.surfaceContainerHigh : 'transparent',
+            borderRadius: 8,
+            borderWidth: note ? 1 : 0,
+            borderColor: C.outlineVariant,
+            minHeight: 32,
+          }}
+          placeholder="Add a note…"
+          placeholderTextColor={C.onSurfaceVariant + '66'}
+          value={note}
+          onChangeText={onNoteChange}
+          multiline
+          blurOnSubmit
+        />
       </View>
 
       {/* Previous performance strip */}
@@ -625,28 +697,42 @@ function ExerciseSection({
                   ]}>
                   <Text style={styles.setNumber}>{i + 1}</Text>
 
-                  {/* Weight — tapping opens the numpad */}
+                  {/* Weight — minus · value · plus */}
                   <TouchableOpacity
-                    style={[
-                      styles.inputBox,
-                      s.done && styles.inputReadOnly,
-                      isNext && !s.done && styles.inputBoxActive,
-                    ]}
+                    disabled={s.done}
+                    onPress={() => {
+                      const cur  = parseFloat(s.weight) || 0;
+                      const next = Math.max(0, cur - weightIncrement);
+                      onUpdateSet(i, 'weight', String(next % 1 === 0 ? next : next.toFixed(1)));
+                    }}
+                    style={{ padding: 4, opacity: s.done ? 0.3 : 1 }}>
+                    <IconSymbol name="minus" size={14} color={C.onSurfaceVariant} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.inputBox, s.done && styles.inputReadOnly, isNext && !s.done && styles.inputBoxActive]}
                     onPress={() => !s.done && onOpenNumPad(i, 'weight', s.weight)}
                     disabled={s.done}
                     activeOpacity={0.7}>
                     <Text style={styles.weightInput}>{s.weight || '0'}</Text>
                   </TouchableOpacity>
 
+                  <TouchableOpacity
+                    disabled={s.done}
+                    onPress={() => {
+                      const cur  = parseFloat(s.weight) || 0;
+                      const next = cur + weightIncrement;
+                      onUpdateSet(i, 'weight', String(next % 1 === 0 ? next : next.toFixed(1)));
+                    }}
+                    style={{ padding: 4, opacity: s.done ? 0.3 : 1 }}>
+                    <IconSymbol name="plus" size={14} color={C.onSurfaceVariant} />
+                  </TouchableOpacity>
+
                   <Text style={styles.weightUnit}>kg</Text>
 
-                  {/* Reps — tapping opens the numpad */}
+                  {/* Reps — tap to open numpad only */}
                   <TouchableOpacity
-                    style={[
-                      styles.inputBox,
-                      s.done && styles.inputReadOnly,
-                      isNext && !s.done && styles.inputBoxActive,
-                    ]}
+                    style={[styles.inputBox, s.done && styles.inputReadOnly, isNext && !s.done && styles.inputBoxActive]}
                     onPress={() => !s.done && onOpenNumPad(i, 'reps', s.reps)}
                     disabled={s.done}
                     activeOpacity={0.7}>
@@ -655,15 +741,9 @@ function ExerciseSection({
 
                   {/* Checkmark */}
                   <TouchableOpacity
-                    style={[
-                      styles.checkCircle,
-                      s.done    && styles.checkCircleDone,
-                      isNext && !s.done && styles.checkCircleNext,
-                    ]}
+                    style={[styles.checkCircle, s.done && styles.checkCircleDone, isNext && !s.done && styles.checkCircleNext]}
                     onPress={() => handleSetToggle(i)}>
-                    {s.done && (
-                      <IconSymbol name="checkmark" size={14} color={C.background} />
-                    )}
+                    {s.done && <IconSymbol name="checkmark" size={14} color={C.background} />}
                   </TouchableOpacity>
                 </View>
               </SwipeableRow>
@@ -675,7 +755,6 @@ function ExerciseSection({
                   onPress={() => setRestExpanded((e) => !e)}
                   activeOpacity={0.8}>
                   <IconSymbol name="timer" size={13} color={C.primary} />
-
                   {restExpanded ? (
                     <>
                       <TouchableOpacity
@@ -683,9 +762,7 @@ function ExerciseSection({
                         onPress={(e) => { e.stopPropagation(); onAdjustRest(-15); }}>
                         <Text style={styles.restAdjustBtnText}>−15</Text>
                       </TouchableOpacity>
-                      <Text style={styles.restChipText}>
-                        {formatTime(activeRest!.remaining)}
-                      </Text>
+                      <Text style={styles.restChipText}>{formatTime(activeRest!.remaining)}</Text>
                       <TouchableOpacity
                         style={styles.restAdjustBtn}
                         onPress={(e) => { e.stopPropagation(); onAdjustRest(+15); }}>
@@ -693,11 +770,8 @@ function ExerciseSection({
                       </TouchableOpacity>
                     </>
                   ) : (
-                    <Text style={styles.restChipText}>
-                      {formatTime(activeRest!.remaining)}
-                    </Text>
+                    <Text style={styles.restChipText}>{formatTime(activeRest!.remaining)}</Text>
                   )}
-
                   <TouchableOpacity
                     style={styles.restChipSkip}
                     onPress={(e) => { e.stopPropagation(); onSkipRest(); }}>
@@ -729,6 +803,7 @@ export default function StartWorkoutScreen() {
   const C = useColors();
   const styles = useStyles();
   const router = useRouter();
+  const { restTimer: REST_SECONDS, weightIncrement } = usePrefs();
 
   // ── Persistent workout state from context ──────────────────────────────────
   const {
@@ -743,7 +818,32 @@ export default function StartWorkoutScreen() {
   }, [hydrated]);
 
   // ── Local UI state (resets on unmount — that's fine) ──────────────────────
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal,    setShowAddModal]    = useState(false);
+  const [exRestOverrides, setExRestOverrides] = useState<Record<string, number>>({});
+  const [notesState,      setNotesState]      = useState<Record<string, string>>({});
+  const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load saved exercise notes on mount
+  useEffect(() => {
+    AsyncStorage.getItem('@fitconnect:exercise_notes')
+      .then((raw) => { if (raw) try { setNotesState(JSON.parse(raw)); } catch {} })
+      .catch(() => {});
+  }, []);
+
+  function updateNote(exerciseName: string, text: string) {
+    setNotesState((prev) => {
+      const next = { ...prev, [exerciseName]: text };
+      if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+      notesSaveTimer.current = setTimeout(() => {
+        AsyncStorage.setItem('@fitconnect:exercise_notes', JSON.stringify(next)).catch(() => {});
+      }, 600);
+      return next;
+    });
+  }
+
+  function setRestOverride(exId: string, seconds: number) {
+    setExRestOverrides((prev) => ({ ...prev, [exId]: seconds }));
+  }
 
   // Numpad state
   const [numPadTarget, setNumPadTarget] = useState<NumPadTarget | null>(null);
@@ -902,7 +1002,8 @@ export default function StartWorkoutScreen() {
     if (!wasDone) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       restExerciseRef.current = exerciseName;
-      setActiveRest({ exId, setIdx: idx, endsAt: Date.now() + REST_SECONDS * 1000 });
+      const restSecs = exRestOverrides[exId] ?? REST_SECONDS;
+      setActiveRest({ exId, setIdx: idx, endsAt: Date.now() + restSecs * 1000 });
       scheduleRestNotification(exerciseName);
     } else if (activeRest?.exId === exId && activeRest.setIdx === idx) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1083,6 +1184,21 @@ export default function StartWorkoutScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSavedStats({ sets: doneSets.length, volume, duration: elapsed });
       setFinishing(false);
+
+      // Rate-app prompt after every 5th completed workout
+      try {
+        const COUNT_KEY = '@fitconnect:workout_count';
+        const raw = await AsyncStorage.getItem(COUNT_KEY);
+        const count = (parseInt(raw ?? '0') || 0) + 1;
+        await AsyncStorage.setItem(COUNT_KEY, String(count));
+        if (count % 5 === 0) {
+          const StoreReview = await import('expo-store-review');
+          if (await StoreReview.isAvailableAsync()) {
+            await StoreReview.requestReview();
+          }
+        }
+      } catch {}
+
       setTimeout(() => {
         clearWorkout();
         setSavedStats(null);
@@ -1156,6 +1272,10 @@ export default function StartWorkoutScreen() {
             onAdjustRest={adjustRest}
             onOpenNumPad={(setIdx, field, val) => openNumPad(ex.id, setIdx, field, val)}
             isLast={idx === exercises.length - 1}
+            note={notesState[ex.name] ?? ''}
+            onNoteChange={(text) => updateNote(ex.name, text)}
+            restSeconds={exRestOverrides[ex.id] ?? REST_SECONDS}
+            onCycleRest={(secs) => setRestOverride(ex.id, secs)}
           />
         ))}
 

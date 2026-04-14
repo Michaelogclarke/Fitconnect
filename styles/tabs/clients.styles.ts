@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
@@ -19,7 +21,7 @@ export function useStyles() {
     paddingBottom: Spacing.md,
   },
   title: {
-    ...Typography.displayMd,
+    ...T.displayMd,
     color: C.onSurface,
   },
   addBtn: {
@@ -44,11 +46,11 @@ export function useStyles() {
     alignItems: 'center',
   },
   statValue: {
-    ...Typography.headlineLg,
+    ...T.headlineLg,
     color: C.primary,
   },
   statLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     marginTop: 2,
   },
@@ -77,18 +79,18 @@ export function useStyles() {
     alignItems: 'center',
   },
   avatarText: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.primary,
   },
   clientInfo: {
     flex: 1,
   },
   clientName: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.onSurface,
   },
   clientMeta: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     marginTop: 2,
   },
@@ -103,5 +105,5 @@ export function useStyles() {
   statusPaused: {
     backgroundColor: C.onSurfaceVariant,
   },
-}), [C]);
+}), [C, T]);
 }

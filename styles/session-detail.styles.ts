@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
@@ -31,7 +33,7 @@ export function useStyles() {
   },
 
   backText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurfaceVariant,
   },
 
@@ -45,12 +47,12 @@ export function useStyles() {
   },
 
   sessionName: {
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
   },
 
   sessionMeta: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     marginTop: 4,
   },
@@ -73,7 +75,7 @@ export function useStyles() {
   },
 
   doAgainText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.background,
   },
 
@@ -86,12 +88,12 @@ export function useStyles() {
   },
 
   statValue: {
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.primary,
   },
 
   statLabel: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     marginTop: 2,
   },
@@ -115,7 +117,7 @@ export function useStyles() {
   },
 
   exName: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     flex: 1,
   },
@@ -128,7 +130,7 @@ export function useStyles() {
   },
 
   muscleText: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.primary,
   },
 
@@ -154,20 +156,20 @@ export function useStyles() {
 
   colSet: {
     width: 32,
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
   },
 
   colWeight: {
     flex: 1,
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurface,
     textAlign: 'center',
   },
 
   colReps: {
     flex: 1,
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurface,
     textAlign: 'center',
   },
@@ -178,7 +180,7 @@ export function useStyles() {
   },
 
   headerText: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     textAlign: 'center',
   },
@@ -211,8 +213,8 @@ export function useStyles() {
   },
 
   notFoundText: {
-    ...Typography.bodyLg,
+    ...T.bodyLg,
     color: C.onSurfaceVariant,
   },
-}), [C]);
+}), [C, T]);
 }

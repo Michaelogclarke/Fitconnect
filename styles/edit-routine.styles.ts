@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
@@ -32,7 +34,7 @@ export function useStyles() {
   },
   titleInput: {
     flex: 1,
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
     paddingVertical: 0,
   },
@@ -45,7 +47,7 @@ export function useStyles() {
     alignItems: 'center',
   },
   saveBtnText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.background,
   },
 
@@ -66,13 +68,13 @@ export function useStyles() {
     paddingVertical: Spacing.xs,
   },
   metaChipText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
   },
 
   // Section label
   sectionLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -115,7 +117,7 @@ export function useStyles() {
     flex: 1,
   },
   exerciseName: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.onSurface,
   },
   exerciseChips: {
@@ -131,7 +133,7 @@ export function useStyles() {
     paddingVertical: 2,
   },
   chipText: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
   },
   chipHighlight: {
@@ -176,12 +178,12 @@ export function useStyles() {
     paddingVertical: Spacing.sm,
   },
   editFieldLabel: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
     marginBottom: 4,
   },
   editFieldInput: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.onSurface,
     padding: 0,
   },
@@ -193,7 +195,7 @@ export function useStyles() {
     paddingVertical: Spacing.sm,
   },
   editNotesInput: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurface,
     padding: 0,
   },
@@ -213,7 +215,7 @@ export function useStyles() {
     gap: Spacing.sm,
   },
   addExerciseBtnText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.primary,
   },
 
@@ -239,7 +241,7 @@ export function useStyles() {
     alignItems: 'center',
   },
   discardBtnText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurfaceVariant,
   },
   saveLargeBtn: {
@@ -250,8 +252,8 @@ export function useStyles() {
     alignItems: 'center',
   },
   saveLargeBtnText: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.background,
   },
-}), [C]);
+}), [C, T]);
 }

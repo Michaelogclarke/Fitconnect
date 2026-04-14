@@ -73,6 +73,26 @@ const MAPPING = {
   'star':             'star-border',
   'bookmark.fill':    'bookmark',
   'bookmark':         'bookmark-border',
+  // Additional mappings
+  'chevron.up':                   'expand-less',
+  'minus':                        'remove',
+  'xmark':                        'close',
+  'moon.fill':                    'nights-stay',
+  'sun.max.fill':                 'wb-sunny',
+  'circle.lefthalf.filled':       'brightness-medium',
+  'bubble.left.fill':             'chat',
+  'calendar':                     'event',
+  'clock.arrow.circlepath':       'update',
+  'bell.slash.fill':              'notifications-off',
+  'alarm':                        'alarm',
+  'bolt.fill':                    'bolt',
+  'figure.run':                   'directions-run',
+  'note.text':                    'description',
+  'person.text.rectangle.fill':   'badge',
+  'plusminus':                    'exposure',
+  'textformat.size':              'format-size',
+  'arrow.up':                     'arrow-upward',
+  'arrow.up.circle.fill':         'arrow-circle-up',
 } as IconMapping;
 
 /**

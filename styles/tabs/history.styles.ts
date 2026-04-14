@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
@@ -14,7 +16,7 @@ export function useStyles() {
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  title: { ...Typography.headlineLg, color: C.onSurface },
+  title: { ...T.headlineLg, color: C.onSurface },
 
   // ── Summary strip ──────────────────────────────────────────────────────────
   summaryRow: {
@@ -29,8 +31,8 @@ export function useStyles() {
     borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
   },
-  summaryValue: { ...Typography.headlineMd, color: C.primary },
-  summaryLabel: { ...Typography.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
+  summaryValue: { ...T.headlineMd, color: C.primary },
+  summaryLabel: { ...T.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Empty state ────────────────────────────────────────────────────────────
   emptyState: {
@@ -42,12 +44,12 @@ export function useStyles() {
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  emptyText:    { ...Typography.titleMd, color: C.onSurface },
-  emptySubtext: { ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' as const },
+  emptyText:    { ...T.titleMd, color: C.onSurface },
+  emptySubtext: { ...T.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' as const },
 
   // ── Week group ─────────────────────────────────────────────────────────────
   weekLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -74,11 +76,11 @@ export function useStyles() {
     justifyContent: 'center', alignItems: 'center',
   },
   sessionInfo:   { flex: 1 },
-  sessionName:   { ...Typography.titleMd, color: C.onSurface },
-  sessionMeta:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  sessionName:   { ...T.titleMd, color: C.onSurface },
+  sessionMeta:   { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
   sessionRight:  { alignItems: 'flex-end' },
-  sessionVolume: { ...Typography.titleMd, color: C.primary },
-  sessionSets:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  sessionVolume: { ...T.titleMd, color: C.primary },
+  sessionSets:   { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Expanded detail ────────────────────────────────────────────────────────
   sessionDetail: { marginTop: Spacing.sm },
@@ -95,6 +97,6 @@ export function useStyles() {
     width: 6, height: 6, borderRadius: 3,
     backgroundColor: C.primary + '88',
   },
-  exerciseText: { ...Typography.bodyMd, color: C.onSurfaceVariant },
-}), [C]);
+  exerciseText: { ...T.bodyMd, color: C.onSurfaceVariant },
+}), [C, T]);
 }

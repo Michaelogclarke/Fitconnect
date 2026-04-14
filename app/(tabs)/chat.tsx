@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -41,8 +41,9 @@ export default function ChatScreen() {
   const C = useColors();
   const styles = useStyles();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [threads, setThreads] = useState<Thread[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [threads,    setThreads]    = useState<Thread[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -91,7 +92,14 @@ export default function ChatScreen() {
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={async () => { setRefreshing(true); await loadThreads(); setRefreshing(false); }}
+              tintColor={C.primary}
+            />
+          }>
           {threads.map((t, idx) => (
             <React.Fragment key={t.threadId}>
               <TouchableOpacity

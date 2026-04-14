@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container:     { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
@@ -28,11 +30,11 @@ export function useStyles() {
     minWidth: 72,
   },
   backText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurfaceVariant,
   },
   headerTitle: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.onSurface,
   },
   saveBtn: {
@@ -41,7 +43,7 @@ export function useStyles() {
     padding: Spacing.xs,
   },
   saveBtnText: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.primary,
   },
 
@@ -71,7 +73,7 @@ export function useStyles() {
     marginHorizontal: Spacing.lg,
   },
   sectionLabel: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -92,21 +94,21 @@ export function useStyles() {
     minHeight: 52,
   },
   fieldLabel: {
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     width: 90,
   },
   fieldInput: {
     flex: 1,
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
     textAlign: 'right',
   },
   errorText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.error,
     marginTop: Spacing.sm,
     marginLeft: Spacing.xs,
   },
-}), [C]);
+}), [C, T]);
 }

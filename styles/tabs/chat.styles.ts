@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
@@ -16,7 +18,7 @@ export function useStyles() {
     paddingBottom: Spacing.md,
   },
   title: {
-    ...Typography.displayMd,
+    ...T.displayMd,
     color: C.onSurface,
   },
   lockRow: {
@@ -26,7 +28,7 @@ export function useStyles() {
     marginTop: Spacing.xs,
   },
   lockText: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.success,
   },
   scroll: {
@@ -55,7 +57,7 @@ export function useStyles() {
     alignItems: 'center',
   },
   avatarText: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.primary,
   },
   onlineDot: {
@@ -78,15 +80,15 @@ export function useStyles() {
     alignItems: 'center',
   },
   threadName: {
-    ...Typography.titleLg,
+    ...T.titleLg,
     color: C.onSurface,
   },
   threadTime: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.onSurfaceVariant,
   },
   threadPreview: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     marginTop: 2,
   },
@@ -100,7 +102,7 @@ export function useStyles() {
     marginTop: 2,
   },
   unreadText: {
-    ...Typography.labelMd,
+    ...T.labelMd,
     color: C.background,
     fontSize: 10,
   },
@@ -109,5 +111,5 @@ export function useStyles() {
     backgroundColor: C.outlineVariant,
     marginLeft: 68,
   },
-}), [C]);
+}), [C, T]);
 }

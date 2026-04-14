@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
 export function useStyles() {
   const C = useColors();
+  const T = useTypography();
   return useMemo(() => StyleSheet.create({
   container: { flex: 1, backgroundColor: C.background },
   inner: {
@@ -25,7 +27,7 @@ export function useStyles() {
     letterSpacing: -1,
   },
   tagline: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.onSurfaceVariant,
     marginTop: Spacing.xs,
   },
@@ -38,13 +40,13 @@ export function useStyles() {
     marginBottom: Spacing.lg,
   },
   formTitle: {
-    ...Typography.headlineMd,
+    ...T.headlineMd,
     color: C.onSurface,
     marginBottom: Spacing.lg,
   },
 
   errorText: {
-    ...Typography.bodyMd,
+    ...T.bodyMd,
     color: C.error,
     backgroundColor: C.error + '18',
     borderRadius: Radius.md,
@@ -55,7 +57,7 @@ export function useStyles() {
   // ── Fields ────────────────────────────────────────────────────────────────
   fieldGroup: { marginBottom: Spacing.md },
   label: {
-    ...Typography.labelLg,
+    ...T.labelLg,
     color: C.onSurfaceVariant,
     marginBottom: Spacing.xs,
   },
@@ -66,7 +68,7 @@ export function useStyles() {
     borderColor: C.outlineVariant,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    ...Typography.titleMd,
+    ...T.titleMd,
     color: C.onSurface,
   },
 
@@ -80,7 +82,7 @@ export function useStyles() {
     marginTop: Spacing.sm,
   },
   primaryBtnDisabled: { opacity: 0.45 },
-  primaryBtnText: { ...Typography.titleLg, color: C.background },
+  primaryBtnText: { ...T.titleLg, color: C.background },
 
   // ── Switch row ────────────────────────────────────────────────────────────
   switchRow: {
@@ -88,16 +90,16 @@ export function useStyles() {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  switchText: { ...Typography.bodyMd, color: C.onSurfaceVariant },
-  switchLink: { ...Typography.bodyMd, color: C.primary, fontWeight: '600' },
+  switchText: { ...T.bodyMd, color: C.onSurfaceVariant },
+  switchLink: { ...T.bodyMd, color: C.primary, fontWeight: '600' },
 
   // ── Confirmation screen ───────────────────────────────────────────────────
   confirmText: {
-    ...Typography.bodyLg,
+    ...T.bodyLg,
     color: C.onSurfaceVariant,
     marginBottom: Spacing.xl,
     lineHeight: 24,
   },
   confirmEmail: { color: C.primary, fontWeight: '600' },
-}), [C]);
+}), [C, T]);
 }
