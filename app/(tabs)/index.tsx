@@ -243,6 +243,7 @@ export default function HomeScreen() {
   const [ownLoading,     setOwnLoading]     = useState(false);
   const [ownDataLoaded,  setOwnDataLoaded]  = useState(false);
   const [refreshing,     setRefreshing]     = useState(false);
+  const [unreadCount,    setUnreadCount]    = useState(0);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -312,12 +313,12 @@ export default function HomeScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Profile name + role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, role')
-        .eq('id', user.id)
-        .single();
+      // Profile name + role + unread notification count
+      const [{ data: profile }, { count: unread }] = await Promise.all([
+        supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
+        supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).is('read_at', null),
+      ]);
+      setUnreadCount(unread ?? 0);
       const userName   = profile?.full_name?.split(' ')[0] ?? '';
       const userRole   = (profile?.role ?? 'client') as 'client' | 'trainer';
       setRole(userRole);
@@ -627,8 +628,23 @@ export default function HomeScreen() {
             <Text style={styles.date}>{today}</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <TouchableOpacity style={styles.iconBtn}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => router.push('/notifications' as any)}>
               <IconSymbol name="bell.fill" size={20} color={C.onSurface} />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute', top: -3, right: -3,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  backgroundColor: C.error,
+                  justifyContent: 'center', alignItems: 'center',
+                  paddingHorizontal: 3,
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700', lineHeight: 11 }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.iconBtn, { backgroundColor: C.primary }]}

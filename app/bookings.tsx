@@ -16,6 +16,7 @@ import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { sendPushNotification, insertNotification } from '@/lib/notifications';
+import BookingCalendar from '@/components/BookingCalendar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +126,7 @@ export default function BookingsScreen() {
   const [role,      setRole]      = useState<'trainer' | 'client' | null>(null);
   const [userId,    setUserId]    = useState<string | null>(null);
   const [bookings,  setBookings]  = useState<Booking[]>([]);
+  const [viewMode,  setViewMode]  = useState<'list' | 'calendar'>('list');
 
   useFocusEffect(
     useCallback(() => { loadBookings(); }, [])
@@ -275,15 +277,15 @@ export default function BookingsScreen() {
           </View>
           <View style={[
             s.badge,
-            booking.status === 'confirmed' && s.badgeConfirmed,
+            booking.status === 'confirmed' && !isPast && s.badgeConfirmed,
             booking.status === 'pending'   && s.badgePending,
           ]}>
             <Text style={[
               s.badgeText,
-              booking.status === 'confirmed' && s.badgeTextConfirmed,
+              booking.status === 'confirmed' && !isPast && s.badgeTextConfirmed,
               booking.status === 'pending'   && s.badgeTextPending,
             ]}>
-              {booking.status === 'pending' ? 'Pending' : 'Confirmed'}
+              {booking.status === 'pending' ? 'Pending' : isPast ? 'Completed' : 'Confirmed'}
             </Text>
           </View>
         </View>
@@ -347,11 +349,25 @@ export default function BookingsScreen() {
           <IconSymbol name="chevron.left" size={24} color={C.onSurface} />
         </TouchableOpacity>
         <Text style={s.title}>Bookings</Text>
-        <View style={{ width: 24 }} />
+        {role === 'trainer' ? (
+          <TouchableOpacity
+            onPress={() => setViewMode((v) => v === 'list' ? 'calendar' : 'list')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <IconSymbol
+              name={viewMode === 'list' ? 'calendar' : 'list.bullet'}
+              size={22}
+              color={C.primary}
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
       </View>
 
       {loading ? (
         <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
+      ) : viewMode === 'calendar' ? (
+        <BookingCalendar bookings={bookings} />
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
           {bookings.length === 0 ? (

@@ -38,7 +38,7 @@ type OutgoingRequest = {
 
 // ─── Static menu ─────────────────────────────────────────────────────────────
 
-const MENU_SECTIONS = [
+const CLIENT_MENU_SECTIONS = [
   {
     title: 'Fitness',
     items: [
@@ -51,9 +51,34 @@ const MENU_SECTIONS = [
   {
     title: 'Account',
     items: [
-      { label: 'Edit Profile',        icon: 'pencil'         as const, route: '/edit-profile'    as const },
-      { label: 'Notifications',       icon: 'bell.fill'      as const, route: '/notifications'   as const },
-      { label: 'App Settings',        icon: 'gearshape.fill' as const, route: '/app-settings'    as const },
+      { label: 'Edit Profile',        icon: 'pencil'            as const, route: '/edit-profile'    as const },
+      { label: 'Notifications',       icon: 'bell.fill'         as const, route: '/notifications'   as const },
+      { label: 'App Settings',        icon: 'gearshape.fill'    as const, route: '/app-settings'    as const },
+    ],
+  },
+  {
+    title: 'Legal',
+    items: [
+      { label: 'Privacy Policy',  icon: 'lock.fill'        as const, route: '/privacy-policy' as const },
+      { label: 'Terms of Service', icon: 'bookmark.fill'   as const, route: '/terms'           as const },
+    ],
+  },
+];
+
+const TRAINER_MENU_SECTIONS = [
+  {
+    title: 'Trainer',
+    items: [
+      { label: 'My Listing',       icon: 'storefront'        as const, route: '/trainer-listing'    as const },
+      { label: 'Set Availability', icon: 'calendar.badge.plus' as const, route: '/set-availability' as const },
+    ],
+  },
+  {
+    title: 'Account',
+    items: [
+      { label: 'Edit Profile',        icon: 'pencil'            as const, route: '/edit-profile'    as const },
+      { label: 'Notifications',       icon: 'bell.fill'         as const, route: '/notifications'   as const },
+      { label: 'App Settings',        icon: 'gearshape.fill'    as const, route: '/app-settings'    as const },
     ],
   },
   {
@@ -449,19 +474,34 @@ export default function ProfileScreen() {
 
                   {/* ── No trainer yet ── */}
                   {pendingInvites.length === 0 && outgoingRequests.length === 0 && (
-                    <TouchableOpacity
-                      style={inviteStyles.inviteRow}
-                      onPress={() => setShowFindTrainer(true)}
-                      activeOpacity={0.7}>
-                      <View style={[inviteStyles.avatar, { backgroundColor: C.primary + '22' }]}>
-                        <IconSymbol name="person.badge.plus" size={20} color={C.primary} />
-                      </View>
-                      <View style={inviteStyles.inviteInfo}>
-                        <Text style={inviteStyles.trainerName}>Find a Trainer</Text>
-                        <Text style={inviteStyles.inviteLabel}>Connect with a personal trainer</Text>
-                      </View>
-                      <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity
+                        style={[inviteStyles.inviteRow, { borderBottomWidth: 1, borderBottomColor: C.outlineVariant }]}
+                        onPress={() => router.push('/trainer-marketplace' as any)}
+                        activeOpacity={0.7}>
+                        <View style={[inviteStyles.avatar, { backgroundColor: C.primary + '22' }]}>
+                          <IconSymbol name="storefront" size={20} color={C.primary} />
+                        </View>
+                        <View style={inviteStyles.inviteInfo}>
+                          <Text style={inviteStyles.trainerName}>Browse Marketplace</Text>
+                          <Text style={inviteStyles.inviteLabel}>Find trainers in your city</Text>
+                        </View>
+                        <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={inviteStyles.inviteRow}
+                        onPress={() => setShowFindTrainer(true)}
+                        activeOpacity={0.7}>
+                        <View style={[inviteStyles.avatar, { backgroundColor: C.primary + '22' }]}>
+                          <IconSymbol name="person.badge.plus" size={20} color={C.primary} />
+                        </View>
+                        <View style={inviteStyles.inviteInfo}>
+                          <Text style={inviteStyles.trainerName}>Invite by Email</Text>
+                          <Text style={inviteStyles.inviteLabel}>Send a request to a specific trainer</Text>
+                        </View>
+                        <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />
+                      </TouchableOpacity>
+                    </>
                   )}
 
                   {/* ── Add another / request ── */}
@@ -483,7 +523,7 @@ export default function ProfileScreen() {
         )}
 
         {/* Menu Sections */}
-        {MENU_SECTIONS.map((section) => (
+        {(role === 'trainer' ? TRAINER_MENU_SECTIONS : CLIENT_MENU_SECTIONS).map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
             <View style={styles.menuCard}>

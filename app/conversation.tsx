@@ -18,6 +18,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import { sendPushNotification, insertNotification } from '@/lib/notifications';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -176,11 +177,12 @@ export default function ConversationScreen() {
     sendBtnDisabled: { opacity: 0.4 },
   }), [C]);
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [text,     setText]     = useState('');
-  const [sending,  setSending]  = useState(false);
-  const [userId,   setUserId]   = useState<string | null>(null);
+  const [messages,     setMessages]     = useState<Message[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [text,         setText]         = useState('');
+  const [sending,      setSending]      = useState(false);
+  const [userId,       setUserId]       = useState<string | null>(null);
+  const [recipientId,  setRecipientId]  = useState<string | null>(null);
 
   const listRef  = useRef<FlatList>(null);
   const insets   = useSafeAreaInsets();
@@ -204,6 +206,16 @@ export default function ConversationScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id);
+
+      // Resolve the other party's ID from the trainer_client link
+      const { data: link } = await supabase
+        .from('trainer_clients')
+        .select('trainer_id, client_id')
+        .eq('id', threadId)
+        .single();
+      if (link) {
+        setRecipientId(link.trainer_id === user.id ? link.client_id : link.trainer_id);
+      }
 
       // Load existing messages
       const { data } = await supabase
@@ -286,6 +298,16 @@ export default function ConversationScreen() {
       sender_id:         userId,
       content,
     });
+
+    // Notify the other person
+    if (recipientId) {
+      const senderName = otherName ? `${otherName}` : 'Someone';
+      const preview    = content.length > 60 ? content.slice(0, 60) + '…' : content;
+      await Promise.all([
+        sendPushNotification(recipientId, senderName, preview),
+        insertNotification(recipientId, 'message' as any, `New message from ${senderName}`, preview),
+      ]);
+    }
 
     setSending(false);
   }

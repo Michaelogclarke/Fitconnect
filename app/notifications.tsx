@@ -13,6 +13,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useColors } from '@/contexts/ThemeContext';
+import { useSpotify } from '@/contexts/SpotifyContext';
 import { supabase } from '@/lib/supabase';
 import type { NotificationType } from '@/lib/notifications';
 
@@ -58,6 +59,7 @@ function iconForType(type: NotificationType, C: ReturnType<typeof import('@/cont
 export default function NotificationsScreen() {
   const C = useColors();
   const router = useRouter();
+  const { isConnected: spotifyConnected, connect: connectSpotify } = useSpotify();
 
   const s = useMemo(() => StyleSheet.create({
     container:   { flex: 1, backgroundColor: C.background },
@@ -92,6 +94,25 @@ export default function NotificationsScreen() {
     emptyText:   { ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
     markAllBtn:  { paddingHorizontal: Spacing.sm, paddingVertical: 4 },
     markAllText: { ...Typography.labelLg, color: C.primary },
+    spotifyCard: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+      backgroundColor: '#1DB95415',
+      borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.sm,
+      borderWidth: 1, borderColor: '#1DB95433',
+    },
+    spotifyIconBox: {
+      width: 40, height: 40, borderRadius: Radius.full,
+      backgroundColor: '#1DB95422', justifyContent: 'center', alignItems: 'center',
+    },
+    spotifyBody:    { flex: 1 },
+    spotifyTitle:   { ...Typography.titleMd, color: C.onSurface },
+    spotifyText:    { ...Typography.bodyMd, color: C.onSurfaceVariant, marginTop: 2 },
+    spotifyBtn: {
+      backgroundColor: '#1DB954', borderRadius: Radius.md,
+      paddingHorizontal: Spacing.md, paddingVertical: 6, marginTop: Spacing.sm,
+      alignSelf: 'flex-start',
+    },
+    spotifyBtnText: { ...Typography.labelLg, color: '#fff', fontWeight: '700' },
   }), [C]);
 
   const [loading,       setLoading]       = useState(true);
@@ -167,6 +188,22 @@ export default function NotificationsScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
+          {/* Spotify suggestion */}
+          {!spotifyConnected && (
+            <View style={s.spotifyCard}>
+              <View style={s.spotifyIconBox}>
+                <IconSymbol name="music.note" size={20} color="#1DB954" />
+              </View>
+              <View style={s.spotifyBody}>
+                <Text style={s.spotifyTitle}>Connect Spotify</Text>
+                <Text style={s.spotifyText}>Play music during workouts without leaving the app.</Text>
+                <TouchableOpacity style={s.spotifyBtn} onPress={connectSpotify}>
+                  <Text style={s.spotifyBtnText}>Connect</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {unreadCount > 0 && (
             <TouchableOpacity style={[s.markAllBtn, { alignSelf: 'flex-end', marginBottom: Spacing.sm }]} onPress={markAllRead}>
               <Text style={s.markAllText}>Mark all as read</Text>

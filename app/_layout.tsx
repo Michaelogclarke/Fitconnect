@@ -115,6 +115,8 @@ function AppShell() {
             <Stack.Screen name="app-settings"         options={{ headerShown: false }} />
             <Stack.Screen name="dev-tools"            options={{ headerShown: false }} />
             <Stack.Screen name="conversation"         options={{ headerShown: false }} />
+            <Stack.Screen name="trainer-listing"     options={{ headerShown: false }} />
+            <Stack.Screen name="trainer-marketplace" options={{ headerShown: false }} />
           </Stack>
           <StatusBar style={isDark ? 'light' : 'dark'} />
         </NavThemeProvider>
