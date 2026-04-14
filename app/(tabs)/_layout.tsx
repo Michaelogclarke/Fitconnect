@@ -28,6 +28,7 @@ export default function TabLayout() {
 
   const [role,        setRole]        = useState<'client' | 'trainer' | null>(null);
   const [showTrainer, setShowTrainer] = useState(false);
+  const [clientUserId, setClientUserId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -42,7 +43,7 @@ export default function TabLayout() {
       if (r) setRole(r);
 
       if (r !== 'trainer') {
-        // Show Trainer tab only if client has an active trainer
+        setClientUserId(user.id);
         const { count } = await supabase
           .from('trainer_clients')
           .select('*', { count: 'exact', head: true })
@@ -52,6 +53,26 @@ export default function TabLayout() {
       }
     });
   }, []);
+
+  // Reactively show/hide Trainer tab when trainer_clients changes
+  useEffect(() => {
+    if (!clientUserId) return;
+    const channel = supabase
+      .channel(`trainer-tab:${clientUserId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'trainer_clients',
+        filter: `client_id=eq.${clientUserId}`,
+      }, async () => {
+        const { count } = await supabase
+          .from('trainer_clients')
+          .select('*', { count: 'exact', head: true })
+          .eq('client_id', clientUserId)
+          .eq('status', 'active');
+        setShowTrainer((count ?? 0) > 0);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [clientUserId]);
 
   // Tick to keep rest countdown on the banner fresh
   const [, setTick] = useState(0);

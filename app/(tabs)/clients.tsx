@@ -33,6 +33,12 @@ type Client = {
   totalSessions: number;
 };
 
+type PendingClientRequest = {
+  linkId:     string;
+  clientId:   string;
+  clientName: string;
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function daysSince(isoDate: string | null): string {
@@ -262,10 +268,11 @@ export default function ClientsScreen() {
     },
   }), [C]);
 
-  const [loading,       setLoading]       = useState(true);
-  const [clients,       setClients]       = useState<Client[]>([]);
-  const [weekSessions,  setWeekSessions]  = useState(0);
-  const [showInvite,    setShowInvite]    = useState(false);
+  const [loading,          setLoading]          = useState(true);
+  const [clients,          setClients]          = useState<Client[]>([]);
+  const [pendingRequests,  setPendingRequests]  = useState<PendingClientRequest[]>([]);
+  const [weekSessions,     setWeekSessions]     = useState(0);
+  const [showInvite,       setShowInvite]       = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -278,6 +285,28 @@ export default function ClientsScreen() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
+
+    // 0. Fetch client-initiated pending requests
+    const { data: requestLinks } = await supabase
+      .from('trainer_clients')
+      .select('id, client_id')
+      .eq('trainer_id', user.id)
+      .eq('status', 'pending')
+      .eq('initiated_by', 'client');
+
+    if (requestLinks && requestLinks.length > 0) {
+      const reqClientIds = requestLinks.map((l) => l.client_id);
+      const { data: reqProfiles } = await supabase
+        .from('profiles').select('id, full_name').in('id', reqClientIds);
+      const reqNameMap = Object.fromEntries((reqProfiles ?? []).map((p) => [p.id, p.full_name]));
+      setPendingRequests(requestLinks.map((l) => ({
+        linkId:     l.id,
+        clientId:   l.client_id,
+        clientName: reqNameMap[l.client_id] ?? 'Unknown',
+      })));
+    } else {
+      setPendingRequests([]);
+    }
 
     // 1. Fetch active client links
     const { data: links } = await supabase
@@ -344,6 +373,27 @@ export default function ClientsScreen() {
     setLoading(false);
   }
 
+  async function handleAcceptRequest(linkId: string) {
+    await supabase
+      .from('trainer_clients')
+      .update({ status: 'active', accepted_at: new Date().toISOString() })
+      .eq('id', linkId);
+    setPendingRequests((prev) => prev.filter((r) => r.linkId !== linkId));
+    loadClients();
+  }
+
+  async function handleDeclineRequest(linkId: string) {
+    Alert.alert('Decline Request', 'Decline this client\'s request?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Decline', style: 'destructive', onPress: async () => {
+          await supabase.from('trainer_clients').delete().eq('id', linkId);
+          setPendingRequests((prev) => prev.filter((r) => r.linkId !== linkId));
+        },
+      },
+    ]);
+  }
+
   const activeCount = clients.length;
 
   return (
@@ -384,6 +434,53 @@ export default function ClientsScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
+
+        {/* Pending client requests */}
+        {pendingRequests.length > 0 && (
+          <>
+            <Text style={[styles.sectionLabel ?? {}, {
+              ...Typography.labelLg, color: C.onSurfaceVariant,
+              textTransform: 'uppercase', letterSpacing: 1,
+              marginBottom: Spacing.sm,
+            }]}>Client Requests</Text>
+            {pendingRequests.map((req) => (
+              <View key={req.linkId} style={[styles.clientCard, { marginBottom: Spacing.sm }]}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initials(req.clientName)}</Text>
+                </View>
+                <View style={styles.clientInfo}>
+                  <Text style={styles.clientName}>{req.clientName}</Text>
+                  <Text style={styles.clientMeta}>Wants you as their trainer</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: C.primary, borderRadius: Radius.md,
+                      paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+                      alignItems: 'center',
+                    }}
+                    onPress={() => handleAcceptRequest(req.linkId)}>
+                    <Text style={{ ...Typography.labelLg, color: C.background }}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: C.error + '22', borderRadius: Radius.md,
+                      paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
+                      borderWidth: 1, borderColor: C.error + '44',
+                    }}
+                    onPress={() => handleDeclineRequest(req.linkId)}>
+                    <Text style={{ ...Typography.labelLg, color: C.error }}>Decline</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+            <Text style={{
+              ...Typography.labelLg, color: C.onSurfaceVariant,
+              textTransform: 'uppercase', letterSpacing: 1,
+              marginBottom: Spacing.sm, marginTop: Spacing.sm,
+            }}>Active Clients</Text>
+          </>
+        )}
 
         {loading ? (
           <ActivityIndicator color={C.primary} style={{ marginVertical: 40 }} />

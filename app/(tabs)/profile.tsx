@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -25,6 +25,12 @@ type PendingInvite = {
 };
 
 type ActiveTrainer = {
+  linkId:      string;
+  trainerId:   string;
+  trainerName: string;
+};
+
+type OutgoingRequest = {
   linkId:      string;
   trainerId:   string;
   trainerName: string;
@@ -82,14 +88,16 @@ export default function ProfileScreen() {
     trainerAction:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, paddingVertical: Spacing.md },
     trainerActionText: { ...Typography.titleMd, color: C.primary },
   }), [C]);
-  const [loading,        setLoading]        = useState(true);
-  const [fullName,       setFullName]       = useState('');
-  const [role,           setRole]           = useState<'client' | 'trainer'>('client');
-  const [isDev,          setIsDev]          = useState(false);
-  const [totalSessions,  setTotalSessions]  = useState(0);
-  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
-  const [activeTrainer,  setActiveTrainer]  = useState<ActiveTrainer | null>(null);
-  const [acceptingId,    setAcceptingId]    = useState<string | null>(null);
+  const [loading,          setLoading]          = useState(true);
+  const [fullName,         setFullName]         = useState('');
+  const [role,             setRole]             = useState<'client' | 'trainer'>('client');
+  const [isDev,            setIsDev]            = useState(false);
+  const [totalSessions,    setTotalSessions]    = useState(0);
+  const [pendingInvites,   setPendingInvites]   = useState<PendingInvite[]>([]);
+  const [outgoingRequests, setOutgoingRequests] = useState<OutgoingRequest[]>([]);
+  const [activeTrainer,    setActiveTrainer]    = useState<ActiveTrainer | null>(null);
+  const [acceptingId,      setAcceptingId]      = useState<string | null>(null);
+  const [showFindTrainer,  setShowFindTrainer]  = useState(false);
 
   function applyData(d: ProfileCache) {
     setFullName(d.fullName);
@@ -135,6 +143,7 @@ export default function ProfileScreen() {
       if (profile?.role === 'client') {
         await Promise.all([
           loadPendingInvites(user.id),
+          loadOutgoingRequests(user.id),
           loadActiveTrainer(user.id),
         ]);
       }
@@ -150,7 +159,8 @@ export default function ProfileScreen() {
       .from('trainer_clients')
       .select('id, trainer_id')
       .eq('client_id', userId)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .eq('initiated_by', 'trainer');
 
     if (!links || links.length === 0) { setPendingInvites([]); return; }
 
@@ -163,6 +173,30 @@ export default function ProfileScreen() {
     const trainerMap = Object.fromEntries((trainers ?? []).map((t) => [t.id, t.full_name]));
 
     setPendingInvites(links.map((l) => ({
+      linkId:      l.id,
+      trainerId:   l.trainer_id,
+      trainerName: trainerMap[l.trainer_id] ?? 'Unknown Trainer',
+    })));
+  }
+
+  async function loadOutgoingRequests(userId: string) {
+    const { data: links } = await supabase
+      .from('trainer_clients')
+      .select('id, trainer_id')
+      .eq('client_id', userId)
+      .eq('status', 'pending')
+      .eq('initiated_by', 'client');
+
+    if (!links || links.length === 0) { setOutgoingRequests([]); return; }
+
+    const trainerIds = links.map((l) => l.trainer_id);
+    const { data: trainers } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', trainerIds);
+
+    const trainerMap = Object.fromEntries((trainers ?? []).map((t) => [t.id, t.full_name]));
+    setOutgoingRequests(links.map((l) => ({
       linkId:      l.id,
       trainerId:   l.trainer_id,
       trainerName: trainerMap[l.trainer_id] ?? 'Unknown Trainer',
@@ -206,6 +240,11 @@ export default function ProfileScreen() {
   async function handleDeclineInvite(linkId: string) {
     await supabase.from('trainer_clients').delete().eq('id', linkId);
     setPendingInvites((prev) => prev.filter((i) => i.linkId !== linkId));
+  }
+
+  async function handleCancelRequest(linkId: string) {
+    await supabase.from('trainer_clients').delete().eq('id', linkId);
+    setOutgoingRequests((prev) => prev.filter((r) => r.linkId !== linkId));
   }
 
   async function handleDisconnectTrainer() {
@@ -304,86 +343,138 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Active trainer section (clients only) */}
-        {activeTrainer && (
+        {/* My Trainer section (clients only) */}
+        {role === 'client' && (
           <View style={inviteStyles.section}>
-            <Text style={styles.sectionTitle}>Your Trainer</Text>
+            <Text style={styles.sectionTitle}>My Trainer</Text>
             <View style={styles.menuCard}>
-              <View style={[inviteStyles.inviteRow, { borderBottomWidth: 1, borderBottomColor: C.outlineVariant }]}>
-                <View style={inviteStyles.avatar}>
-                  <Text style={inviteStyles.avatarText}>{initials(activeTrainer.trainerName)}</Text>
-                </View>
-                <View style={inviteStyles.inviteInfo}>
-                  <Text style={inviteStyles.trainerName}>{activeTrainer.trainerName}</Text>
-                  <Text style={inviteStyles.inviteLabel}>Personal Trainer</Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row' }}>
-                <TouchableOpacity
-                  style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: C.outlineVariant }]}
-                  onPress={() => router.push({
-                    pathname: '/conversation' as any,
-                    params: { threadId: activeTrainer.linkId, otherName: activeTrainer.trainerName },
-                  })}>
-                  <IconSymbol name="bubble.left.fill" size={16} color={C.primary} />
-                  <Text style={inviteStyles.trainerActionText}>Message</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: C.outlineVariant }]}
-                  onPress={() => router.push({
-                    pathname: '/check-in' as any,
-                    params: { threadId: activeTrainer.linkId, trainerName: activeTrainer.trainerName },
-                  })}>
-                  <IconSymbol name="checkmark.circle.fill" size={16} color={C.primary} />
-                  <Text style={inviteStyles.trainerActionText}>Check-In</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={inviteStyles.trainerAction}
-                  onPress={handleDisconnectTrainer}>
-                  <IconSymbol name="xmark.circle.fill" size={16} color={C.error} />
-                  <Text style={[inviteStyles.trainerActionText, { color: C.error }]}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
 
-        {/* Pending trainer invites (clients only) */}
-        {pendingInvites.length > 0 && (
-          <View style={inviteStyles.section}>
-            <Text style={styles.sectionTitle}>Trainer Invites</Text>
-            <View style={styles.menuCard}>
-              {pendingInvites.map((invite, idx) => (
-                <View
-                  key={invite.linkId}
-                  style={[
-                    inviteStyles.inviteRow,
-                    idx < pendingInvites.length - 1 && styles.menuItemBorder,
-                  ]}>
-                  <View style={inviteStyles.avatar}>
-                    <Text style={inviteStyles.avatarText}>{initials(invite.trainerName)}</Text>
+              {/* ── Active trainer ── */}
+              {activeTrainer ? (
+                <>
+                  <View style={[inviteStyles.inviteRow, { borderBottomWidth: 1, borderBottomColor: C.outlineVariant }]}>
+                    <View style={inviteStyles.avatar}>
+                      <Text style={inviteStyles.avatarText}>{initials(activeTrainer.trainerName)}</Text>
+                    </View>
+                    <View style={inviteStyles.inviteInfo}>
+                      <Text style={inviteStyles.trainerName}>{activeTrainer.trainerName}</Text>
+                      <Text style={inviteStyles.inviteLabel}>Personal Trainer · Active</Text>
+                    </View>
                   </View>
-                  <View style={inviteStyles.inviteInfo}>
-                    <Text style={inviteStyles.trainerName}>{invite.trainerName}</Text>
-                    <Text style={inviteStyles.inviteLabel}>wants to be your trainer</Text>
-                  </View>
-                  <View style={inviteStyles.actions}>
+                  <View style={{ flexDirection: 'row' }}>
                     <TouchableOpacity
-                      style={inviteStyles.acceptBtn}
-                      onPress={() => handleAcceptInvite(invite.linkId)}
-                      disabled={acceptingId === invite.linkId}>
-                      {acceptingId === invite.linkId
-                        ? <ActivityIndicator size="small" color={C.background} />
-                        : <Text style={inviteStyles.acceptBtnText}>Accept</Text>}
+                      style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: C.outlineVariant }]}
+                      onPress={() => router.push({
+                        pathname: '/conversation' as any,
+                        params: { threadId: activeTrainer.linkId, otherName: activeTrainer.trainerName },
+                      })}>
+                      <IconSymbol name="bubble.left.fill" size={16} color={C.primary} />
+                      <Text style={inviteStyles.trainerActionText}>Message</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={inviteStyles.declineBtn}
-                      onPress={() => handleDeclineInvite(invite.linkId)}>
-                      <Text style={inviteStyles.declineBtnText}>Decline</Text>
+                      style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: C.outlineVariant }]}
+                      onPress={() => router.push({
+                        pathname: '/check-in' as any,
+                        params: { threadId: activeTrainer.linkId, trainerName: activeTrainer.trainerName },
+                      })}>
+                      <IconSymbol name="checkmark.circle.fill" size={16} color={C.primary} />
+                      <Text style={inviteStyles.trainerActionText}>Check-In</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={inviteStyles.trainerAction} onPress={handleDisconnectTrainer}>
+                      <IconSymbol name="xmark.circle.fill" size={16} color={C.error} />
+                      <Text style={[inviteStyles.trainerActionText, { color: C.error }]}>Remove</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-              ))}
+                </>
+              ) : (
+                <>
+                  {/* ── Incoming trainer invites ── */}
+                  {pendingInvites.map((invite, idx) => (
+                    <View
+                      key={invite.linkId}
+                      style={[
+                        inviteStyles.inviteRow,
+                        (idx < pendingInvites.length - 1 || outgoingRequests.length > 0) && styles.menuItemBorder,
+                      ]}>
+                      <View style={inviteStyles.avatar}>
+                        <Text style={inviteStyles.avatarText}>{initials(invite.trainerName)}</Text>
+                      </View>
+                      <View style={inviteStyles.inviteInfo}>
+                        <Text style={inviteStyles.trainerName}>{invite.trainerName}</Text>
+                        <Text style={inviteStyles.inviteLabel}>wants to be your trainer</Text>
+                      </View>
+                      <View style={inviteStyles.actions}>
+                        <TouchableOpacity
+                          style={inviteStyles.acceptBtn}
+                          onPress={() => handleAcceptInvite(invite.linkId)}
+                          disabled={acceptingId === invite.linkId}>
+                          {acceptingId === invite.linkId
+                            ? <ActivityIndicator size="small" color={C.background} />
+                            : <Text style={inviteStyles.acceptBtnText}>Accept</Text>}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={inviteStyles.declineBtn}
+                          onPress={() => handleDeclineInvite(invite.linkId)}>
+                          <Text style={inviteStyles.declineBtnText}>Decline</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+
+                  {/* ── Outgoing client requests ── */}
+                  {outgoingRequests.map((req, idx) => (
+                    <View
+                      key={req.linkId}
+                      style={[
+                        inviteStyles.inviteRow,
+                        idx < outgoingRequests.length - 1 && styles.menuItemBorder,
+                      ]}>
+                      <View style={inviteStyles.avatar}>
+                        <Text style={inviteStyles.avatarText}>{initials(req.trainerName)}</Text>
+                      </View>
+                      <View style={inviteStyles.inviteInfo}>
+                        <Text style={inviteStyles.trainerName}>{req.trainerName}</Text>
+                        <Text style={inviteStyles.inviteLabel}>Request sent · awaiting response</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={inviteStyles.declineBtn}
+                        onPress={() => handleCancelRequest(req.linkId)}>
+                        <Text style={inviteStyles.declineBtnText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+
+                  {/* ── No trainer yet ── */}
+                  {pendingInvites.length === 0 && outgoingRequests.length === 0 && (
+                    <TouchableOpacity
+                      style={inviteStyles.inviteRow}
+                      onPress={() => setShowFindTrainer(true)}
+                      activeOpacity={0.7}>
+                      <View style={[inviteStyles.avatar, { backgroundColor: C.primary + '22' }]}>
+                        <IconSymbol name="person.badge.plus" size={20} color={C.primary} />
+                      </View>
+                      <View style={inviteStyles.inviteInfo}>
+                        <Text style={inviteStyles.trainerName}>Find a Trainer</Text>
+                        <Text style={inviteStyles.inviteLabel}>Connect with a personal trainer</Text>
+                      </View>
+                      <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />
+                    </TouchableOpacity>
+                  )}
+
+                  {/* ── Add another / request ── */}
+                  {(pendingInvites.length > 0 || outgoingRequests.length > 0) && (
+                    <TouchableOpacity
+                      style={[inviteStyles.inviteRow, { borderTopWidth: 1, borderTopColor: C.outlineVariant }]}
+                      onPress={() => setShowFindTrainer(true)}
+                      activeOpacity={0.7}>
+                      <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
+                      <Text style={[inviteStyles.inviteLabel, { color: C.primary, marginLeft: Spacing.xs }]}>
+                        Request another trainer
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
             </View>
           </View>
         )}
@@ -460,7 +551,136 @@ export default function ProfileScreen() {
         </Text>
 
       </ScrollView>
+
+      {/* Find Trainer Modal */}
+      <FindTrainerModal
+        visible={showFindTrainer}
+        onClose={() => setShowFindTrainer(false)}
+        onRequested={() => {
+          setShowFindTrainer(false);
+          // Reload outgoing requests (userId fetched inline)
+          supabase.auth.getUser().then(({ data: { user } }) => {
+            if (user) loadOutgoingRequests(user.id);
+          });
+        }}
+      />
     </SafeAreaView>
+  );
+}
+
+// ─── Find Trainer Modal ───────────────────────────────────────────────────────
+
+function FindTrainerModal({
+  visible,
+  onClose,
+  onRequested,
+}: {
+  visible:     boolean;
+  onClose:     () => void;
+  onRequested: () => void;
+}) {
+  const C = useColors();
+  const ms = useMemo(() => StyleSheet.create({
+    backdrop:    { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+    sheet: {
+      backgroundColor: C.surfaceContainer,
+      borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
+      padding: Spacing.xl, paddingBottom: Spacing.xxxl,
+    },
+    handle: {
+      width: 40, height: 4, borderRadius: Radius.full,
+      backgroundColor: C.outlineVariant, alignSelf: 'center', marginBottom: Spacing.lg,
+    },
+    title:       { ...Typography.titleLg, color: C.onSurface, marginBottom: Spacing.xs },
+    subtitle:    { ...Typography.bodyMd, color: C.onSurfaceVariant, marginBottom: Spacing.lg },
+    label:       { ...Typography.labelLg, color: C.onSurfaceVariant, marginBottom: Spacing.xs },
+    input: {
+      backgroundColor: C.surfaceContainerHighest, borderRadius: Radius.md,
+      borderWidth: 1, borderColor: C.outlineVariant,
+      paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+      ...Typography.titleMd, color: C.onSurface, marginBottom: Spacing.md,
+    },
+    error: {
+      ...Typography.bodyMd, color: C.error, backgroundColor: C.error + '18',
+      borderRadius: Radius.md, padding: Spacing.sm, marginBottom: Spacing.md,
+    },
+    sendBtn: {
+      height: 50, borderRadius: Radius.md, backgroundColor: C.primary,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    sendBtnDisabled: { opacity: 0.45 },
+    sendBtnText:     { ...Typography.titleLg, color: C.background },
+    cancelBtn:       { height: 44, justifyContent: 'center', alignItems: 'center', marginTop: Spacing.sm },
+    cancelBtnText:   { ...Typography.titleMd, color: C.onSurfaceVariant },
+  }), [C]);
+
+  const [email,   setEmail]   = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState('');
+
+  function reset() { setEmail(''); setError(''); setLoading(false); }
+  function handleClose() { reset(); onClose(); }
+
+  async function handleRequest() {
+    if (!email.trim()) return;
+    setLoading(true); setError('');
+
+    const { data, error: rpcErr } = await supabase.rpc('request_trainer_by_email', {
+      trainer_email: email.trim().toLowerCase(),
+    });
+
+    setLoading(false);
+    if (rpcErr || data?.error) {
+      setError(data?.error ?? rpcErr?.message ?? 'Something went wrong.');
+      return;
+    }
+
+    reset();
+    onRequested();
+    Alert.alert('Request Sent', `Your request has been sent to ${data.full_name ?? email}. They will be notified.`);
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        style={ms.backdrop}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={handleClose} activeOpacity={1} />
+        <View style={ms.sheet}>
+          <View style={ms.handle} />
+          <Text style={ms.title}>Request a Trainer</Text>
+          <Text style={ms.subtitle}>
+            Enter the email address of your trainer's FitConnect account.
+          </Text>
+          {error ? <Text style={ms.error}>{error}</Text> : null}
+          <Text style={ms.label}>Trainer Email</Text>
+          <TextInput
+            style={ms.input}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="trainer@example.com"
+            placeholderTextColor={C.onSurfaceVariant}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+            returnKeyType="send"
+            onSubmitEditing={handleRequest}
+            autoFocus
+          />
+          <TouchableOpacity
+            style={[ms.sendBtn, (!email.trim() || loading) && ms.sendBtnDisabled]}
+            onPress={handleRequest}
+            disabled={!email.trim() || loading}>
+            {loading
+              ? <ActivityIndicator color={C.background} />
+              : <Text style={ms.sendBtnText}>Send Request</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity style={ms.cancelBtn} onPress={handleClose}>
+            <Text style={ms.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
