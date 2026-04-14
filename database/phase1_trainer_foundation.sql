@@ -28,7 +28,7 @@ create table if not exists public.trainer_clients (
   trainer_id   uuid        references auth.users on delete cascade not null,
   client_id    uuid        references auth.users on delete cascade not null,
   status       text        not null default 'pending'
-               check (status in ('pending', 'active')),
+               check (status in ('pending', 'active', 'removed')),
   invited_at   timestamptz not null default now(),
   accepted_at  timestamptz,
   unique (trainer_id, client_id)

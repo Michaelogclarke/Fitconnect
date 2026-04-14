@@ -219,7 +219,10 @@ export default function ProfileScreen() {
           text: 'Disconnect',
           style: 'destructive',
           onPress: async () => {
-            const { error } = await supabase.from('trainer_clients').delete().eq('id', activeTrainer.linkId);
+            const { error } = await supabase
+              .from('trainer_clients')
+              .update({ status: 'removed' })
+              .eq('id', activeTrainer.linkId);
             if (error) {
               Alert.alert('Error', error.message);
             } else {
