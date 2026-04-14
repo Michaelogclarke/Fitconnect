@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,7 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { sendPushNotification } from '@/lib/notifications';
 
@@ -46,7 +47,79 @@ function formatBookingTime(iso: string): string {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function BookingsScreen() {
+  const C = useColors();
   const router = useRouter();
+
+  const s = useMemo(() => StyleSheet.create({
+    container:    { flex: 1, backgroundColor: C.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+      borderBottomWidth: 1, borderBottomColor: C.outlineVariant,
+    },
+    title:        { ...Typography.titleLg, color: C.onSurface },
+    scroll:       { padding: Spacing.lg, gap: Spacing.sm },
+    sectionLabel: {
+      ...Typography.labelLg, color: C.onSurfaceVariant,
+      textTransform: 'uppercase', letterSpacing: 1,
+      marginTop: Spacing.lg, marginBottom: Spacing.sm,
+    },
+    card: {
+      backgroundColor: C.surfaceContainer, borderRadius: Radius.lg,
+      padding: Spacing.md, gap: Spacing.sm,
+      borderWidth: 1, borderColor: C.outlineVariant,
+      marginBottom: Spacing.sm,
+    },
+    cardTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    cardLeft:     { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 },
+    avatar: {
+      width: 40, height: 40, borderRadius: Radius.full,
+      backgroundColor: C.primary + '22',
+      justifyContent: 'center', alignItems: 'center',
+    },
+    avatarText:   { ...Typography.titleMd, color: C.primary },
+    cardName:     { ...Typography.titleMd, color: C.onSurface },
+    cardTime:     { ...Typography.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
+    badge: {
+      borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: 3,
+      backgroundColor: C.surfaceContainerHighest,
+    },
+    badgeConfirmed: { backgroundColor: C.success + '22' },
+    badgePending:   { backgroundColor: C.primary + '22' },
+    badgeText:      { ...Typography.labelMd, color: C.onSurfaceVariant },
+    badgeTextConfirmed: { color: C.success },
+    badgeTextPending:   { color: C.primary },
+    notes:        { ...Typography.bodyMd, color: C.onSurfaceVariant, fontStyle: 'italic' },
+    actions:      { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+    btnConfirm: {
+      flex: 1, backgroundColor: C.primary, borderRadius: Radius.md,
+      paddingVertical: Spacing.sm, alignItems: 'center',
+    },
+    btnConfirmText: { ...Typography.titleMd, color: C.background },
+    btnDecline: {
+      flex: 1, backgroundColor: C.error + '22', borderRadius: Radius.md,
+      paddingVertical: Spacing.sm, alignItems: 'center',
+      borderWidth: 1, borderColor: C.error + '44',
+    },
+    btnDeclineText: { ...Typography.titleMd, color: C.error },
+    btnCancel: {
+      backgroundColor: C.surfaceContainerHighest, borderRadius: Radius.md,
+      paddingVertical: Spacing.sm, alignItems: 'center', marginTop: Spacing.xs,
+      borderWidth: 1, borderColor: C.outlineVariant,
+    },
+    btnCancelText: { ...Typography.labelLg, color: C.onSurfaceVariant },
+    empty: {
+      paddingTop: 80, alignItems: 'center', gap: Spacing.md,
+      paddingHorizontal: Spacing.xl,
+    },
+    emptyTitle:   { ...Typography.titleLg, color: C.onSurface },
+    emptyText:    { ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
+    emptyBtn: {
+      marginTop: Spacing.sm, backgroundColor: C.primary,
+      borderRadius: Radius.lg, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm,
+    },
+    emptyBtnText: { ...Typography.titleMd, color: C.background },
+  }), [C]);
 
   const [loading,   setLoading]   = useState(true);
   const [role,      setRole]      = useState<'trainer' | 'client' | null>(null);
@@ -239,19 +312,19 @@ export default function BookingsScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={24} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={24} color={C.onSurface} />
         </TouchableOpacity>
         <Text style={s.title}>Bookings</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
           {bookings.length === 0 ? (
             <View style={s.empty}>
-              <IconSymbol name="calendar" size={36} color={Colors.outlineVariant} />
+              <IconSymbol name="calendar" size={36} color={C.outlineVariant} />
               <Text style={s.emptyTitle}>No bookings yet</Text>
               <Text style={s.emptyText}>
                 {role === 'trainer'
@@ -285,76 +358,3 @@ export default function BookingsScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-    borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant,
-  },
-  title:        { ...Typography.titleLg, color: Colors.onSurface },
-  scroll:       { padding: Spacing.lg, gap: Spacing.sm },
-  sectionLabel: {
-    ...Typography.labelLg, color: Colors.onSurfaceVariant,
-    textTransform: 'uppercase', letterSpacing: 1,
-    marginTop: Spacing.lg, marginBottom: Spacing.sm,
-  },
-  card: {
-    backgroundColor: Colors.surfaceContainer, borderRadius: Radius.lg,
-    padding: Spacing.md, gap: Spacing.sm,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-    marginBottom: Spacing.sm,
-  },
-  cardTop:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardLeft:     { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 },
-  avatar: {
-    width: 40, height: 40, borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '22',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  avatarText:   { ...Typography.titleMd, color: Colors.primary },
-  cardName:     { ...Typography.titleMd, color: Colors.onSurface },
-  cardTime:     { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginTop: 2 },
-  badge: {
-    borderRadius: Radius.full, paddingHorizontal: Spacing.sm, paddingVertical: 3,
-    backgroundColor: Colors.surfaceContainerHighest,
-  },
-  badgeConfirmed: { backgroundColor: Colors.success + '22' },
-  badgePending:   { backgroundColor: Colors.primary + '22' },
-  badgeText:      { ...Typography.labelMd, color: Colors.onSurfaceVariant },
-  badgeTextConfirmed: { color: Colors.success },
-  badgeTextPending:   { color: Colors.primary },
-  notes:        { ...Typography.bodyMd, color: Colors.onSurfaceVariant, fontStyle: 'italic' },
-  actions:      { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
-  btnConfirm: {
-    flex: 1, backgroundColor: Colors.primary, borderRadius: Radius.md,
-    paddingVertical: Spacing.sm, alignItems: 'center',
-  },
-  btnConfirmText: { ...Typography.titleMd, color: Colors.background },
-  btnDecline: {
-    flex: 1, backgroundColor: Colors.error + '22', borderRadius: Radius.md,
-    paddingVertical: Spacing.sm, alignItems: 'center',
-    borderWidth: 1, borderColor: Colors.error + '44',
-  },
-  btnDeclineText: { ...Typography.titleMd, color: Colors.error },
-  btnCancel: {
-    backgroundColor: Colors.surfaceContainerHighest, borderRadius: Radius.md,
-    paddingVertical: Spacing.sm, alignItems: 'center', marginTop: Spacing.xs,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-  },
-  btnCancelText: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
-  empty: {
-    paddingTop: 80, alignItems: 'center', gap: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-  },
-  emptyTitle:   { ...Typography.titleLg, color: Colors.onSurface },
-  emptyText:    { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' },
-  emptyBtn: {
-    marginTop: Spacing.sm, backgroundColor: Colors.primary,
-    borderRadius: Radius.lg, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm,
-  },
-  emptyBtnText: { ...Typography.titleMd, color: Colors.background },
-});

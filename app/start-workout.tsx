@@ -21,8 +21,8 @@ import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { DELETE_WIDTH, styles } from '@/styles/start-workout.styles';
+import { useColors } from '@/contexts/ThemeContext';
+import { DELETE_WIDTH, useStyles } from '@/styles/start-workout.styles';
 import { supabase } from '@/lib/supabase';
 import { useWorkout, Exercise, SetRow, ActiveRest } from '@/contexts/WorkoutContext';
 import { getCached, getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
@@ -67,6 +67,7 @@ function SwipeableRow({
   children: React.ReactNode;
   onDelete: () => void;
 }) {
+  const styles  = useStyles();
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen     = useRef(false);
   const [rowWidth, setRowWidth] = useState(0);
@@ -136,6 +137,7 @@ function NumPad({
   onDone:       () => void;
   onClose:      () => void;
 }) {
+  const styles = useStyles();
   function press(key: string) {
     if (key === '⌫') {
       const next = value.slice(0, -1);
@@ -206,6 +208,8 @@ function AddExerciseModal({
   onClose: () => void;
   onAdd: (exercise: Exercise, sets: SetRow[]) => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const [phase, setPhase]       = useState<'search' | 'configure'>('search');
   const [search, setSearch]     = useState('');
   const [dbList, setDbList]     = useState<DbExercise[]>([]);
@@ -303,11 +307,11 @@ function AddExerciseModal({
 
             {/* Search bar */}
             <View style={styles.searchBarWrap}>
-              <IconSymbol name="magnifyingglass" size={16} color={Colors.onSurfaceVariant} />
+              <IconSymbol name="magnifyingglass" size={16} color={C.onSurfaceVariant} />
               <TextInput
                 style={styles.searchBarInput}
                 placeholder="Search exercises…"
-                placeholderTextColor={Colors.onSurfaceVariant}
+                placeholderTextColor={C.onSurfaceVariant}
                 value={search}
                 onChangeText={setSearch}
                 autoFocus
@@ -317,7 +321,7 @@ function AddExerciseModal({
             </View>
 
             {loading ? (
-              <ActivityIndicator color={Colors.primary} style={{ paddingVertical: 32 }} />
+              <ActivityIndicator color={C.primary} style={{ paddingVertical: 32 }} />
             ) : (
               <FlatList
                 style={styles.exerciseList}
@@ -332,7 +336,7 @@ function AddExerciseModal({
                     {item.muscle_group ? (
                       <Text style={styles.exerciseListMuscle}>{item.muscle_group}</Text>
                     ) : null}
-                    <IconSymbol name="plus" size={16} color={Colors.primary} />
+                    <IconSymbol name="plus" size={16} color={C.primary} />
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={
@@ -343,11 +347,11 @@ function AddExerciseModal({
                 ListFooterComponent={
                   trimmedSearch.length > 0 && !exactMatch ? (
                     <TouchableOpacity style={styles.createCustomRow} onPress={createCustom}>
-                      <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
+                      <IconSymbol name="plus.circle.fill" size={20} color={C.primary} />
                       <Text style={styles.createCustomText}>
                         Create "{trimmedSearch}"
                       </Text>
-                      <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+                      <IconSymbol name="chevron.right" size={14} color={C.onSurfaceVariant} />
                     </TouchableOpacity>
                   ) : null
                 }
@@ -372,7 +376,7 @@ function AddExerciseModal({
           {/* Title row with back button */}
           <View style={[styles.modalTitleRow, { paddingHorizontal: 16 }]}>
             <TouchableOpacity style={styles.modalBackBtn} onPress={() => setPhase('search')}>
-              <IconSymbol name="chevron.left" size={14} color={Colors.onSurface} />
+              <IconSymbol name="chevron.left" size={14} color={C.onSurface} />
             </TouchableOpacity>
             <Text style={styles.modalTitleInRow}>{selected?.name}</Text>
             {form.muscle ? (
@@ -388,7 +392,7 @@ function AddExerciseModal({
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="e.g. Legs"
-                  placeholderTextColor={Colors.onSurfaceVariant}
+                  placeholderTextColor={C.onSurfaceVariant}
                   value={form.muscle}
                   onChangeText={(v) => fieldC('muscle', v)}
                   returnKeyType="next"
@@ -419,7 +423,7 @@ function AddExerciseModal({
                 <NumericInput
                   style={styles.fieldInput}
                   placeholder="0"
-                  placeholderTextColor={Colors.onSurfaceVariant}
+                  placeholderTextColor={C.onSurfaceVariant}
                   value={form.weight}
                   onChangeText={(v) => fieldC('weight', v)}
                   keyboardType="decimal-pad"
@@ -464,6 +468,8 @@ function ExerciseSection({
   onOpenNumPad:      (setIdx: number, field: 'weight' | 'reps', currentValue: string) => void;
   isLast:            boolean;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const doneCount  = sets.filter((s) => s.done).length;
   const allDone    = doneCount === sets.length && sets.length > 0;
   const nextSetIdx = sets.findIndex((s) => !s.done);
@@ -562,7 +568,7 @@ function ExerciseSection({
         </View>
         <View style={[styles.sectionProgressBadge, allDone && styles.sectionProgressBadgeDone]}>
           {allDone && (
-            <IconSymbol name="checkmark.circle.fill" size={12} color={Colors.primary} />
+            <IconSymbol name="checkmark.circle.fill" size={12} color={C.primary} />
           )}
           <Text style={[styles.sectionProgressText, allDone && styles.sectionProgressTextDone]}>
             {doneCount}/{sets.length}
@@ -572,14 +578,14 @@ function ExerciseSection({
           onPress={onDeleteExercise}
           style={{ padding: 8 }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="trash.fill" size={16} color={Colors.error} />
+          <IconSymbol name="trash.fill" size={16} color={C.error} />
         </TouchableOpacity>
       </View>
 
       {/* Previous performance strip */}
       {prevSets && (
         <View style={styles.prevRow}>
-          <IconSymbol name="clock" size={11} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="clock" size={11} color={C.onSurfaceVariant} />
           <Text style={styles.prevText} numberOfLines={1}>
             {prevSets.map((s) => `${s.weight ?? '—'}×${s.reps ?? '—'}`).join('  ·  ')}
           </Text>
@@ -589,7 +595,7 @@ function ExerciseSection({
       {/* PR celebration banner */}
       {prVisible && (
         <View style={styles.prBanner}>
-          <IconSymbol name="trophy.fill" size={14} color={Colors.primary} />
+          <IconSymbol name="trophy.fill" size={14} color={C.primary} />
           <Text style={styles.prBannerText}>New Personal Record!</Text>
         </View>
       )}
@@ -656,7 +662,7 @@ function ExerciseSection({
                     ]}
                     onPress={() => handleSetToggle(i)}>
                     {s.done && (
-                      <IconSymbol name="checkmark" size={14} color={Colors.background} />
+                      <IconSymbol name="checkmark" size={14} color={C.background} />
                     )}
                   </TouchableOpacity>
                 </View>
@@ -668,7 +674,7 @@ function ExerciseSection({
                   style={styles.restChip}
                   onPress={() => setRestExpanded((e) => !e)}
                   activeOpacity={0.8}>
-                  <IconSymbol name="timer" size={13} color={Colors.primary} />
+                  <IconSymbol name="timer" size={13} color={C.primary} />
 
                   {restExpanded ? (
                     <>
@@ -707,7 +713,7 @@ function ExerciseSection({
       {/* Add set */}
       <View style={styles.setActionsRow}>
         <TouchableOpacity style={styles.addSetBtn} onPress={onAddSet}>
-          <IconSymbol name="plus.circle.fill" size={15} color={Colors.primary} />
+          <IconSymbol name="plus.circle.fill" size={15} color={C.primary} />
           <Text style={styles.addSetBtnText}>Add Set</Text>
         </TouchableOpacity>
       </View>
@@ -720,6 +726,8 @@ function ExerciseSection({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function StartWorkoutScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
 
   // ── Persistent workout state from context ──────────────────────────────────
@@ -1093,7 +1101,7 @@ export default function StartWorkoutScreen() {
       {/* Top bar */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backBtn} onPress={confirmCancelWorkout}>
-          <IconSymbol name="chevron.left" size={20} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={20} color={C.onSurface} />
         </TouchableOpacity>
         <View style={styles.topBarCenter}>
           <Text style={styles.topBarTitle}>Today's Workout</Text>
@@ -1123,11 +1131,11 @@ export default function StartWorkoutScreen() {
 
         {exercises.length === 0 && (
           <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32, gap: 8 }}>
-            <IconSymbol name="dumbbell.fill" size={40} color={Colors.outlineVariant} />
-            <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.onSurface, marginTop: 8 }}>
+            <IconSymbol name="dumbbell.fill" size={40} color={C.outlineVariant} />
+            <Text style={{ fontSize: 16, fontWeight: '600', color: C.onSurface, marginTop: 8 }}>
               No exercises yet
             </Text>
-            <Text style={{ fontSize: 14, color: Colors.onSurfaceVariant, textAlign: 'center' }}>
+            <Text style={{ fontSize: 14, color: C.onSurfaceVariant, textAlign: 'center' }}>
               Tap "Add Exercise" below to get started
             </Text>
           </View>
@@ -1153,7 +1161,7 @@ export default function StartWorkoutScreen() {
 
         <View style={styles.addExerciseSection}>
           <TouchableOpacity style={styles.addExerciseBtn} onPress={() => setShowAddModal(true)}>
-            <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
+            <IconSymbol name="plus.circle.fill" size={20} color={C.primary} />
             <Text style={styles.addExerciseBtnText}>Add Exercise to Session</Text>
           </TouchableOpacity>
         </View>
@@ -1179,7 +1187,7 @@ export default function StartWorkoutScreen() {
           onPress={finishWorkout}
           disabled={finishing}>
           {finishing ? (
-            <ActivityIndicator color={allDone ? Colors.background : Colors.onSurfaceVariant} />
+            <ActivityIndicator color={allDone ? C.background : C.onSurfaceVariant} />
           ) : (
             <Text style={allDone ? styles.btnFinishText : styles.btnFinishDimmedText}>
               {allDone ? 'Finish Workout' : 'Finish Early'}
@@ -1203,7 +1211,7 @@ export default function StartWorkoutScreen() {
         <View style={styles.savedOverlay}>
           <View style={styles.savedCard}>
             <View style={styles.savedIconBox}>
-              <IconSymbol name="checkmark.circle.fill" size={40} color={Colors.primary} />
+              <IconSymbol name="checkmark.circle.fill" size={40} color={C.primary} />
             </View>
             <Text style={styles.savedTitle}>Workout Complete!</Text>
             <View style={styles.savedStatsRow}>

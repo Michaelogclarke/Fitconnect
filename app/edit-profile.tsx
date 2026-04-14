@@ -13,13 +13,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { styles } from '@/styles/edit-profile.styles';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/edit-profile.styles';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
 import { setCached, getCachedAny, CACHE_KEYS } from '@/lib/cache';
 
 export default function EditProfileScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
 
   const [loading,   setLoading]   = useState(true);
@@ -91,7 +93,7 @@ export default function EditProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} disabled={saving}>
-            <IconSymbol name="chevron.left" size={20} color={Colors.onSurfaceVariant} />
+            <IconSymbol name="chevron.left" size={20} color={C.onSurfaceVariant} />
             <Text style={styles.backText}>Profile</Text>
           </TouchableOpacity>
 
@@ -102,7 +104,7 @@ export default function EditProfileScreen() {
             onPress={handleSave}
             disabled={saving}>
             {saving
-              ? <ActivityIndicator size="small" color={Colors.primary} />
+              ? <ActivityIndicator size="small" color={C.primary} />
               : <Text style={styles.saveBtnText}>Save</Text>}
           </TouchableOpacity>
         </View>
@@ -126,14 +128,14 @@ export default function EditProfileScreen() {
               <View style={styles.fieldRow}>
                 <Text style={styles.fieldLabel}>Full Name</Text>
                 {loading ? (
-                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <ActivityIndicator size="small" color={C.primary} />
                 ) : (
                   <TextInput
                     style={styles.fieldInput}
                     value={fullName}
                     onChangeText={(t) => { setFullName(t); setError(''); }}
                     placeholder="Your name"
-                    placeholderTextColor={Colors.onSurfaceVariant}
+                    placeholderTextColor={C.onSurfaceVariant}
                     autoCapitalize="words"
                     autoCorrect={false}
                     returnKeyType="done"

@@ -106,9 +106,11 @@ async function call(
 
 // ─── Player state ─────────────────────────────────────────────────────────────
 
-export async function getPlayerState(token: string): Promise<PlayerState | null> {
+// Returns PlayerState when playing, null when no active device (204), false on auth error
+export async function getPlayerState(token: string): Promise<PlayerState | null | false> {
   const { ok, status, data } = await call('GET', '/me/player', token);
-  if (!ok || status === 204 || !data) return null;
+  if (status === 204 || (ok && !data)) return null; // no active device — normal
+  if (!ok) return false;                             // auth/network error
 
   const images = data.item?.album?.images ?? [];
   return {

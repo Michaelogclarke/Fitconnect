@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,13 +26,13 @@ type Achievement = {
 const WORKOUT_MILESTONES = [1, 5, 10, 25, 50, 100] as const;
 const WEIGHT_MILESTONES  = [7, 30]                 as const;
 
-function buildAchievements(sessions: number, weightDays: number): Achievement[] {
+function buildAchievements(sessions: number, weightDays: number, primary: string, tertiary: string): Achievement[] {
   const workoutAchievements: Achievement[] = WORKOUT_MILESTONES.map((n) => ({
     id:            `workouts_${n}`,
     title:         n === 1 ? 'First Rep' : `${n} Workouts`,
     description:   n === 1 ? 'Complete your first workout' : `Complete ${n} total workouts`,
     icon:          'dumbbell.fill',
-    color:         Colors.primary,
+    color:         primary,
     unlocked:      sessions >= n,
     progress:      Math.min(sessions / n, 1),
     progressLabel: `${Math.min(sessions, n)} / ${n}`,
@@ -43,7 +44,7 @@ function buildAchievements(sessions: number, weightDays: number): Achievement[] 
       title:         'Consistent Tracker',
       description:   'Log your body weight 7 times',
       icon:          'scalemass.fill',
-      color:         Colors.tertiary,
+      color:         tertiary,
       unlocked:      weightDays >= 7,
       progress:      Math.min(weightDays / 7, 1),
       progressLabel: `${Math.min(weightDays, 7)} / 7`,
@@ -53,7 +54,7 @@ function buildAchievements(sessions: number, weightDays: number): Achievement[] 
       title:         'Weight Watch Pro',
       description:   'Log your body weight 30 times',
       icon:          'chart.line.uptrend.xyaxis',
-      color:         Colors.tertiary,
+      color:         tertiary,
       unlocked:      weightDays >= 30,
       progress:      Math.min(weightDays / 30, 1),
       progressLabel: `${Math.min(weightDays, 30)} / 30`,
@@ -66,9 +67,10 @@ function buildAchievements(sessions: number, weightDays: number): Achievement[] 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
 function AchievementCard({ a }: { a: Achievement }) {
+  const C = useColors();
   return (
     <View style={{
-      backgroundColor:  a.unlocked ? Colors.surfaceContainerHigh : Colors.surfaceContainer,
+      backgroundColor:  a.unlocked ? C.surfaceContainerHigh : C.surfaceContainer,
       borderRadius:     Radius.lg,
       padding:          Spacing.lg,
       flexDirection:    'row',
@@ -82,18 +84,18 @@ function AchievementCard({ a }: { a: Achievement }) {
         width:           48,
         height:          48,
         borderRadius:    Radius.full,
-        backgroundColor: a.unlocked ? a.color + '22' : Colors.outlineVariant + '33',
+        backgroundColor: a.unlocked ? a.color + '22' : C.outlineVariant + '33',
         justifyContent:  'center',
         alignItems:      'center',
       }}>
-        <IconSymbol name={a.icon as any} size={22} color={a.unlocked ? a.color : Colors.outlineVariant} />
+        <IconSymbol name={a.icon as any} size={22} color={a.unlocked ? a.color : C.outlineVariant} />
       </View>
 
       <View style={{ flex: 1, gap: 4 }}>
-        <Text style={{ ...Typography.titleMd, color: a.unlocked ? Colors.onSurface : Colors.onSurfaceVariant }}>
+        <Text style={{ ...Typography.titleMd, color: a.unlocked ? C.onSurface : C.onSurfaceVariant }}>
           {a.title}
         </Text>
-        <Text style={{ ...Typography.bodyMd, color: Colors.onSurfaceVariant }}>
+        <Text style={{ ...Typography.bodyMd, color: C.onSurfaceVariant }}>
           {a.description}
         </Text>
 
@@ -101,7 +103,7 @@ function AchievementCard({ a }: { a: Achievement }) {
           <>
             <View style={{
               height:          4,
-              backgroundColor: Colors.outlineVariant,
+              backgroundColor: C.outlineVariant,
               borderRadius:    Radius.full,
               marginTop:       4,
               overflow:        'hidden',
@@ -113,7 +115,7 @@ function AchievementCard({ a }: { a: Achievement }) {
                 borderRadius:    Radius.full,
               }} />
             </View>
-            <Text style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }}>
+            <Text style={{ ...Typography.labelMd, color: C.onSurfaceVariant }}>
               {a.progressLabel}
             </Text>
           </>
@@ -130,6 +132,7 @@ function AchievementCard({ a }: { a: Achievement }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function AchievementsScreen() {
+  const C = useColors();
   const router = useRouter();
   const [loading,      setLoading]      = useState(true);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -152,7 +155,7 @@ export default function AchievementsScreen() {
           .eq('user_id', user.id),
       ]);
 
-      setAchievements(buildAchievements(sessions ?? 0, weightDays ?? 0));
+      setAchievements(buildAchievements(sessions ?? 0, weightDays ?? 0, C.primary, C.tertiary));
     } catch {} finally {
       setLoading(false);
     }
@@ -163,27 +166,27 @@ export default function AchievementsScreen() {
   const unlockedCount  = unlocked.length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.background }} edges={['top']}>
       {/* Header */}
       <View style={{
         flexDirection: 'row', alignItems: 'center',
         paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-        borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant,
+        borderBottomWidth: 1, borderBottomColor: C.outlineVariant,
         gap: Spacing.md,
       }}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={22} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={22} color={C.onSurface} />
         </TouchableOpacity>
-        <Text style={{ ...Typography.headlineMd, color: Colors.onSurface, flex: 1 }}>Achievements</Text>
+        <Text style={{ ...Typography.headlineMd, color: C.onSurface, flex: 1 }}>Achievements</Text>
         {!loading && (
-          <Text style={{ ...Typography.labelLg, color: Colors.onSurfaceVariant }}>
+          <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant }}>
             {unlockedCount}/{achievements.length}
           </Text>
         )}
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.xxxl }} />
+        <ActivityIndicator color={C.primary} style={{ marginTop: Spacing.xxxl }} />
       ) : (
         <ScrollView
           contentContainerStyle={{ padding: Spacing.lg, gap: Spacing.md }}
@@ -191,22 +194,22 @@ export default function AchievementsScreen() {
 
           {/* Summary banner */}
           <View style={{
-            backgroundColor: Colors.primary + '15',
+            backgroundColor: C.primary + '15',
             borderRadius:    Radius.lg,
             padding:         Spacing.lg,
             flexDirection:   'row',
             alignItems:      'center',
             gap:             Spacing.md,
             borderWidth:     1,
-            borderColor:     Colors.primary + '40',
+            borderColor:     C.primary + '40',
             marginBottom:    Spacing.sm,
           }}>
-            <IconSymbol name="trophy.fill" size={32} color={Colors.primary} />
+            <IconSymbol name="trophy.fill" size={32} color={C.primary} />
             <View>
-              <Text style={{ ...Typography.headlineMd, color: Colors.primary }}>
+              <Text style={{ ...Typography.headlineMd, color: C.primary }}>
                 {unlockedCount} Unlocked
               </Text>
-              <Text style={{ ...Typography.bodyMd, color: Colors.onSurfaceVariant }}>
+              <Text style={{ ...Typography.bodyMd, color: C.onSurfaceVariant }}>
                 {achievements.length - unlockedCount} more to go
               </Text>
             </View>
@@ -217,7 +220,7 @@ export default function AchievementsScreen() {
             <>
               <Text style={{
                 ...Typography.labelLg,
-                color: Colors.onSurfaceVariant,
+                color: C.onSurfaceVariant,
                 textTransform: 'uppercase',
                 marginLeft: Spacing.xs,
                 marginTop: Spacing.sm,
@@ -233,7 +236,7 @@ export default function AchievementsScreen() {
             <>
               <Text style={{
                 ...Typography.labelLg,
-                color: Colors.onSurfaceVariant,
+                color: C.onSurfaceVariant,
                 textTransform: 'uppercase',
                 marginLeft: Spacing.xs,
                 marginTop: Spacing.sm,

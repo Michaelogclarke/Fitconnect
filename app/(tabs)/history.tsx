@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { styles } from '@/styles/tabs/history.styles';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/history.styles';
 import { supabase } from '@/lib/supabase';
 import { formatShortDate, formatDuration, formatVolume, weekLabel } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
@@ -36,6 +36,8 @@ type HistoryCache = {
 // ─── Session card ─────────────────────────────────────────────────────────────
 
 function SessionCard({ session, onPress }: { session: HistorySession; onPress: () => void }) {
+  const C = useColors();
+  const styles = useStyles();
   return (
     <TouchableOpacity
       style={styles.sessionCard}
@@ -44,7 +46,7 @@ function SessionCard({ session, onPress }: { session: HistorySession; onPress: (
 
       <View style={styles.sessionTop}>
         <View style={styles.sessionIconBox}>
-          <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
+          <IconSymbol name="dumbbell.fill" size={18} color={C.primary} />
         </View>
         <View style={styles.sessionInfo}>
           <Text style={styles.sessionName}>{session.name}</Text>
@@ -84,6 +86,8 @@ function SessionCard({ session, onPress }: { session: HistorySession; onPress: (
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const [loading,       setLoading]       = useState(true);
   const [groups,        setGroups]        = useState<WeekGroup[]>([]);
@@ -188,10 +192,10 @@ export default function HistoryScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
         ) : groups.length === 0 ? (
           <View style={styles.emptyState}>
-            <IconSymbol name="dumbbell.fill" size={32} color={Colors.outlineVariant} />
+            <IconSymbol name="dumbbell.fill" size={32} color={C.outlineVariant} />
             <Text style={styles.emptyText}>No sessions yet</Text>
             <Text style={styles.emptySubtext}>Your completed workouts will appear here</Text>
           </View>

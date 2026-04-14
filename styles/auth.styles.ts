@@ -1,8 +1,12 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
-export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+export function useStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
   inner: {
     flex: 1,
     justifyContent: 'center',
@@ -17,32 +21,32 @@ export const styles = StyleSheet.create({
   brand: {
     fontSize: 36,
     fontWeight: '800',
-    color: Colors.primary,
+    color: C.primary,
     letterSpacing: -1,
   },
   tagline: {
     ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginTop: Spacing.xs,
   },
 
   // ── Form card ─────────────────────────────────────────────────────────────
   form: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.xl,
     padding: Spacing.xl,
     marginBottom: Spacing.lg,
   },
   formTitle: {
     ...Typography.headlineMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
     marginBottom: Spacing.lg,
   },
 
   errorText: {
     ...Typography.bodyMd,
-    color: Colors.error,
-    backgroundColor: Colors.error + '18',
+    color: C.error,
+    backgroundColor: C.error + '18',
     borderRadius: Radius.md,
     padding: Spacing.sm,
     marginBottom: Spacing.md,
@@ -52,31 +56,31 @@ export const styles = StyleSheet.create({
   fieldGroup: { marginBottom: Spacing.md },
   label: {
     ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginBottom: Spacing.xs,
   },
   input: {
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     ...Typography.titleMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
 
   // ── Buttons ───────────────────────────────────────────────────────────────
   primaryBtn: {
     height: 50,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: Spacing.sm,
   },
   primaryBtnDisabled: { opacity: 0.45 },
-  primaryBtnText: { ...Typography.titleLg, color: Colors.background },
+  primaryBtnText: { ...Typography.titleLg, color: C.background },
 
   // ── Switch row ────────────────────────────────────────────────────────────
   switchRow: {
@@ -84,15 +88,16 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  switchText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  switchLink: { ...Typography.bodyMd, color: Colors.primary, fontWeight: '600' },
+  switchText: { ...Typography.bodyMd, color: C.onSurfaceVariant },
+  switchLink: { ...Typography.bodyMd, color: C.primary, fontWeight: '600' },
 
   // ── Confirmation screen ───────────────────────────────────────────────────
   confirmText: {
     ...Typography.bodyLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginBottom: Spacing.xl,
     lineHeight: 24,
   },
-  confirmEmail: { color: Colors.primary, fontWeight: '600' },
-});
+  confirmEmail: { color: C.primary, fontWeight: '600' },
+}), [C]);
+}

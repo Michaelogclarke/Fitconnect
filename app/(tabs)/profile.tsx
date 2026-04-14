@@ -1,11 +1,12 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
-import { styles } from '@/styles/tabs/profile.styles';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors, useTheme } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/profile.styles';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
@@ -60,7 +61,27 @@ const MENU_SECTIONS = [
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
+  const C = useColors();
+  const { isDark, setMode, mode } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
+
+  const inviteStyles = useMemo(() => StyleSheet.create({
+    section:           { marginHorizontal: Spacing.lg, marginBottom: Spacing.lg },
+    inviteRow:         { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.sm },
+    avatar:            { width: 40, height: 40, borderRadius: Radius.full, backgroundColor: C.primary + '33', justifyContent: 'center', alignItems: 'center' },
+    avatarText:        { ...Typography.titleMd, color: C.primary },
+    inviteInfo:        { flex: 1 },
+    trainerName:       { ...Typography.titleMd, color: C.onSurface },
+    inviteLabel:       { ...Typography.bodyMd, color: C.onSurfaceVariant },
+    actions:           { flexDirection: 'row', gap: Spacing.xs },
+    acceptBtn:         { backgroundColor: C.primary, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, minWidth: 64, alignItems: 'center' },
+    acceptBtnText:     { ...Typography.labelLg, color: C.background, fontWeight: '600' as const },
+    declineBtn:        { borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
+    declineBtnText:    { ...Typography.labelLg, color: C.onSurfaceVariant },
+    trainerAction:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.xs, paddingVertical: Spacing.md },
+    trainerActionText: { ...Typography.titleMd, color: C.primary },
+  }), [C]);
   const [loading,        setLoading]        = useState(true);
   const [fullName,       setFullName]       = useState('');
   const [role,           setRole]           = useState<'client' | 'trainer'>('client');
@@ -257,7 +278,7 @@ export default function ProfileScreen() {
           </View>
 
           {loading ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: 12 }} />
+            <ActivityIndicator color={C.primary} style={{ marginTop: 12 }} />
           ) : (
             <>
               <Text style={styles.userName}>{displayName}</Text>
@@ -277,7 +298,7 @@ export default function ProfileScreen() {
           <View style={inviteStyles.section}>
             <Text style={styles.sectionTitle}>Your Trainer</Text>
             <View style={styles.menuCard}>
-              <View style={[inviteStyles.inviteRow, { borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant }]}>
+              <View style={[inviteStyles.inviteRow, { borderBottomWidth: 1, borderBottomColor: C.outlineVariant }]}>
                 <View style={inviteStyles.avatar}>
                   <Text style={inviteStyles.avatarText}>{initials(activeTrainer.trainerName)}</Text>
                 </View>
@@ -288,28 +309,28 @@ export default function ProfileScreen() {
               </View>
               <View style={{ flexDirection: 'row' }}>
                 <TouchableOpacity
-                  style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: Colors.outlineVariant }]}
+                  style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: C.outlineVariant }]}
                   onPress={() => router.push({
                     pathname: '/conversation' as any,
                     params: { threadId: activeTrainer.linkId, otherName: activeTrainer.trainerName },
                   })}>
-                  <IconSymbol name="bubble.left.fill" size={16} color={Colors.primary} />
+                  <IconSymbol name="bubble.left.fill" size={16} color={C.primary} />
                   <Text style={inviteStyles.trainerActionText}>Message</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: Colors.outlineVariant }]}
+                  style={[inviteStyles.trainerAction, { borderRightWidth: 1, borderRightColor: C.outlineVariant }]}
                   onPress={() => router.push({
                     pathname: '/check-in' as any,
                     params: { threadId: activeTrainer.linkId, trainerName: activeTrainer.trainerName },
                   })}>
-                  <IconSymbol name="checkmark.circle.fill" size={16} color={Colors.primary} />
+                  <IconSymbol name="checkmark.circle.fill" size={16} color={C.primary} />
                   <Text style={inviteStyles.trainerActionText}>Check-In</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={inviteStyles.trainerAction}
                   onPress={handleDisconnectTrainer}>
-                  <IconSymbol name="xmark.circle.fill" size={16} color={Colors.error} />
-                  <Text style={[inviteStyles.trainerActionText, { color: Colors.error }]}>Remove</Text>
+                  <IconSymbol name="xmark.circle.fill" size={16} color={C.error} />
+                  <Text style={[inviteStyles.trainerActionText, { color: C.error }]}>Remove</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -341,7 +362,7 @@ export default function ProfileScreen() {
                       onPress={() => handleAcceptInvite(invite.linkId)}
                       disabled={acceptingId === invite.linkId}>
                       {acceptingId === invite.linkId
-                        ? <ActivityIndicator size="small" color={Colors.background} />
+                        ? <ActivityIndicator size="small" color={C.background} />
                         : <Text style={inviteStyles.acceptBtnText}>Accept</Text>}
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -371,21 +392,47 @@ export default function ProfileScreen() {
                   onPress={() => item.route && router.push(item.route as any)}
                   activeOpacity={item.route ? 0.7 : 1}>
                   <View style={styles.menuIconBox}>
-                    <IconSymbol name={item.icon} size={18} color={item.route ? Colors.primary : Colors.onSurfaceVariant} />
+                    <IconSymbol name={item.icon} size={18} color={item.route ? C.primary : C.onSurfaceVariant} />
                   </View>
-                  <Text style={[styles.menuLabel, !item.route && { color: Colors.onSurfaceVariant }]}>
+                  <Text style={[styles.menuLabel, !item.route && { color: C.onSurfaceVariant }]}>
                     {item.label}
                   </Text>
                   <IconSymbol
                     name="chevron.right"
                     size={16}
-                    color={item.route ? Colors.onSurfaceVariant : Colors.outlineVariant}
+                    color={item.route ? C.onSurfaceVariant : C.outlineVariant}
                   />
                 </TouchableOpacity>
               ))}
             </View>
           </View>
         ))}
+
+        {/* Appearance */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.menuCard}>
+            {(['dark', 'light', 'system'] as const).map((m, i, arr) => (
+              <TouchableOpacity
+                key={m}
+                style={[styles.menuItem, i < arr.length - 1 && styles.menuItemBorder]}
+                onPress={() => setMode(m)}
+                activeOpacity={0.7}>
+                <View style={styles.menuIconBox}>
+                  <IconSymbol
+                    name={m === 'dark' ? 'moon.fill' : m === 'light' ? 'sun.max.fill' : 'circle.lefthalf.filled'}
+                    size={18}
+                    color={C.primary}
+                  />
+                </View>
+                <Text style={styles.menuLabel}>
+                  {m === 'dark' ? 'Dark' : m === 'light' ? 'Light' : 'System Default'}
+                </Text>
+                {mode === m && <IconSymbol name="checkmark.circle.fill" size={20} color={C.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* Music */}
         <View style={styles.section}>
@@ -401,22 +448,22 @@ export default function ProfileScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.menuLabel}>Spotify</Text>
                 {spotifyConnected && playerState?.track ? (
-                  <Text style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }} numberOfLines={1}>
+                  <Text style={{ ...Typography.labelMd, color: C.onSurfaceVariant }} numberOfLines={1}>
                     {playerState.track.name} · {playerState.track.artist}
                   </Text>
                 ) : (
-                  <Text style={{ ...Typography.labelMd, color: spotifyConnected ? Colors.success : Colors.onSurfaceVariant }}>
+                  <Text style={{ ...Typography.labelMd, color: spotifyConnected ? C.success : C.onSurfaceVariant }}>
                     {spotifyConnected ? 'Connected — tap to disconnect' : 'Tap to connect'}
                   </Text>
                 )}
               </View>
               <View style={{
-                backgroundColor: spotifyConnected ? '#1DB95422' : Colors.surfaceContainerHighest,
+                backgroundColor: spotifyConnected ? '#1DB95422' : C.surfaceContainerHighest,
                 paddingHorizontal: Spacing.sm,
                 paddingVertical: 3,
                 borderRadius: Radius.full,
               }}>
-                <Text style={{ ...Typography.labelMd, color: spotifyConnected ? '#1DB954' : Colors.onSurfaceVariant }}>
+                <Text style={{ ...Typography.labelMd, color: spotifyConnected ? '#1DB954' : C.onSurfaceVariant }}>
                   {spotifyConnected ? 'Connected' : 'Connect'}
                 </Text>
               </View>
@@ -429,21 +476,21 @@ export default function ProfileScreen() {
           <View style={styles.menuCard}>
             <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]} onPress={handleSignOut}>
               <View style={styles.menuIconBox}>
-                <IconSymbol name="rectangle.portrait.and.arrow.right" size={18} color={Colors.error} />
+                <IconSymbol name="rectangle.portrait.and.arrow.right" size={18} color={C.error} />
               </View>
-              <Text style={[styles.menuLabel, { color: Colors.error }]}>Sign Out</Text>
+              <Text style={[styles.menuLabel, { color: C.error }]}>Sign Out</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
               <View style={styles.menuIconBox}>
-                <IconSymbol name="trash" size={18} color={Colors.error} />
+                <IconSymbol name="trash" size={18} color={C.error} />
               </View>
-              <Text style={[styles.menuLabel, { color: Colors.error }]}>Delete Account</Text>
+              <Text style={[styles.menuLabel, { color: C.error }]}>Delete Account</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Version */}
-        <Text style={{ textAlign: 'center', color: Colors.onSurfaceVariant, fontSize: 12, marginBottom: Spacing.xl }}>
+        <Text style={{ textAlign: 'center', color: C.onSurfaceVariant, fontSize: 12, marginBottom: Spacing.xl }}>
           FitConnect v1.0.0
         </Text>
 
@@ -452,76 +499,3 @@ export default function ProfileScreen() {
   );
 }
 
-const inviteStyles = StyleSheet.create({
-  section: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  inviteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.md,
-    gap: Spacing.sm,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    ...Typography.titleMd,
-    color: Colors.primary,
-  },
-  inviteInfo: {
-    flex: 1,
-  },
-  trainerName: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-  },
-  inviteLabel: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-  },
-  acceptBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    minWidth: 64,
-    alignItems: 'center',
-  },
-  acceptBtnText: {
-    ...Typography.labelLg,
-    color: Colors.background,
-    fontWeight: '600',
-  },
-  declineBtn: {
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-  },
-  declineBtnText: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-  },
-  trainerAction: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-    paddingVertical: Spacing.md,
-  },
-  trainerActionText: {
-    ...Typography.titleMd,
-    color: Colors.primary,
-  },
-});

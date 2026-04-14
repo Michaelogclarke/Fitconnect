@@ -23,8 +23,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { NumericInput } from '@/components/ui/numeric-input';
-import { Colors, Spacing } from '@/constants/theme';
-import { styles } from '@/styles/tabs/nutrition.styles';
+import { Spacing } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/nutrition.styles';
 import { supabase } from '@/lib/supabase';
 import { toLocalDate } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
@@ -105,6 +106,8 @@ function SwipeableFoodRow({
   onDelete: () => void;
   onEdit:   () => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const DELETE_W   = 76;
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen     = useRef(false);
@@ -132,9 +135,9 @@ function SwipeableFoodRow({
   ).current;
 
   const macros = [
-    log.protein_g > 0 ? { label: 'P', value: log.protein_g, color: Colors.primary } : null,
+    log.protein_g > 0 ? { label: 'P', value: log.protein_g, color: C.primary } : null,
     log.carbs_g   > 0 ? { label: 'C', value: log.carbs_g,   color: '#70aaff'       } : null,
-    log.fat_g     > 0 ? { label: 'F', value: log.fat_g,     color: Colors.success  } : null,
+    log.fat_g     > 0 ? { label: 'F', value: log.fat_g,     color: C.success  } : null,
   ].filter(Boolean) as { label: string; value: number; color: string }[];
 
   return (
@@ -186,6 +189,8 @@ function BarcodeScannerModal({
   onClose:        () => void;
   onProductFound: (product: ScannedProduct) => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const [permission, requestPermission] = useCameraPermissions();
   const [fetching,   setFetching]   = useState(false);
   const [notFound,   setNotFound]   = useState(false);
@@ -248,7 +253,7 @@ function BarcodeScannerModal({
     return (
       <Modal visible animationType="slide" onRequestClose={onClose}>
         <View style={[styles.scannerContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={C.primary} />
         </View>
       </Modal>
     );
@@ -310,7 +315,7 @@ function BarcodeScannerModal({
         <View style={styles.scannerStatus}>
           {fetching ? (
             <>
-              <ActivityIndicator color={Colors.primary} />
+              <ActivityIndicator color={C.primary} />
               <Text style={[styles.scannerStatusText, { marginTop: 8 }]}>Looking up product…</Text>
             </>
           ) : notFound ? (
@@ -349,6 +354,8 @@ function AddFoodModal({
   onAdded:         (log: FoodLog) => void;
   onEdited:        (log: FoodLog) => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const isEditMode = !!editLog;
   type Phase = 'pick' | 'configure';
   const [phase,    setPhase]    = useState<Phase>('pick');
@@ -632,21 +639,21 @@ function AddFoodModal({
 
                 {/* Search bar */}
                 <View style={styles.searchBarContainer}>
-                  <IconSymbol name="magnifyingglass" size={16} color={Colors.onSurfaceVariant} />
+                  <IconSymbol name="magnifyingglass" size={16} color={C.onSurfaceVariant} />
                   <TextInput
                     style={styles.searchBarInput}
                     value={searchQuery}
                     onChangeText={handleSearchChange}
                     placeholder="Search foods…"
-                    placeholderTextColor={Colors.onSurfaceVariant}
+                    placeholderTextColor={C.onSurfaceVariant}
                     autoCapitalize="none"
                     autoCorrect={false}
                     returnKeyType="search"
                   />
-                  {searching && <ActivityIndicator size="small" color={Colors.onSurfaceVariant} />}
+                  {searching && <ActivityIndicator size="small" color={C.onSurfaceVariant} />}
                   {searchQuery.length > 0 && !searching && (
                     <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }}>
-                      <IconSymbol name="xmark.circle.fill" size={16} color={Colors.onSurfaceVariant} />
+                      <IconSymbol name="xmark.circle.fill" size={16} color={C.onSurfaceVariant} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -690,7 +697,7 @@ function AddFoodModal({
                                 {result.brand ? `${result.brand} · ` : ''}per 100g · {Math.round(result.per100g.calories)} kcal
                               </Text>
                             </View>
-                            <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+                            <IconSymbol name="chevron.right" size={14} color={C.onSurfaceVariant} />
                           </TouchableOpacity>
                         ))}
                       </>
@@ -725,14 +732,14 @@ function AddFoodModal({
                               <IconSymbol
                                 name={alreadySaved ? 'star.fill' : 'star'}
                                 size={16}
-                                color={alreadySaved ? Colors.primary : Colors.onSurfaceVariant}
+                                color={alreadySaved ? C.primary : C.onSurfaceVariant}
                               />
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={styles.foodActionBtn}
                               onPress={() => quickLog(food)}
                               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                              <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
+                              <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
                             </TouchableOpacity>
                           </TouchableOpacity>
                         );
@@ -761,13 +768,13 @@ function AddFoodModal({
                             style={styles.foodActionBtn}
                             onPress={() => toggleSaveFood(food)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                            <IconSymbol name="star.fill" size={16} color={Colors.primary} />
+                            <IconSymbol name="star.fill" size={16} color={C.primary} />
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={styles.foodActionBtn}
                             onPress={() => quickLog(food)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                            <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
+                            <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
                           </TouchableOpacity>
                         </TouchableOpacity>
                       ))
@@ -784,26 +791,26 @@ function AddFoodModal({
                   style={styles.methodBtn}
                   onPress={() => setShowScan(true)}>
                   <View style={styles.methodBtnIcon}>
-                    <IconSymbol name="barcode.viewfinder" size={22} color={Colors.primary} />
+                    <IconSymbol name="barcode.viewfinder" size={22} color={C.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.methodBtnTitle}>Scan Barcode</Text>
                     <Text style={styles.methodBtnSub}>Auto-fill from product label</Text>
                   </View>
-                  <IconSymbol name="chevron.right" size={16} color={Colors.onSurfaceVariant} />
+                  <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.methodBtn}
                   onPress={() => setPhase('configure')}>
                   <View style={styles.methodBtnIcon}>
-                    <IconSymbol name="pencil" size={22} color={Colors.primary} />
+                    <IconSymbol name="pencil" size={22} color={C.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.methodBtnTitle}>Enter Manually</Text>
                     <Text style={styles.methodBtnSub}>Type in the details yourself</Text>
                   </View>
-                  <IconSymbol name="chevron.right" size={16} color={Colors.onSurfaceVariant} />
+                  <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.modalCancelBtn} onPress={handleClose}>
@@ -815,7 +822,7 @@ function AddFoodModal({
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                   {!scannedProduct && !isEditMode && (
                     <TouchableOpacity onPress={() => setPhase('pick')}>
-                      <IconSymbol name="chevron.left" size={20} color={Colors.onSurfaceVariant} />
+                      <IconSymbol name="chevron.left" size={20} color={C.onSurfaceVariant} />
                     </TouchableOpacity>
                   )}
                   <Text style={[styles.modalTitle, { flex: 1 }]}>
@@ -828,7 +835,7 @@ function AddFoodModal({
                       <IconSymbol
                         name={isSaved ? 'star.fill' : 'star'}
                         size={20}
-                        color={isSaved ? Colors.primary : Colors.onSurfaceVariant}
+                        color={isSaved ? C.primary : C.onSurfaceVariant}
                       />
                     </TouchableOpacity>
                   )}
@@ -843,7 +850,7 @@ function AddFoodModal({
                       value={foodName}
                       onChangeText={setFoodName}
                       placeholder="Food name"
-                      placeholderTextColor={Colors.onSurfaceVariant}
+                      placeholderTextColor={C.onSurfaceVariant}
                       autoCapitalize="sentences"
                     />
                   </View>
@@ -860,7 +867,7 @@ function AddFoodModal({
                         onChangeText={setQuantity}
                         keyboardType="numeric"
                         placeholder="100"
-                        placeholderTextColor={Colors.onSurfaceVariant}
+                        placeholderTextColor={C.onSurfaceVariant}
                       />
                       <Text style={styles.fieldUnit}>g</Text>
                     </View>
@@ -877,7 +884,7 @@ function AddFoodModal({
                       onChangeText={setCalories}
                       keyboardType="numeric"
                       placeholder="0"
-                      placeholderTextColor={Colors.onSurfaceVariant}
+                      placeholderTextColor={C.onSurfaceVariant}
                       editable={!scannedProduct}
                     />
                     <Text style={styles.fieldUnit}>kcal</Text>
@@ -890,7 +897,7 @@ function AddFoodModal({
                       onChangeText={setProtein}
                       keyboardType="decimal-pad"
                       placeholder="0"
-                      placeholderTextColor={Colors.onSurfaceVariant}
+                      placeholderTextColor={C.onSurfaceVariant}
                       editable={!scannedProduct}
                     />
                     <Text style={styles.fieldUnit}>g</Text>
@@ -903,7 +910,7 @@ function AddFoodModal({
                       onChangeText={setCarbs}
                       keyboardType="decimal-pad"
                       placeholder="0"
-                      placeholderTextColor={Colors.onSurfaceVariant}
+                      placeholderTextColor={C.onSurfaceVariant}
                       editable={!scannedProduct}
                     />
                     <Text style={styles.fieldUnit}>g</Text>
@@ -916,7 +923,7 @@ function AddFoodModal({
                       onChangeText={setFat}
                       keyboardType="decimal-pad"
                       placeholder="0"
-                      placeholderTextColor={Colors.onSurfaceVariant}
+                      placeholderTextColor={C.onSurfaceVariant}
                       editable={!scannedProduct}
                     />
                     <Text style={styles.fieldUnit}>g</Text>
@@ -948,7 +955,7 @@ function AddFoodModal({
                     onPress={handleSave}
                     disabled={saving}>
                     {saving
-                      ? <ActivityIndicator size="small" color={Colors.background} />
+                      ? <ActivityIndicator size="small" color={C.background} />
                       : <Text style={styles.modalSaveText}>{isEditMode ? 'Save Changes' : 'Add Food'}</Text>}
                   </TouchableOpacity>
                 </View>
@@ -974,6 +981,8 @@ function NutritionGoalsModal({
   onClose: () => void;
   onSaved: (g: NutritionGoals) => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const [calories,  setCalories]  = useState('');
   const [protein,   setProtein]   = useState('');
   const [carbs,     setCarbs]     = useState('');
@@ -1041,7 +1050,7 @@ function NutritionGoalsModal({
                   onChangeText={row.set}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor={Colors.onSurfaceVariant}
+                  placeholderTextColor={C.onSurfaceVariant}
                 />
                 <Text style={styles.goalsUnit}>{row.unit}</Text>
               </View>
@@ -1057,7 +1066,7 @@ function NutritionGoalsModal({
               onPress={handleSave}
               disabled={saving}>
               {saving
-                ? <ActivityIndicator size="small" color={Colors.background} />
+                ? <ActivityIndicator size="small" color={C.background} />
                 : <Text style={styles.modalSaveText}>Save Goals</Text>}
             </TouchableOpacity>
           </View>
@@ -1070,6 +1079,8 @@ function NutritionGoalsModal({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function NutritionScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
 
   const [loading,        setLoading]        = useState(true);
@@ -1226,29 +1237,29 @@ export default function NutritionScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Nutrition</Text>
         <TouchableOpacity style={styles.goalsBtn} onPress={() => setShowGoalsModal(true)}>
-          <IconSymbol name="gearshape.fill" size={18} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="gearshape.fill" size={18} color={C.onSurfaceVariant} />
         </TouchableOpacity>
       </View>
 
       {/* Date navigation */}
       <View style={styles.dateNav}>
         <TouchableOpacity style={styles.dateBtn} onPress={goToPrevDay}>
-          <IconSymbol name="chevron.left" size={16} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={16} color={C.onSurface} />
         </TouchableOpacity>
         <Text style={styles.dateText}>{formatViewDate(viewDate)}</Text>
         <TouchableOpacity style={styles.dateBtn} onPress={goToNextDay} disabled={isToday}>
-          <IconSymbol name="chevron.right" size={16} color={isToday ? Colors.outlineVariant : Colors.onSurface} />
+          <IconSymbol name="chevron.right" size={16} color={isToday ? C.outlineVariant : C.onSurface} />
         </TouchableOpacity>
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+        <ActivityIndicator color={C.primary} style={{ marginTop: 60 }} />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />
           }>
 
           {/* Daily summary card */}
@@ -1267,7 +1278,7 @@ export default function NutritionScreen() {
             {/* Remaining calories */}
             <Text style={[
               styles.calorieRemaining,
-              { color: calRemaining < 0 ? Colors.error : Colors.onSurfaceVariant },
+              { color: calRemaining < 0 ? C.error : C.onSurfaceVariant },
             ]}>
               {calRemaining < 0
                 ? `${Math.abs(calRemaining)} kcal over`
@@ -1276,9 +1287,9 @@ export default function NutritionScreen() {
 
             <View style={styles.macroRow}>
               {[
-                { label: 'Protein', total: totalProtein, goal: goals.protein_g, pct: proteinPct, color: Colors.primary },
+                { label: 'Protein', total: totalProtein, goal: goals.protein_g, pct: proteinPct, color: C.primary },
                 { label: 'Carbs',   total: totalCarbs,   goal: goals.carbs_g,   pct: carbsPct,   color: '#70aaff' },
-                { label: 'Fat',     total: totalFat,     goal: goals.fat_g,     pct: fatPct,     color: Colors.success },
+                { label: 'Fat',     total: totalFat,     goal: goals.fat_g,     pct: fatPct,     color: C.success },
               ].map((m) => (
                 <View key={m.label} style={styles.macroItem}>
                   <Text style={styles.macroLabel}>{m.label}</Text>
@@ -1308,7 +1319,7 @@ export default function NutritionScreen() {
                     <IconSymbol
                       name={isExpanded ? 'chevron.left' : 'chevron.right'}
                       size={12}
-                      color={Colors.onSurfaceVariant}
+                      color={C.onSurfaceVariant}
                       style={{ transform: [{ rotate: isExpanded ? '270deg' : '90deg' }] }}
                     />
                   </TouchableOpacity>
@@ -1317,7 +1328,7 @@ export default function NutritionScreen() {
                     <TouchableOpacity
                       onPress={() => { setEditLog(undefined); setTargetMeal(meal); setShowAddModal(true); }}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
+                      <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1349,7 +1360,7 @@ export default function NutritionScreen() {
       <TouchableOpacity
         style={[styles.fab, { bottom: fabBottom }]}
         onPress={() => { setEditLog(undefined); setTargetMeal(undefined); setShowAddModal(true); }}>
-        <IconSymbol name="plus.circle.fill" size={26} color={Colors.background} />
+        <IconSymbol name="plus.circle.fill" size={26} color={C.background} />
       </TouchableOpacity>
 
       <AddFoodModal

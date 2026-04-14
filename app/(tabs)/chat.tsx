@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { styles } from '@/styles/tabs/chat.styles';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/chat.styles';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
 
@@ -38,6 +38,8 @@ function formatTime(iso: string | null): string {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ChatScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -70,18 +72,18 @@ export default function ChatScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Messages</Text>
         <View style={styles.lockRow}>
-          <IconSymbol name="lock.fill" size={12} color={Colors.success} />
+          <IconSymbol name="lock.fill" size={12} color={C.success} />
           <Text style={styles.lockText}>End-to-end encrypted</Text>
         </View>
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
       ) : threads.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
-          <IconSymbol name="bubble.left.and.bubble.right.fill" size={40} color={Colors.outlineVariant} />
+          <IconSymbol name="bubble.left.and.bubble.right.fill" size={40} color={C.outlineVariant} />
           <Text style={{ ...styles.title, fontSize: 18, marginTop: 16 }}>No conversations yet</Text>
-          <Text style={{ color: Colors.onSurfaceVariant, textAlign: 'center', marginTop: 8 }}>
+          <Text style={{ color: C.onSurfaceVariant, textAlign: 'center', marginTop: 8 }}>
             Messages with your trainer or clients will appear here.
           </Text>
         </View>

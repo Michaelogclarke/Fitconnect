@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -12,7 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -48,6 +49,40 @@ function RatingPicker({
   value:    Rating;
   onChange: (v: Rating) => void;
 }) {
+  const C = useColors();
+  const ratingStyles = useMemo(() => StyleSheet.create({
+    container: {
+      paddingVertical: Spacing.md,
+    },
+    labelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: Spacing.sm,
+    },
+    label: {
+      ...Typography.titleMd,
+      color: C.onSurface,
+    },
+    sublabel: {
+      ...Typography.labelLg,
+      color: C.primary,
+    },
+    dots: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    dot: {
+      flex: 1,
+      height: 8,
+      borderRadius: Radius.full,
+      backgroundColor: C.outlineVariant,
+    },
+    dotFilled: {
+      backgroundColor: C.primary,
+    },
+  }), [C]);
+
   return (
     <View style={ratingStyles.container}>
       <View style={ratingStyles.labelRow}>
@@ -71,6 +106,7 @@ function RatingPicker({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CheckInScreen() {
+  const C = useColors();
   const router = useRouter();
   const { threadId, trainerName } = useLocalSearchParams<{ threadId: string; trainerName: string }>();
 
@@ -83,6 +119,84 @@ export default function CheckInScreen() {
   const [alreadyDone, setAlreadyDone] = useState(false);
 
   const weekStart = currentWeekStart();
+
+  const localStyles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+    },
+    headerTitle: {
+      ...Typography.titleLg,
+      color: C.onSurface,
+    },
+    content: {
+      paddingHorizontal: Spacing.lg,
+      paddingBottom: Spacing.xxxl,
+    },
+    subheading: {
+      ...Typography.bodyLg,
+      color: C.onSurfaceVariant,
+      marginBottom: Spacing.xs,
+    },
+    weekText: {
+      color: C.onSurface,
+      fontWeight: '600',
+    },
+    trainerNote: {
+      ...Typography.labelLg,
+      color: C.primary,
+      marginBottom: Spacing.lg,
+    },
+    card: {
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.xl,
+      paddingHorizontal: Spacing.lg,
+      marginTop: Spacing.md,
+      marginBottom: Spacing.lg,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: C.outlineVariant,
+    },
+    notesSection: {
+      marginBottom: Spacing.xl,
+    },
+    notesLabel: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+      marginBottom: Spacing.sm,
+    },
+    notesInput: {
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: C.outlineVariant,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.md,
+      ...Typography.bodyMd,
+      color: C.onSurface,
+      minHeight: 100,
+    },
+    submitBtn: {
+      height: 52,
+      borderRadius: Radius.md,
+      backgroundColor: C.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    submitBtnDisabled: { opacity: 0.45 },
+    submitBtnText: {
+      ...Typography.titleLg,
+      color: C.background,
+    },
+  }), [C]);
 
   useEffect(() => {
     if (!threadId) return;
@@ -136,14 +250,14 @@ export default function CheckInScreen() {
       {/* Header */}
       <View style={localStyles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={24} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={24} color={C.onSurface} />
         </TouchableOpacity>
         <Text style={localStyles.headerTitle}>Weekly Check-In</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView
           contentContainerStyle={localStyles.content}
@@ -176,7 +290,7 @@ export default function CheckInScreen() {
               value={notes}
               onChangeText={setNotes}
               placeholder="How's the programme feeling? Anything to flag?"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -188,7 +302,7 @@ export default function CheckInScreen() {
             onPress={handleSubmit}
             disabled={saving}>
             {saving
-              ? <ActivityIndicator color={Colors.background} />
+              ? <ActivityIndicator color={C.background} />
               : <Text style={localStyles.submitBtnText}>
                   {alreadyDone ? 'Update Check-In' : 'Submit Check-In'}
                 </Text>}
@@ -198,116 +312,3 @@ export default function CheckInScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const ratingStyles = StyleSheet.create({
-  container: {
-    paddingVertical: Spacing.md,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  label: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-  },
-  sublabel: {
-    ...Typography.labelLg,
-    color: Colors.primary,
-  },
-  dots: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  dot: {
-    flex: 1,
-    height: 8,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.outlineVariant,
-  },
-  dotFilled: {
-    backgroundColor: Colors.primary,
-  },
-});
-
-const localStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  headerTitle: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
-  },
-  content: {
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
-  },
-  subheading: {
-    ...Typography.bodyLg,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.xs,
-  },
-  weekText: {
-    color: Colors.onSurface,
-    fontWeight: '600',
-  },
-  trainerNote: {
-    ...Typography.labelLg,
-    color: Colors.primary,
-    marginBottom: Spacing.lg,
-  },
-  card: {
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.xl,
-    paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.lg,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.outlineVariant,
-  },
-  notesSection: {
-    marginBottom: Spacing.xl,
-  },
-  notesLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.sm,
-  },
-  notesInput: {
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    ...Typography.bodyMd,
-    color: Colors.onSurface,
-    minHeight: 100,
-  },
-  submitBtn: {
-    height: 52,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  submitBtnDisabled: { opacity: 0.45 },
-  submitBtnText: {
-    ...Typography.titleLg,
-    color: Colors.background,
-  },
-});

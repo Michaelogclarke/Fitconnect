@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { styles } from '@/styles/tabs/workouts.styles';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/workouts.styles';
 
 const FILTERS = ['All', 'Chest', 'Back', 'Legs', 'Arms', 'Core'];
 
@@ -18,6 +18,8 @@ const WORKOUTS = [
 ];
 
 export default function WorkoutsScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -30,7 +32,7 @@ export default function WorkoutsScreen() {
 
       {/* Search Bar */}
       <View style={styles.searchBar}>
-        <IconSymbol name="chevron.right" size={18} color={Colors.onSurfaceVariant} />
+        <IconSymbol name="chevron.right" size={18} color={C.onSurfaceVariant} />
         <Text style={styles.searchText}>Search workouts…</Text>
       </View>
 
@@ -65,7 +67,7 @@ export default function WorkoutsScreen() {
         {WORKOUTS.map((w) => (
           <TouchableOpacity key={w.id} style={styles.workoutCard} onPress={() => router.push('/start-workout')}>
             <View style={styles.workoutIconBox}>
-              <IconSymbol name="dumbbell.fill" size={22} color={Colors.primary} />
+              <IconSymbol name="dumbbell.fill" size={22} color={C.primary} />
             </View>
             <View style={styles.workoutInfo}>
               <Text style={styles.workoutName}>{w.name}</Text>

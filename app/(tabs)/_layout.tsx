@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SpotifyMiniPlayer, MINI_PLAYER_HEIGHT } from '@/components/SpotifyMiniPlayer';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { useWorkout } from '@/contexts/WorkoutContext';
 import { useSpotify } from '@/contexts/SpotifyContext';
 import { supabase } from '@/lib/supabase';
@@ -18,6 +19,7 @@ function formatTime(s: number) {
 }
 
 export default function TabLayout() {
+  const C = useColors();
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const { isActive, elapsed, exercises, activeRest } = useWorkout();
@@ -78,11 +80,11 @@ export default function TabLayout() {
         screenOptions={{
           headerShown: false,
           tabBarButton: HapticTab,
-          tabBarActiveTintColor: Colors.tabIconSelected,
-          tabBarInactiveTintColor: Colors.tabIconDefault,
+          tabBarActiveTintColor: C.tabIconSelected,
+          tabBarInactiveTintColor: C.tabIconDefault,
           tabBarStyle: {
-            backgroundColor: Colors.tabBarBackground,
-            borderTopColor: Colors.outlineVariant,
+            backgroundColor: C.tabBarBackground,
+            borderTopColor: C.outlineVariant,
             borderTopWidth: 1,
             height: 72,
             paddingBottom: 12,
@@ -151,10 +153,10 @@ export default function TabLayout() {
             bottom: bannerBottom,
             left: Spacing.md,
             right: Spacing.md,
-            backgroundColor: Colors.surfaceContainerHigh,
+            backgroundColor: C.surfaceContainerHigh,
             borderRadius: Radius.lg,
             borderWidth: 1,
-            borderColor: Colors.primary + '55',
+            borderColor: C.primary + '55',
             flexDirection: 'row',
             alignItems: 'center',
             paddingHorizontal: Spacing.md,
@@ -171,15 +173,15 @@ export default function TabLayout() {
           {/* Live indicator dot — orange when resting, green when active */}
           <View style={{
             width: 8, height: 8, borderRadius: 4,
-            backgroundColor: activeRest && restRemaining > 0 ? Colors.primary : Colors.success,
+            backgroundColor: activeRest && restRemaining > 0 ? C.primary : C.success,
           }} />
 
           {/* Info */}
           <View style={{ flex: 1 }}>
-            <Text style={{ ...Typography.labelLg, color: Colors.onSurface }}>
+            <Text style={{ ...Typography.labelLg, color: C.onSurface }}>
               {activeRest && restRemaining > 0 ? 'Resting…' : 'Workout in progress'}
             </Text>
-            <Text style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }}>
+            <Text style={{ ...Typography.labelMd, color: C.onSurfaceVariant }}>
               {exercises.length} exercise{exercises.length !== 1 ? 's' : ''} · {formatTime(elapsed)}
             </Text>
           </View>
@@ -187,24 +189,24 @@ export default function TabLayout() {
           {/* Rest countdown or workout timer */}
           {activeRest && restRemaining > 0 ? (
             <View style={{
-              backgroundColor: Colors.primary + '22',
+              backgroundColor: C.primary + '22',
               borderRadius: Radius.sm,
               paddingHorizontal: Spacing.sm,
               paddingVertical: 3,
               borderWidth: 1,
-              borderColor: Colors.primary + '44',
+              borderColor: C.primary + '44',
             }}>
-              <Text style={{ ...Typography.titleMd, color: Colors.primary, fontVariant: ['tabular-nums'] }}>
+              <Text style={{ ...Typography.titleMd, color: C.primary, fontVariant: ['tabular-nums'] }}>
                 {formatTime(restRemaining)}
               </Text>
             </View>
           ) : (
-            <Text style={{ ...Typography.titleMd, color: Colors.primary, fontVariant: ['tabular-nums'] }}>
+            <Text style={{ ...Typography.titleMd, color: C.primary, fontVariant: ['tabular-nums'] }}>
               {formatTime(elapsed)}
             </Text>
           )}
 
-          <IconSymbol name="chevron.right" size={16} color={Colors.primary} />
+          <IconSymbol name="chevron.right" size={16} color={C.primary} />
         </TouchableOpacity>
       )}
 

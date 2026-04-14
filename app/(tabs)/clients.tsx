@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -16,8 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
-import { styles } from '@/styles/tabs/clients.styles';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/clients.styles';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
 
@@ -53,6 +54,86 @@ function InviteModal({
   onClose:   () => void;
   onInvited: () => void;
 }) {
+  const C = useColors();
+  const inviteStyles = useMemo(() => StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    sheet: {
+      backgroundColor: C.surfaceContainer,
+      borderTopLeftRadius: Radius.xl,
+      borderTopRightRadius: Radius.xl,
+      padding: Spacing.xl,
+      paddingBottom: Spacing.xxxl,
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      borderRadius: Radius.full,
+      backgroundColor: C.outlineVariant,
+      alignSelf: 'center',
+      marginBottom: Spacing.lg,
+    },
+    title: {
+      ...Typography.headlineMd,
+      color: C.onSurface,
+      marginBottom: Spacing.xs,
+    },
+    subtitle: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      marginBottom: Spacing.lg,
+    },
+    error: {
+      ...Typography.bodyMd,
+      color: C.error,
+      backgroundColor: C.error + '18',
+      borderRadius: Radius.md,
+      padding: Spacing.sm,
+      marginBottom: Spacing.md,
+    },
+    fieldGroup: {
+      marginBottom: Spacing.md,
+    },
+    label: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+      marginBottom: Spacing.xs,
+    },
+    input: {
+      backgroundColor: C.surfaceContainerHighest,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: C.outlineVariant,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      ...Typography.titleMd,
+      color: C.onSurface,
+    },
+    sendBtn: {
+      height: 50,
+      borderRadius: Radius.md,
+      backgroundColor: C.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+    },
+    sendBtnDisabled: { opacity: 0.45 },
+    sendBtnText: { ...Typography.titleLg, color: C.background },
+    cancelBtn: {
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+    },
+    cancelBtnText: {
+      ...Typography.titleMd,
+      color: C.onSurfaceVariant,
+    },
+  }), [C]);
+
   const [email,   setEmail]   = useState('');
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
@@ -113,7 +194,7 @@ function InviteModal({
               value={email}
               onChangeText={setEmail}
               placeholder="client@example.com"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               autoCapitalize="none"
               keyboardType="email-address"
               autoComplete="email"
@@ -128,7 +209,7 @@ function InviteModal({
             onPress={handleInvite}
             disabled={!email.trim() || loading}>
             {loading
-              ? <ActivityIndicator color={Colors.background} />
+              ? <ActivityIndicator color={C.background} />
               : <Text style={inviteStyles.sendBtnText}>Send Invite</Text>}
           </TouchableOpacity>
 
@@ -144,7 +225,42 @@ function InviteModal({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ClientsScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
+
+  const emptyStyles = useMemo(() => StyleSheet.create({
+    container: {
+      alignItems: 'center',
+      paddingTop: Spacing.xxxl,
+      paddingHorizontal: Spacing.xl,
+    },
+    title: {
+      ...Typography.headlineMd,
+      color: C.onSurface,
+      marginTop: Spacing.lg,
+    },
+    subtitle: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      textAlign: 'center',
+      marginTop: Spacing.sm,
+      marginBottom: Spacing.xl,
+    },
+    btn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      backgroundColor: C.primary,
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+    },
+    btnText: {
+      ...Typography.titleMd,
+      color: C.background,
+    },
+  }), [C]);
 
   const [loading,       setLoading]       = useState(true);
   const [clients,       setClients]       = useState<Client[]>([]);
@@ -235,7 +351,7 @@ export default function ClientsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Clients</Text>
         <TouchableOpacity style={styles.addBtn} onPress={() => setShowInvite(true)}>
-          <IconSymbol name="plus.circle.fill" size={20} color={Colors.background} />
+          <IconSymbol name="plus.circle.fill" size={20} color={C.background} />
         </TouchableOpacity>
       </View>
 
@@ -270,16 +386,16 @@ export default function ClientsScreen() {
         showsVerticalScrollIndicator={false}>
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 40 }} />
+          <ActivityIndicator color={C.primary} style={{ marginVertical: 40 }} />
         ) : clients.length === 0 ? (
           <View style={emptyStyles.container}>
-            <IconSymbol name="person.2.fill" size={40} color={Colors.outlineVariant} />
+            <IconSymbol name="person.2.fill" size={40} color={C.outlineVariant} />
             <Text style={emptyStyles.title}>No clients yet</Text>
             <Text style={emptyStyles.subtitle}>
               Tap the + button to invite your first client by email.
             </Text>
             <TouchableOpacity style={emptyStyles.btn} onPress={() => setShowInvite(true)}>
-              <IconSymbol name="plus.circle.fill" size={16} color={Colors.background} />
+              <IconSymbol name="plus.circle.fill" size={16} color={C.background} />
               <Text style={emptyStyles.btnText}>Invite a Client</Text>
             </TouchableOpacity>
           </View>
@@ -302,7 +418,7 @@ export default function ClientsScreen() {
                   {c.totalSessions} session{c.totalSessions !== 1 ? 's' : ''} · Last: {daysSince(c.lastSession)}
                 </Text>
               </View>
-              <IconSymbol name="chevron.right" size={16} color={Colors.onSurfaceVariant} />
+              <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />
             </TouchableOpacity>
           ))
         )}
@@ -316,117 +432,3 @@ export default function ClientsScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Local styles ─────────────────────────────────────────────────────────────
-
-const emptyStyles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    paddingTop: Spacing.xxxl,
-    paddingHorizontal: Spacing.xl,
-  },
-  title: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
-    marginTop: Spacing.lg,
-  },
-  subtitle: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.xl,
-  },
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  btnText: {
-    ...Typography.titleMd,
-    color: Colors.background,
-  },
-});
-
-const inviteStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  sheet: {
-    backgroundColor: Colors.surfaceContainer,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxxl,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.outlineVariant,
-    alignSelf: 'center',
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
-    marginBottom: Spacing.xs,
-  },
-  subtitle: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.lg,
-  },
-  error: {
-    ...Typography.bodyMd,
-    color: Colors.error,
-    backgroundColor: Colors.error + '18',
-    borderRadius: Radius.md,
-    padding: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  fieldGroup: {
-    marginBottom: Spacing.md,
-  },
-  label: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.xs,
-  },
-  input: {
-    backgroundColor: Colors.surfaceContainerHighest,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-  },
-  sendBtn: {
-    height: 50,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-  },
-  sendBtnDisabled: { opacity: 0.45 },
-  sendBtnText: { ...Typography.titleLg, color: Colors.background },
-  cancelBtn: {
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-  },
-  cancelBtnText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
-  },
-});

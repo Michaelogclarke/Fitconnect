@@ -1,8 +1,12 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
-export const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: Colors.background },
+export function useStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
+  container:     { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
 
   // ── Header ─────────────────────────────────────────────────────────────────
@@ -14,7 +18,7 @@ export const styles = StyleSheet.create({
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
   },
   backBtn: {
     flexDirection: 'row',
@@ -25,11 +29,11 @@ export const styles = StyleSheet.create({
   },
   backText: {
     ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
   },
   headerTitle: {
     ...Typography.titleLg,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
   saveBtn: {
     minWidth: 72,
@@ -38,7 +42,7 @@ export const styles = StyleSheet.create({
   },
   saveBtnText: {
     ...Typography.titleMd,
-    color: Colors.primary,
+    color: C.primary,
   },
 
   // ── Avatar section ─────────────────────────────────────────────────────────
@@ -50,16 +54,16 @@ export const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
+    backgroundColor: C.primary + '33',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
   },
   avatarText: {
     fontSize: 30,
     fontWeight: '700',
-    color: Colors.primary,
+    color: C.primary,
   },
 
   // ── Form ───────────────────────────────────────────────────────────────────
@@ -68,14 +72,14 @@ export const styles = StyleSheet.create({
   },
   sectionLabel: {
     ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: Spacing.sm,
     marginLeft: Spacing.xs,
   },
   formCard: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
@@ -89,19 +93,20 @@ export const styles = StyleSheet.create({
   },
   fieldLabel: {
     ...Typography.titleMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
     width: 90,
   },
   fieldInput: {
     flex: 1,
     ...Typography.titleMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
     textAlign: 'right',
   },
   errorText: {
     ...Typography.labelLg,
-    color: Colors.error,
+    color: C.error,
     marginTop: Spacing.sm,
     marginLeft: Spacing.xs,
   },
-});
+}), [C]);
+}

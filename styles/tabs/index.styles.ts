@@ -1,8 +1,12 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
-export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+export function useStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
 
   // ── Header ─────────────────────────────────────────────────────────────────
@@ -14,18 +18,18 @@ export const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.sm,
   },
-  greeting: { ...Typography.headlineLg, color: Colors.onSurface },
-  date:     { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginTop: 2 },
+  greeting: { ...Typography.headlineLg, color: C.onSurface },
+  date:     { ...Typography.bodyMd, color: C.onSurfaceVariant, marginTop: 2 },
   iconBtn: {
     width: 40, height: 40, borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     justifyContent: 'center', alignItems: 'center',
   },
 
   // ── Section label ──────────────────────────────────────────────────────────
   sectionLabel: {
     ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginHorizontal: Spacing.lg,
@@ -39,26 +43,26 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.md,
-    backgroundColor: Colors.primary + '14',
+    backgroundColor: C.primary + '14',
     borderRadius: Radius.lg,
     borderWidth: 1,
-    borderColor: Colors.primary + '35',
+    borderColor: C.primary + '35',
     padding: Spacing.md,
     gap: Spacing.md,
   },
   streakLeft: {
     width: 44, height: 44,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center',
     alignItems: 'center',
   },
   streakMid: { flex: 1 },
-  streakTitle: { ...Typography.titleLg, color: Colors.primary },
-  streakSub:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  streakTitle: { ...Typography.titleLg, color: C.primary },
+  streakSub:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
   streakCount: {
     ...Typography.displayMd,
-    color: Colors.primary,
+    color: C.primary,
     opacity: 0.25,
   },
 
@@ -67,32 +71,32 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.primary + '33',
+    borderColor: C.primary + '33',
     gap: Spacing.md,
   },
   quickStartLeft: {
     width: 44, height: 44, borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center', alignItems: 'center',
   },
-  quickStartTitle: { ...Typography.titleMd, color: Colors.onSurface },
-  quickStartSub:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  quickStartTitle: { ...Typography.titleMd, color: C.onSurface },
+  quickStartSub:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Empty state ────────────────────────────────────────────────────────────
   emptyCard: {
     marginHorizontal: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.xl,
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  emptyText: { ...Typography.titleMd, color: Colors.onSurface },
-  emptySub:  { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' },
+  emptyText: { ...Typography.titleMd, color: C.onSurface },
+  emptySub:  { ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
 
   // ── Quick stats ────────────────────────────────────────────────────────────
   statsRow: {
@@ -103,22 +107,22 @@ export const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1, alignItems: 'center',
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
   },
-  statValue: { ...Typography.headlineMd, color: Colors.primary },
-  statLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginTop: 2 },
+  statValue: { ...Typography.headlineMd, color: C.primary },
+  statLabel: { ...Typography.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Weekly goal card ───────────────────────────────────────────────────────
   weeklyGoalCard: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
   weeklyGoalHeader: {
     flexDirection: 'row',
@@ -126,8 +130,8 @@ export const styles = StyleSheet.create({
     gap: Spacing.xs,
     marginBottom: Spacing.sm,
   },
-  weeklyGoalTitle: { ...Typography.titleMd, color: Colors.onSurface, flex: 1 },
-  weeklyGoalTapHint: { ...Typography.labelMd, color: Colors.onSurfaceVariant },
+  weeklyGoalTitle: { ...Typography.titleMd, color: C.onSurface, flex: 1 },
+  weeklyGoalTapHint: { ...Typography.labelMd, color: C.onSurfaceVariant },
   weeklyGoalDots: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -138,9 +142,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     borderRadius: Radius.full,
   },
-  weeklyGoalDotFilled: { backgroundColor: Colors.primary },
-  weeklyGoalDotEmpty:  { backgroundColor: Colors.outlineVariant },
-  weeklyGoalCount: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  weeklyGoalDotFilled: { backgroundColor: C.primary },
+  weeklyGoalDotEmpty:  { backgroundColor: C.outlineVariant },
+  weeklyGoalCount: { ...Typography.labelLg, color: C.onSurfaceVariant },
 
   // ── Weekly goal picker modal ───────────────────────────────────────────────
   goalPickerOverlay: {
@@ -152,12 +156,12 @@ export const styles = StyleSheet.create({
   },
   goalPickerSheet: {
     width: '100%',
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.xl,
     padding: Spacing.xl,
   },
-  goalPickerTitle: { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.xs },
-  goalPickerSub:   { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginBottom: Spacing.lg },
+  goalPickerTitle: { ...Typography.titleLg, color: C.onSurface, marginBottom: Spacing.xs },
+  goalPickerSub:   { ...Typography.bodyMd, color: C.onSurfaceVariant, marginBottom: Spacing.lg },
   goalPickerOptions: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -167,34 +171,34 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.md,
     borderRadius: Radius.md,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
   goalPickerOptionActive: {
-    backgroundColor: Colors.primary + '22',
-    borderColor: Colors.primary,
+    backgroundColor: C.primary + '22',
+    borderColor: C.primary,
   },
   goalPickerOptionText: {
     ...Typography.headlineMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
   goalPickerOptionLabel: {
     ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
-  goalPickerOptionTextActive: { color: Colors.primary },
+  goalPickerOptionTextActive: { color: C.primary },
 
   // ── Steps / health card ────────────────────────────────────────────────────
   stepsCard: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
   stepsHeader: {
     flexDirection: 'row',
@@ -203,37 +207,37 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   stepsLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  stepsTitle: { ...Typography.titleMd, color: Colors.onSurface },
-  stepsCount: { ...Typography.headlineMd, color: Colors.primary },
+  stepsTitle: { ...Typography.titleMd, color: C.onSurface },
+  stepsCount: { ...Typography.headlineMd, color: C.primary },
   stepsBarTrack: {
     height: 8,
-    backgroundColor: Colors.outlineVariant,
+    backgroundColor: C.outlineVariant,
     borderRadius: Radius.full,
     overflow: 'hidden',
     marginBottom: Spacing.xs,
   },
   stepsBarFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: Radius.full,
   },
-  stepsFooter: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  stepsFooter: { ...Typography.labelLg, color: C.onSurfaceVariant },
   stepsConnectCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
   stepsConnectText: {
     ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     flex: 1,
   },
 
@@ -241,31 +245,32 @@ export const styles = StyleSheet.create({
   recentCard: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: Spacing.lg, marginBottom: Spacing.sm,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     gap: Spacing.md,
   },
   recentIconBox: {
     width: 40, height: 40, borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center', alignItems: 'center',
   },
   recentInfo: { flex: 1 },
-  recentName:   { ...Typography.titleMd, color: Colors.onSurface },
-  recentMeta:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
-  recentVolume: { ...Typography.labelLg, color: Colors.primary },
+  recentName:   { ...Typography.titleMd, color: C.onSurface },
+  recentMeta:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  recentVolume: { ...Typography.labelLg, color: C.primary },
 
   recentRight: { alignItems: 'flex-end', gap: 6 },
   recentDoAgainBtn: {
     flexDirection: 'row', alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.primary + '1a',
+    backgroundColor: C.primary + '1a',
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: Colors.primary + '44',
+    borderColor: C.primary + '44',
   },
-  recentDoAgainText: { ...Typography.labelMd, color: Colors.primary },
-});
+  recentDoAgainText: { ...Typography.labelMd, color: C.primary },
+}), [C]);
+}

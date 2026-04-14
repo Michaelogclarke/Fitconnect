@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -15,7 +15,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -63,8 +64,117 @@ function buildList(messages: Message[]): ListItem[] {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ConversationScreen() {
+  const C = useColors();
   const router = useRouter();
   const { threadId, otherName } = useLocalSearchParams<{ threadId: string; otherName: string }>();
+
+  const convStyles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: C.outlineVariant,
+    },
+    headerName: {
+      ...Typography.titleLg,
+      color: C.onSurface,
+      flex: 1,
+      textAlign: 'center',
+      marginHorizontal: Spacing.sm,
+    },
+    messageList: {
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.lg,
+      gap: Spacing.xs,
+    },
+    daySep: {
+      alignItems: 'center',
+      marginVertical: Spacing.md,
+    },
+    daySepText: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+      backgroundColor: C.surfaceContainerHighest,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 3,
+      borderRadius: Radius.full,
+    },
+    bubble: {
+      maxWidth: '78%',
+      borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      marginVertical: 2,
+    },
+    bubbleMe: {
+      alignSelf: 'flex-end',
+      backgroundColor: C.primary,
+      borderBottomRightRadius: 4,
+    },
+    bubbleThem: {
+      alignSelf: 'flex-start',
+      backgroundColor: C.surfaceContainerHighest,
+      borderBottomLeftRadius: 4,
+    },
+    bubbleText: {
+      ...Typography.bodyMd,
+      lineHeight: 20,
+    },
+    bubbleTextMe:   { color: C.background },
+    bubbleTextThem: { color: C.onSurface },
+    bubbleTime: {
+      ...Typography.labelMd,
+      marginTop: 3,
+    },
+    bubbleTimeMe:   { color: C.background + 'aa', textAlign: 'right' },
+    bubbleTimeThem: { color: C.onSurfaceVariant },
+    emptyWrap: {
+      paddingTop: 80,
+      alignItems: 'center',
+    },
+    emptyText: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+    },
+    inputBar: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: C.outlineVariant,
+      backgroundColor: C.background,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: C.surfaceContainerHighest,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: C.outlineVariant,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      ...Typography.bodyMd,
+      color: C.onSurface,
+      maxHeight: 120,
+    },
+    sendBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.full,
+      backgroundColor: C.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sendBtnDisabled: { opacity: 0.4 },
+  }), [C]);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -211,7 +321,7 @@ export default function ConversationScreen() {
       {/* Header */}
       <View style={convStyles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={24} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={24} color={C.onSurface} />
         </TouchableOpacity>
         <Text style={convStyles.headerName} numberOfLines={1}>{otherName ?? 'Chat'}</Text>
         <View style={{ width: 24 }} />
@@ -223,7 +333,7 @@ export default function ConversationScreen() {
         keyboardVerticalOffset={0}>
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
         ) : (
           <FlatList
             ref={listRef}
@@ -250,7 +360,7 @@ export default function ConversationScreen() {
             value={text}
             onChangeText={setText}
             placeholder="Message…"
-            placeholderTextColor={Colors.onSurfaceVariant}
+            placeholderTextColor={C.onSurfaceVariant}
             multiline
             maxLength={2000}
             returnKeyType="default"
@@ -260,121 +370,11 @@ export default function ConversationScreen() {
             onPress={handleSend}
             disabled={!text.trim() || sending}>
             {sending
-              ? <ActivityIndicator size="small" color={Colors.background} />
-              : <IconSymbol name="arrow.up" size={18} color={Colors.background} />}
+              ? <ActivityIndicator size="small" color={C.background} />
+              : <IconSymbol name="arrow.up" size={18} color={C.background} />}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const convStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
-  },
-  headerName: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: Spacing.sm,
-  },
-  messageList: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.lg,
-    gap: Spacing.xs,
-  },
-  daySep: {
-    alignItems: 'center',
-    marginVertical: Spacing.md,
-  },
-  daySepText: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-    backgroundColor: Colors.surfaceContainerHighest,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  bubble: {
-    maxWidth: '78%',
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    marginVertical: 2,
-  },
-  bubbleMe: {
-    alignSelf: 'flex-end',
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  bubbleThem: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.surfaceContainerHighest,
-    borderBottomLeftRadius: 4,
-  },
-  bubbleText: {
-    ...Typography.bodyMd,
-    lineHeight: 20,
-  },
-  bubbleTextMe:   { color: Colors.background },
-  bubbleTextThem: { color: Colors.onSurface },
-  bubbleTime: {
-    ...Typography.labelMd,
-    marginTop: 3,
-  },
-  bubbleTimeMe:   { color: Colors.background + 'aa', textAlign: 'right' },
-  bubbleTimeThem: { color: Colors.onSurfaceVariant },
-  emptyWrap: {
-    paddingTop: 80,
-    alignItems: 'center',
-  },
-  emptyText: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.outlineVariant,
-    backgroundColor: Colors.background,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: Colors.surfaceContainerHighest,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    ...Typography.bodyMd,
-    color: Colors.onSurface,
-    maxHeight: 120,
-  },
-  sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendBtnDisabled: { opacity: 0.4 },
-});

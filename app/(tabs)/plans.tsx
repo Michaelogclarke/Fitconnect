@@ -1,11 +1,12 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
-import { styles } from '@/styles/tabs/plans.styles';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/plans.styles';
 import { supabase } from '@/lib/supabase';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { useWorkout, Exercise, SetRow } from '@/contexts/WorkoutContext';
@@ -58,6 +59,9 @@ function PlanCard({
   onToggleTemplate?: () => void;
   onDeploy?:        () => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
+  const templateStyles = useTemplateStyles();
   const [expanded,    setExpanded]    = useState(false);
   const [startingId,  setStartingId]  = useState<string | null>(null);
 
@@ -77,7 +81,7 @@ function PlanCard({
         onPress={() => setExpanded((e) => !e)}
         activeOpacity={0.8}>
         <View style={styles.planIconBox}>
-          <IconSymbol name="dumbbell.fill" size={20} color={Colors.primary} />
+          <IconSymbol name="dumbbell.fill" size={20} color={C.primary} />
         </View>
         <View style={styles.planInfo}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
@@ -88,8 +92,8 @@ function PlanCard({
               </View>
             )}
             {plan.assigned_by && !isTrainer && (
-              <View style={[templateStyles.badge, { backgroundColor: Colors.primary + '22' }]}>
-                <Text style={[templateStyles.badgeText, { color: Colors.primary }]}>From Trainer</Text>
+              <View style={[templateStyles.badge, { backgroundColor: C.primary + '22' }]}>
+                <Text style={[templateStyles.badgeText, { color: C.primary }]}>From Trainer</Text>
               </View>
             )}
           </View>
@@ -104,7 +108,7 @@ function PlanCard({
         <IconSymbol
           name={expanded ? 'chevron.up' : 'chevron.down'}
           size={18}
-          color={Colors.onSurfaceVariant}
+          color={C.onSurfaceVariant}
         />
       </TouchableOpacity>
 
@@ -136,9 +140,9 @@ function PlanCard({
                     disabled={!!startingId}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     {startingId === day.id ? (
-                      <ActivityIndicator size="small" color={Colors.primary} />
+                      <ActivityIndicator size="small" color={C.primary} />
                     ) : (
-                      <IconSymbol name="play.fill" size={14} color={Colors.primary} />
+                      <IconSymbol name="play.fill" size={14} color={C.primary} />
                     )}
                   </TouchableOpacity>
                 </View>
@@ -149,7 +153,7 @@ function PlanCard({
           <View style={templateStyles.footerRow}>
             <TouchableOpacity style={[styles.editPlanRow, { flex: 1 }]} onPress={onEdit}>
               <Text style={styles.editPlanText}>Edit Plan</Text>
-              <IconSymbol name="pencil" size={13} color={Colors.onSurfaceVariant} />
+              <IconSymbol name="pencil" size={13} color={C.onSurfaceVariant} />
             </TouchableOpacity>
             {isTrainer && (
               <>
@@ -157,13 +161,13 @@ function PlanCard({
                 <TouchableOpacity
                   style={[styles.editPlanRow, { flex: 1 }]}
                   onPress={onToggleTemplate}>
-                  <Text style={[styles.editPlanText, plan.is_template && { color: Colors.primary }]}>
+                  <Text style={[styles.editPlanText, plan.is_template && { color: C.primary }]}>
                     {plan.is_template ? 'Remove Template' : 'Make Template'}
                   </Text>
                   <IconSymbol
                     name="doc.on.doc.fill"
                     size={13}
-                    color={plan.is_template ? Colors.primary : Colors.onSurfaceVariant}
+                    color={plan.is_template ? C.primary : C.onSurfaceVariant}
                   />
                 </TouchableOpacity>
                 {plan.is_template && (
@@ -172,8 +176,8 @@ function PlanCard({
                     <TouchableOpacity
                       style={[styles.editPlanRow, { flex: 1 }]}
                       onPress={onDeploy}>
-                      <Text style={[styles.editPlanText, { color: Colors.success }]}>Deploy</Text>
-                      <IconSymbol name="arrow.up.circle.fill" size={13} color={Colors.success} />
+                      <Text style={[styles.editPlanText, { color: C.success }]}>Deploy</Text>
+                      <IconSymbol name="arrow.up.circle.fill" size={13} color={C.success} />
                     </TouchableOpacity>
                   </>
                 )}
@@ -189,6 +193,9 @@ function PlanCard({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PlansScreen() {
+  const C = useColors();
+  const styles = useStyles();
+  const templateStyles = useTemplateStyles();
   const router = useRouter();
   const { startWorkoutFromPlan } = useWorkout();
 
@@ -335,16 +342,16 @@ export default function PlansScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Plans</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/plan-editor' as any)}>
-            <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
+            <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
             <Text style={styles.addBtnText}>New Plan</Text>
           </TouchableOpacity>
         </View>
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 40 }} />
+          <ActivityIndicator color={C.primary} style={{ marginVertical: 40 }} />
         ) : plans.length === 0 ? (
           <View style={styles.emptyState}>
-            <IconSymbol name="list.bullet" size={36} color={Colors.outlineVariant} />
+            <IconSymbol name="list.bullet" size={36} color={C.outlineVariant} />
             <Text style={[styles.emptyText, { marginTop: Spacing.md }]}>No plans yet</Text>
             <Text style={styles.emptySubtext}>
               Build a training plan with your exercises, sets, and reps — then start any day with one tap.
@@ -352,7 +359,7 @@ export default function PlansScreen() {
             <TouchableOpacity
               style={styles.emptyCreateBtn}
               onPress={() => router.push('/plan-editor' as any)}>
-              <IconSymbol name="plus.circle.fill" size={16} color={Colors.background} />
+              <IconSymbol name="plus.circle.fill" size={16} color={C.background} />
               <Text style={styles.emptyCreateText}>Create Your First Plan</Text>
             </TouchableOpacity>
           </View>
@@ -396,8 +403,8 @@ export default function PlansScreen() {
                     </View>
                     <Text style={templateStyles.clientName}>{c.name}</Text>
                     {deployingId === c.clientId
-                      ? <ActivityIndicator size="small" color={Colors.primary} />
-                      : <IconSymbol name="arrow.up.circle.fill" size={20} color={Colors.success} />}
+                      ? <ActivityIndicator size="small" color={C.primary} />
+                      : <IconSymbol name="arrow.up.circle.fill" size={20} color={C.success} />}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -412,97 +419,100 @@ export default function PlansScreen() {
   );
 }
 
-const templateStyles = StyleSheet.create({
-  badge: {
-    backgroundColor: Colors.tertiary + '22',
-    borderRadius: Radius.full,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: Colors.tertiary + '55',
-  },
-  badgeText: {
-    ...Typography.labelMd,
-    color: Colors.tertiary,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: Colors.outlineVariant,
-  },
-  footerDivider: {
-    width: 1,
-    backgroundColor: Colors.outlineVariant,
-  },
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  sheet: {
-    backgroundColor: Colors.surfaceContainer,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxxl,
-    maxHeight: '65%',
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.outlineVariant,
-    alignSelf: 'center',
-    marginBottom: Spacing.lg,
-  },
-  sheetTitle: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
-    marginBottom: Spacing.xs,
-  },
-  sheetSub: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.lg,
-  },
-  empty: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.lg,
-  },
-  clientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
-  },
-  clientAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  clientAvatarText: {
-    ...Typography.titleMd,
-    color: Colors.primary,
-  },
-  clientName: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-    flex: 1,
-  },
-  cancelBtn: {
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-  },
-  cancelText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
-  },
-});
+function useTemplateStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
+    badge: {
+      backgroundColor: C.tertiary + '22',
+      borderRadius: Radius.full,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderWidth: 1,
+      borderColor: C.tertiary + '55',
+    },
+    badgeText: {
+      ...Typography.labelMd,
+      color: C.tertiary,
+    },
+    footerRow: {
+      flexDirection: 'row',
+      borderTopWidth: 1,
+      borderTopColor: C.outlineVariant,
+    },
+    footerDivider: {
+      width: 1,
+      backgroundColor: C.outlineVariant,
+    },
+    backdrop: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    sheet: {
+      backgroundColor: C.surfaceContainer,
+      borderTopLeftRadius: Radius.xl,
+      borderTopRightRadius: Radius.xl,
+      padding: Spacing.xl,
+      paddingBottom: Spacing.xxxl,
+      maxHeight: '65%',
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      borderRadius: Radius.full,
+      backgroundColor: C.outlineVariant,
+      alignSelf: 'center',
+      marginBottom: Spacing.lg,
+    },
+    sheetTitle: {
+      ...Typography.headlineMd,
+      color: C.onSurface,
+      marginBottom: Spacing.xs,
+    },
+    sheetSub: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      marginBottom: Spacing.lg,
+    },
+    empty: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      marginBottom: Spacing.lg,
+    },
+    clientRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: C.outlineVariant,
+    },
+    clientAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.full,
+      backgroundColor: C.primary + '33',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    clientAvatarText: {
+      ...Typography.titleMd,
+      color: C.primary,
+    },
+    clientName: {
+      ...Typography.titleMd,
+      color: C.onSurface,
+      flex: 1,
+    },
+    cancelBtn: {
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+    },
+    cancelText: {
+      ...Typography.titleMd,
+      color: C.onSurfaceVariant,
+    },
+  }), [C]);
+}

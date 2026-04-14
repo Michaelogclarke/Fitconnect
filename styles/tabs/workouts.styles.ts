@@ -1,10 +1,14 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
-export const styles = StyleSheet.create({
+export function useStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -13,17 +17,17 @@ export const styles = StyleSheet.create({
   },
   title: {
     ...Typography.displayMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
   subtitle: {
     ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginTop: Spacing.xs,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     height: 44,
@@ -33,7 +37,7 @@ export const styles = StyleSheet.create({
   },
   searchText: {
     ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     flex: 1,
   },
   filterRow: {
@@ -46,17 +50,17 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
   },
   filterChipActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
   },
   filterChipText: {
     ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
   },
   filterChipTextActive: {
-    color: Colors.background,
+    color: C.background,
   },
   scroll: {
     flex: 1,
@@ -68,7 +72,7 @@ export const styles = StyleSheet.create({
   },
   workoutCard: {
     borderRadius: Radius.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     padding: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
@@ -78,7 +82,7 @@ export const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -87,27 +91,27 @@ export const styles = StyleSheet.create({
   },
   workoutName: {
     ...Typography.titleLg,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
   workoutMeta: {
     ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
   workoutBadge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
   },
   workoutBadgeText: {
     ...Typography.labelMd,
-    color: Colors.primary,
+    color: C.primary,
   },
   logBtn: {
     height: 52,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: Spacing.lg,
@@ -115,6 +119,7 @@ export const styles = StyleSheet.create({
   },
   logBtnText: {
     ...Typography.titleLg,
-    color: Colors.background,
+    color: C.background,
   },
-});
+}), [C]);
+}

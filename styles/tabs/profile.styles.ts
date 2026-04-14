@@ -1,10 +1,14 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
-export const styles = StyleSheet.create({
+export function useStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
   scroll: {
     flex: 1,
@@ -22,25 +26,25 @@ export const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
+    backgroundColor: C.primary + '33',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.md,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
   },
   avatarText: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.primary,
+    color: C.primary,
   },
   userName: {
     ...Typography.headlineLg,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
   userRole: {
     ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginTop: Spacing.xs,
   },
   statsRow: {
@@ -54,11 +58,11 @@ export const styles = StyleSheet.create({
   },
   statValue: {
     ...Typography.headlineLg,
-    color: Colors.primary,
+    color: C.primary,
   },
   statLabel: {
     ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
   section: {
@@ -67,13 +71,13 @@ export const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     marginBottom: Spacing.sm,
     marginLeft: Spacing.xs,
   },
   menuCard: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
@@ -86,43 +90,44 @@ export const styles = StyleSheet.create({
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
   },
   menuIconBox: {
     width: 36,
     height: 36,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuLabel: {
     ...Typography.titleMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
     flex: 1,
   },
   menuChevron: {
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
   },
   streakBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary + '15',
+    backgroundColor: C.primary + '15',
     borderRadius: Radius.lg,
     marginHorizontal: Spacing.lg,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
     gap: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.primary + '40',
+    borderColor: C.primary + '40',
   },
   streakText: {
     ...Typography.titleMd,
-    color: Colors.primary,
+    color: C.primary,
     flex: 1,
   },
   streakCount: {
     ...Typography.displayMd,
-    color: Colors.primary,
+    color: C.primary,
   },
-});
+}), [C]);
+}

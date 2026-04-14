@@ -31,7 +31,11 @@ import {
 } from '@/lib/spotify';
 
 const CLIENT_ID    = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID ?? '';
-const REDIRECT_URI = AuthSession.makeRedirectUri({ scheme: 'fitconnect', path: 'spotify-auth' });
+const REDIRECT_URI = AuthSession.makeRedirectUri(
+  __DEV__
+    ? { useProxy: true }
+    : { scheme: 'fitconnect', path: 'spotify-auth' },
+);
 const DISCOVERY    = {
   authorizationEndpoint: 'https://accounts.spotify.com/authorize',
   tokenEndpoint:         'https://accounts.spotify.com/api/token',
@@ -108,17 +112,20 @@ export function SpotifyProvider({ children }: { children: React.ReactNode }) {
     }
 
     async function poll() {
-      const state = await getPlayerState(token!);
-      if (state === null) {
+      const result = await getPlayerState(token!);
+      if (result === false) {
+        // Auth error — try refreshing once before disconnecting
         const refreshToken = await getStoredRefreshToken();
         if (refreshToken) {
           const newToken = await refreshAccessToken(CLIENT_ID, refreshToken);
           if (newToken) { await saveTokens(newToken); setToken(newToken); return; }
-          await clearTokens();
-          setToken(null);
         }
+        await clearTokens();
+        setToken(null);
+        return;
       }
-      setPlayerState(state);
+      // result is PlayerState or null (no active device) — both are fine
+      setPlayerState(result);
     }
 
     poll();
@@ -130,8 +137,8 @@ export function SpotifyProvider({ children }: { children: React.ReactNode }) {
   async function refetch() {
     if (!token) return;
     setTimeout(async () => {
-      const s = await getPlayerState(token);
-      if (s) setPlayerState(s);
+      const result = await getPlayerState(token);
+      if (result && result !== false) setPlayerState(result);
     }, 600);
   }
 

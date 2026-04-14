@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -15,7 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -87,7 +88,72 @@ function dayToSlots(d: DayState): Array<{ startHour: number; endHour: number }> 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function SetAvailabilityScreen() {
+  const C = useColors();
   const router = useRouter();
+
+  const s = useMemo(() => StyleSheet.create({
+    container: { flex: 1, backgroundColor: C.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+      borderBottomWidth: 1, borderBottomColor: C.outlineVariant,
+    },
+    title:    { ...Typography.titleLg, color: C.onSurface },
+    scroll:   { padding: Spacing.lg, gap: Spacing.sm },
+    subtitle: { ...Typography.bodyMd, color: C.onSurfaceVariant, marginBottom: Spacing.md },
+
+    dayCard: {
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.md,
+      gap: Spacing.xs,
+    },
+    dayTop: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    },
+    dayLabel:    { ...Typography.bodyMd, color: C.onSurface, flex: 1 },
+    dayLabelOff: { color: C.onSurfaceVariant },
+    timePair:    { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+    timeChip: {
+      backgroundColor: C.surfaceContainerHighest,
+      borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: 4,
+    },
+    timeChipText: { ...Typography.labelMd, color: C.primary },
+    timeDash:     { ...Typography.labelMd, color: C.onSurfaceVariant },
+
+    breakRow: {
+      flexDirection: 'row', alignItems: 'center',
+      gap: Spacing.xs,
+      paddingLeft: 52, // align under day label
+    },
+    breakLabel: { ...Typography.labelMd, color: C.onSurfaceVariant, flex: 1 },
+
+    addBreakBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      paddingLeft: 52,
+      paddingVertical: Spacing.xs,
+    },
+    addBreakText: { ...Typography.labelMd, color: C.primary },
+
+    saveBtn: {
+      marginTop: Spacing.xl, backgroundColor: C.primary,
+      borderRadius: Radius.lg, paddingVertical: Spacing.md, alignItems: 'center',
+    },
+    saveBtnText: { ...Typography.titleMd, color: C.background },
+    overlay: { flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: C.surfaceContainer,
+      borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
+      padding: Spacing.lg, paddingBottom: 40,
+    },
+    sheetTitle:        { ...Typography.titleLg, color: C.onSurface, marginBottom: Spacing.md },
+    pickOption:        { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: Radius.md },
+    pickOptionSel:     { backgroundColor: C.primary + '22' },
+    pickOptionDim:     { opacity: 0.3 },
+    pickOptionText:    { ...Typography.bodyMd, color: C.onSurface },
+    pickOptionTextSel: { color: C.primary, fontWeight: '600' },
+  }), [C]);
 
   const [days,    setDays]    = useState<Record<number, DayState>>(defaultDays());
   const [loading, setLoading] = useState(true);
@@ -242,14 +308,14 @@ export default function SetAvailabilityScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={24} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={24} color={C.onSurface} />
         </TouchableOpacity>
         <Text style={s.title}>Set Availability</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
           <Text style={s.subtitle}>
@@ -265,8 +331,8 @@ export default function SetAvailabilityScreen() {
                   <Switch
                     value={d.enabled}
                     onValueChange={() => toggle(dow)}
-                    trackColor={{ false: Colors.outlineVariant, true: Colors.primary + '55' }}
-                    thumbColor={d.enabled ? Colors.primary : Colors.onSurfaceVariant}
+                    trackColor={{ false: C.outlineVariant, true: C.primary + '55' }}
+                    thumbColor={d.enabled ? C.primary : C.onSurfaceVariant}
                   />
                   <Text style={[s.dayLabel, !d.enabled && s.dayLabelOff]}>{label}</Text>
                   {d.enabled && (
@@ -289,7 +355,7 @@ export default function SetAvailabilityScreen() {
                 {/* Breaks */}
                 {d.enabled && d.breaks.map((brk, i) => (
                   <View key={i} style={s.breakRow}>
-                    <IconSymbol name="clock" size={14} color={Colors.onSurfaceVariant} />
+                    <IconSymbol name="clock" size={14} color={C.onSurfaceVariant} />
                     <Text style={s.breakLabel}>Break</Text>
                     <View style={s.timePair}>
                       <TouchableOpacity
@@ -305,7 +371,7 @@ export default function SetAvailabilityScreen() {
                       </TouchableOpacity>
                     </View>
                     <TouchableOpacity onPress={() => removeBreak(dow, i)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <IconSymbol name="xmark.circle.fill" size={18} color={Colors.onSurfaceVariant} />
+                      <IconSymbol name="xmark.circle.fill" size={18} color={C.onSurfaceVariant} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -313,7 +379,7 @@ export default function SetAvailabilityScreen() {
                 {/* Add break button */}
                 {d.enabled && (
                   <TouchableOpacity style={s.addBreakBtn} onPress={() => addBreak(dow)}>
-                    <IconSymbol name="plus" size={14} color={Colors.primary} />
+                    <IconSymbol name="plus" size={14} color={C.primary} />
                     <Text style={s.addBreakText}>Add Break</Text>
                   </TouchableOpacity>
                 )}
@@ -326,7 +392,7 @@ export default function SetAvailabilityScreen() {
             onPress={save}
             disabled={saving}>
             {saving
-              ? <ActivityIndicator color={Colors.background} size="small" />
+              ? <ActivityIndicator color={C.background} size="small" />
               : <Text style={s.saveBtnText}>Save Availability</Text>}
           </TouchableOpacity>
         </ScrollView>
@@ -362,69 +428,3 @@ export default function SetAvailabilityScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-    borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant,
-  },
-  title:    { ...Typography.titleLg, color: Colors.onSurface },
-  scroll:   { padding: Spacing.lg, gap: Spacing.sm },
-  subtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginBottom: Spacing.md },
-
-  dayCard: {
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    gap: Spacing.xs,
-  },
-  dayTop: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-  },
-  dayLabel:    { ...Typography.bodyMd, color: Colors.onSurface, flex: 1 },
-  dayLabelOff: { color: Colors.onSurfaceVariant },
-  timePair:    { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
-  timeChip: {
-    backgroundColor: Colors.surfaceContainerHighest,
-    borderRadius: Radius.md, paddingHorizontal: Spacing.sm, paddingVertical: 4,
-  },
-  timeChipText: { ...Typography.labelMd, color: Colors.primary },
-  timeDash:     { ...Typography.labelMd, color: Colors.onSurfaceVariant },
-
-  breakRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: Spacing.xs,
-    paddingLeft: 52, // align under day label
-  },
-  breakLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, flex: 1 },
-
-  addBreakBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingLeft: 52,
-    paddingVertical: Spacing.xs,
-  },
-  addBreakText: { ...Typography.labelMd, color: Colors.primary },
-
-  saveBtn: {
-    marginTop: Spacing.xl, backgroundColor: Colors.primary,
-    borderRadius: Radius.lg, paddingVertical: Spacing.md, alignItems: 'center',
-  },
-  saveBtnText: { ...Typography.titleMd, color: Colors.background },
-  overlay: { flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: Colors.surfaceContainer,
-    borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
-    padding: Spacing.lg, paddingBottom: 40,
-  },
-  sheetTitle:        { ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.md },
-  pickOption:        { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, borderRadius: Radius.md },
-  pickOptionSel:     { backgroundColor: Colors.primary + '22' },
-  pickOptionDim:     { opacity: 0.3 },
-  pickOptionText:    { ...Typography.bodyMd, color: Colors.onSurface },
-  pickOptionTextSel: { color: Colors.primary, fontWeight: '600' },
-});

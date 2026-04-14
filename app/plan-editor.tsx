@@ -16,8 +16,8 @@ import { NumericInput } from '@/components/ui/numeric-input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { styles } from '@/styles/plan-editor.styles';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/plan-editor.styles';
 import { supabase } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,6 +56,8 @@ function AddExerciseModal({
   onClose: () => void;
   onAdd: (ex: PlanExercise) => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const [phase, setPhase]       = useState<'search' | 'configure'>('search');
   const [search, setSearch]     = useState('');
   const [dbList, setDbList]     = useState<DbExercise[]>([]);
@@ -125,11 +127,11 @@ function AddExerciseModal({
             <Text style={styles.modalTitle}>Add Exercise</Text>
 
             <View style={styles.searchBarWrap}>
-              <IconSymbol name="magnifyingglass" size={16} color={Colors.onSurfaceVariant} />
+              <IconSymbol name="magnifyingglass" size={16} color={C.onSurfaceVariant} />
               <TextInput
                 style={styles.searchBarInput}
                 placeholder="Search exercises…"
-                placeholderTextColor={Colors.onSurfaceVariant}
+                placeholderTextColor={C.onSurfaceVariant}
                 value={search}
                 onChangeText={setSearch}
                 autoFocus
@@ -138,7 +140,7 @@ function AddExerciseModal({
             </View>
 
             {loading ? (
-              <ActivityIndicator color={Colors.primary} style={{ paddingVertical: 32 }} />
+              <ActivityIndicator color={C.primary} style={{ paddingVertical: 32 }} />
             ) : (
               <FlatList
                 style={styles.exerciseList}
@@ -151,7 +153,7 @@ function AddExerciseModal({
                     {item.muscle_group ? (
                       <Text style={styles.exerciseListMuscle}>{item.muscle_group}</Text>
                     ) : null}
-                    <IconSymbol name="plus" size={16} color={Colors.primary} />
+                    <IconSymbol name="plus" size={16} color={C.primary} />
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={
@@ -162,9 +164,9 @@ function AddExerciseModal({
                 ListFooterComponent={
                   trimmed.length > 0 && !exactMatch ? (
                     <TouchableOpacity style={styles.createCustomRow} onPress={createCustom}>
-                      <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
+                      <IconSymbol name="plus.circle.fill" size={20} color={C.primary} />
                       <Text style={styles.createCustomText}>Create "{trimmed}"</Text>
-                      <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+                      <IconSymbol name="chevron.right" size={14} color={C.onSurfaceVariant} />
                     </TouchableOpacity>
                   ) : null
                 }
@@ -188,7 +190,7 @@ function AddExerciseModal({
 
           <View style={styles.modalTitleRow}>
             <TouchableOpacity style={styles.modalBackBtn} onPress={() => setPhase('search')}>
-              <IconSymbol name="chevron.left" size={14} color={Colors.onSurface} />
+              <IconSymbol name="chevron.left" size={14} color={C.onSurface} />
             </TouchableOpacity>
             <Text style={styles.modalTitleInRow}>{selected?.name}</Text>
             {form.muscle ? <Text style={styles.exerciseListMuscle}>{form.muscle}</Text> : null}
@@ -201,7 +203,7 @@ function AddExerciseModal({
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="e.g. Legs"
-                  placeholderTextColor={Colors.onSurfaceVariant}
+                  placeholderTextColor={C.onSurfaceVariant}
                   value={form.muscle}
                   onChangeText={(v) => fc('muscle', v)}
                   returnKeyType="next"
@@ -232,7 +234,7 @@ function AddExerciseModal({
                 <NumericInput
                   style={styles.fieldInput}
                   placeholder="0"
-                  placeholderTextColor={Colors.onSurfaceVariant}
+                  placeholderTextColor={C.onSurfaceVariant}
                   value={form.weight}
                   onChangeText={(v) => fc('weight', v)}
                   keyboardType="decimal-pad"
@@ -282,6 +284,8 @@ function DaySection({
   onUpdateExercise: (exId: string, field: keyof PlanExercise, value: string) => void;
   onDeleteExercise: (exId: string) => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const [expandedExId, setExpandedExId] = useState<string | null>(null);
 
   return (
@@ -297,7 +301,7 @@ function DaySection({
             value={day.name}
             onChangeText={onUpdateName}
             placeholder="Day name"
-            placeholderTextColor={Colors.onSurfaceVariant}
+            placeholderTextColor={C.onSurfaceVariant}
             returnKeyType="done"
           />
           <TextInput
@@ -305,7 +309,7 @@ function DaySection({
             value={day.focus}
             onChangeText={onUpdateFocus}
             placeholder="Focus (e.g. Chest · Triceps)"
-            placeholderTextColor={Colors.outlineVariant}
+            placeholderTextColor={C.outlineVariant}
             returnKeyType="done"
           />
         </View>
@@ -313,11 +317,11 @@ function DaySection({
           <IconSymbol
             name={expanded ? 'chevron.up' : 'chevron.down'}
             size={18}
-            color={Colors.onSurfaceVariant}
+            color={C.onSurfaceVariant}
           />
         </TouchableOpacity>
         <TouchableOpacity style={styles.dayDeleteBtn} onPress={onDelete}>
-          <IconSymbol name="trash.fill" size={14} color={Colors.error} />
+          <IconSymbol name="trash.fill" size={14} color={C.error} />
         </TouchableOpacity>
       </View>
 
@@ -358,11 +362,11 @@ function DaySection({
                   <IconSymbol
                     name={expandedExId === ex.id ? 'xmark' : 'pencil'}
                     size={14}
-                    color={expandedExId === ex.id ? Colors.onSurfaceVariant : Colors.primary}
+                    color={expandedExId === ex.id ? C.onSurfaceVariant : C.primary}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.exDeleteBtn} onPress={() => onDeleteExercise(ex.id)}>
-                  <IconSymbol name="trash" size={14} color={Colors.error} />
+                  <IconSymbol name="trash" size={14} color={C.error} />
                 </TouchableOpacity>
               </View>
 
@@ -403,7 +407,7 @@ function DaySection({
           ))}
 
           <TouchableOpacity style={styles.addExerciseInDayBtn} onPress={onAddExercise}>
-            <IconSymbol name="plus.circle.fill" size={16} color={Colors.primary} />
+            <IconSymbol name="plus.circle.fill" size={16} color={C.primary} />
             <Text style={styles.addExerciseInDayText}>Add Exercise</Text>
           </TouchableOpacity>
         </View>
@@ -415,6 +419,8 @@ function DaySection({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PlanEditorScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const { planId } = useLocalSearchParams<{ planId?: string }>();
 
@@ -602,7 +608,7 @@ export default function PlanEditorScreen() {
   if (screenLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator color={Colors.primary} style={{ flex: 1 }} />
+        <ActivityIndicator color={C.primary} style={{ flex: 1 }} />
       </SafeAreaView>
     );
   }
@@ -613,18 +619,18 @@ export default function PlanEditorScreen() {
       {/* Top bar */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={20} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={20} color={C.onSurface} />
         </TouchableOpacity>
         <TextInput
           style={styles.titleInput}
           value={planName}
           onChangeText={setPlanName}
           placeholder={planId ? 'Plan name' : 'New plan name'}
-          placeholderTextColor={Colors.onSurfaceVariant}
+          placeholderTextColor={C.onSurfaceVariant}
           returnKeyType="done"
         />
         {saving ? (
-          <ActivityIndicator color={Colors.primary} style={{ width: 56 }} />
+          <ActivityIndicator color={C.primary} style={{ width: 56 }} />
         ) : (
           <TouchableOpacity style={styles.saveBtn} onPress={save}>
             <Text style={styles.saveBtnText}>Save</Text>
@@ -644,7 +650,7 @@ export default function PlanEditorScreen() {
           value={planDesc}
           onChangeText={setPlanDesc}
           placeholder="Description (optional)"
-          placeholderTextColor={Colors.onSurfaceVariant}
+          placeholderTextColor={C.onSurfaceVariant}
           multiline
           returnKeyType="done"
           blurOnSubmit
@@ -681,7 +687,7 @@ export default function PlanEditorScreen() {
 
         {/* Add day */}
         <TouchableOpacity style={styles.addDayBtn} onPress={addDay}>
-          <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
+          <IconSymbol name="plus.circle.fill" size={20} color={C.primary} />
           <Text style={styles.addDayBtnText}>Add Day</Text>
         </TouchableOpacity>
 

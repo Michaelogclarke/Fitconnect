@@ -9,7 +9,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 
 const BUCKET    = 'progress-photos';
@@ -34,6 +35,7 @@ function CameraModal({
   onClose:  () => void;
   onTaken:  (uri: string) => void;
 }) {
+  const C = useColors();
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [capturing, setCapturing] = useState(false);
@@ -60,21 +62,21 @@ function CameraModal({
   if (!permission.granted) {
     return (
       <Modal visible animationType="slide" onRequestClose={onClose}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, padding: Spacing.xl }}>
-          <IconSymbol name="camera.fill" size={48} color={Colors.onSurfaceVariant} />
-          <Text style={{ ...Typography.titleLg, color: Colors.onSurface, textAlign: 'center' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: C.background, alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, padding: Spacing.xl }}>
+          <IconSymbol name="camera.fill" size={48} color={C.onSurfaceVariant} />
+          <Text style={{ ...Typography.titleLg, color: C.onSurface, textAlign: 'center' }}>
             Camera Access Required
           </Text>
-          <Text style={{ ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' }}>
+          <Text style={{ ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' }}>
             FitConnect needs camera access to take progress photos.
           </Text>
           <TouchableOpacity
-            style={{ backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: Radius.lg }}
+            style={{ backgroundColor: C.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: Radius.lg }}
             onPress={requestPermission}>
-            <Text style={{ ...Typography.titleMd, color: Colors.background, fontWeight: '700' }}>Grant Access</Text>
+            <Text style={{ ...Typography.titleMd, color: C.background, fontWeight: '700' }}>Grant Access</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onClose}>
-            <Text style={{ ...Typography.bodyMd, color: Colors.onSurfaceVariant }}>Cancel</Text>
+            <Text style={{ ...Typography.bodyMd, color: C.onSurfaceVariant }}>Cancel</Text>
           </TouchableOpacity>
         </SafeAreaView>
       </Modal>
@@ -101,7 +103,7 @@ function CameraModal({
             style={{
               width: 72, height: 72,
               borderRadius: Radius.full,
-              backgroundColor: capturing ? Colors.onSurfaceVariant : '#fff',
+              backgroundColor: capturing ? C.onSurfaceVariant : '#fff',
               borderWidth: 4,
               borderColor: '#ffffff88',
               justifyContent: 'center',
@@ -109,7 +111,7 @@ function CameraModal({
             }}
             onPress={handleCapture}
             disabled={capturing}>
-            {capturing && <ActivityIndicator color={Colors.background} />}
+            {capturing && <ActivityIndicator color={C.background} />}
           </TouchableOpacity>
         </SafeAreaView>
       </View>
@@ -128,6 +130,7 @@ function PhotoViewer({
   onClose:  () => void;
   onDelete: () => void;
 }) {
+  const C = useColors();
   return (
     <Modal visible animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: '#000' }}>
@@ -142,7 +145,7 @@ function PhotoViewer({
           <TouchableOpacity
             style={{ width: 40, height: 40, borderRadius: Radius.full, backgroundColor: '#00000088', justifyContent: 'center', alignItems: 'center' }}
             onPress={onDelete}>
-            <IconSymbol name="trash" size={18} color={Colors.error} />
+            <IconSymbol name="trash" size={18} color={C.error} />
           </TouchableOpacity>
         </SafeAreaView>
 
@@ -159,6 +162,7 @@ function PhotoViewer({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProgressPhotosScreen() {
+  const C = useColors();
   const router = useRouter();
   const [photos,       setPhotos]       = useState<PhotoEntry[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -247,47 +251,47 @@ export default function ProgressPhotosScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.background }} edges={['top']}>
       {/* Header */}
       <View style={{
         flexDirection: 'row', alignItems: 'center',
         paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-        borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant,
+        borderBottomWidth: 1, borderBottomColor: C.outlineVariant,
         gap: Spacing.md,
       }}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={22} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={22} color={C.onSurface} />
         </TouchableOpacity>
-        <Text style={{ ...Typography.headlineMd, color: Colors.onSurface, flex: 1 }}>Progress Photos</Text>
+        <Text style={{ ...Typography.headlineMd, color: C.onSurface, flex: 1 }}>Progress Photos</Text>
         {uploading ? (
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={C.primary} />
         ) : (
           <TouchableOpacity
             style={{
-              backgroundColor: Colors.primary,
+              backgroundColor: C.primary,
               paddingHorizontal: Spacing.md,
               paddingVertical: Spacing.xs,
               borderRadius: Radius.full,
             }}
             onPress={() => setShowCamera(true)}>
-            <Text style={{ ...Typography.labelLg, color: Colors.background, fontWeight: '700' }}>+ Photo</Text>
+            <Text style={{ ...Typography.labelLg, color: C.background, fontWeight: '700' }}>+ Photo</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.xxxl }} />
+        <ActivityIndicator color={C.primary} style={{ marginTop: Spacing.xxxl }} />
       ) : photos.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.xl }}>
-          <IconSymbol name="camera.fill" size={48} color={Colors.outlineVariant} />
-          <Text style={{ ...Typography.titleLg, color: Colors.onSurfaceVariant }}>No photos yet</Text>
-          <Text style={{ ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' }}>
+          <IconSymbol name="camera.fill" size={48} color={C.outlineVariant} />
+          <Text style={{ ...Typography.titleLg, color: C.onSurfaceVariant }}>No photos yet</Text>
+          <Text style={{ ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' }}>
             Take regular photos to track your body transformation over time
           </Text>
           <TouchableOpacity
-            style={{ backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: Radius.lg, marginTop: Spacing.sm }}
+            style={{ backgroundColor: C.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: Radius.lg, marginTop: Spacing.sm }}
             onPress={() => setShowCamera(true)}>
-            <Text style={{ ...Typography.titleMd, color: Colors.background, fontWeight: '700' }}>Take First Photo</Text>
+            <Text style={{ ...Typography.titleMd, color: C.background, fontWeight: '700' }}>Take First Photo</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -302,7 +306,7 @@ export default function ProgressPhotosScreen() {
             <TouchableOpacity onPress={() => setViewingPhoto(item)} activeOpacity={0.85}>
               <Image
                 source={{ uri: item.publicUrl }}
-                style={{ width: CELL_SIZE, height: CELL_SIZE, borderRadius: Radius.md, backgroundColor: Colors.surfaceContainer }}
+                style={{ width: CELL_SIZE, height: CELL_SIZE, borderRadius: Radius.md, backgroundColor: C.surfaceContainer }}
                 contentFit="cover"
               />
             </TouchableOpacity>

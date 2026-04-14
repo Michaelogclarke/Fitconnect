@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,8 +6,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
-import { styles } from '@/styles/tabs/index.styles';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/index.styles';
 import { supabase } from '@/lib/supabase';
 import { formatSessionDate, formatDuration, formatVolume, initials } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
@@ -115,8 +116,113 @@ function getGreeting(): string {
 }
 
 export default function HomeScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const { isActive, startWorkoutFromPlan } = useWorkout();
+
+  const trainerStyles = useMemo(() => StyleSheet.create({
+    actionRow: {
+      flexDirection: 'row',
+      marginHorizontal: Spacing.lg,
+      marginTop: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    actionCard: {
+      flex: 1,
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    actionIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: Radius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionLabel: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+      textAlign: 'center',
+    },
+    flagCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.sm,
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      gap: Spacing.md,
+      borderLeftWidth: 3,
+      borderLeftColor: C.error,
+    },
+    flagAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.full,
+      backgroundColor: C.error + '22',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    flagAvatarText: {
+      ...Typography.titleMd,
+      color: C.error,
+    },
+    flagName: {
+      ...Typography.titleMd,
+      color: C.onSurface,
+    },
+    flagSub: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      marginTop: 2,
+    },
+    flagBadge: {
+      backgroundColor: C.error + '22',
+      borderRadius: Radius.full,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 3,
+    },
+    flagBadgeText: {
+      ...Typography.labelLg,
+      color: C.error,
+      fontWeight: '700',
+    },
+    modeBar: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.sm,
+      gap: Spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: C.outlineVariant,
+      backgroundColor: C.surfaceContainer,
+    },
+    modePill: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      paddingVertical: 10,
+      borderRadius: Radius.full,
+      backgroundColor: C.surfaceContainerHigh,
+    },
+    modePillActive: {
+      backgroundColor: C.primary,
+    },
+    modePillText: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+    },
+    modePillTextActive: {
+      color: C.background,
+      fontWeight: '600',
+    },
+  }), [C]);
 
   const [loading,        setLoading]        = useState(true);
   const [role,           setRole]           = useState<'client' | 'trainer' | null>(null);
@@ -510,12 +616,12 @@ export default function HomeScreen() {
           </View>
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
             <TouchableOpacity style={styles.iconBtn}>
-              <IconSymbol name="bell.fill" size={20} color={Colors.onSurface} />
+              <IconSymbol name="bell.fill" size={20} color={C.onSurface} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.iconBtn, { backgroundColor: Colors.primary }]}
+              style={[styles.iconBtn, { backgroundColor: C.primary }]}
               onPress={() => router.push('/(tabs)/profile' as any)}>
-              <Text style={{ ...Typography.labelLg, color: Colors.background }}>
+              <Text style={{ ...Typography.labelLg, color: C.background }}>
                 {initials(userName)}
               </Text>
             </TouchableOpacity>
@@ -523,7 +629,7 @@ export default function HomeScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+          <ActivityIndicator color={C.primary} style={{ marginTop: 60 }} />
         ) : role === 'trainer' && trainerMode === 'clients' ? (
           /* ── Trainer Dashboard ──────────────────────────────────────── */
           <>
@@ -544,16 +650,16 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={trainerStyles.actionCard}
                 onPress={() => router.push('/(tabs)/clients' as any)}>
-                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.primary + '22' }]}>
-                  <IconSymbol name="person.2.fill" size={20} color={Colors.primary} />
+                <View style={[trainerStyles.actionIcon, { backgroundColor: C.primary + '22' }]}>
+                  <IconSymbol name="person.2.fill" size={20} color={C.primary} />
                 </View>
                 <Text style={trainerStyles.actionLabel}>All Clients</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={trainerStyles.actionCard}
                 onPress={() => router.push('/(tabs)/chat' as any)}>
-                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.success + '22' }]}>
-                  <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color={Colors.success} />
+                <View style={[trainerStyles.actionIcon, { backgroundColor: C.success + '22' }]}>
+                  <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color={C.success} />
                 </View>
                 <Text style={trainerStyles.actionLabel}>Messages</Text>
               </TouchableOpacity>
@@ -564,16 +670,16 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={trainerStyles.actionCard}
                 onPress={() => router.push('/set-availability' as any)}>
-                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.primaryDim + '22' }]}>
-                  <IconSymbol name="calendar.badge.plus" size={20} color={Colors.primaryDim} />
+                <View style={[trainerStyles.actionIcon, { backgroundColor: C.primaryDim + '22' }]}>
+                  <IconSymbol name="calendar.badge.plus" size={20} color={C.primaryDim} />
                 </View>
                 <Text style={trainerStyles.actionLabel}>Availability</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={trainerStyles.actionCard}
                 onPress={() => router.push('/bookings' as any)}>
-                <View style={[trainerStyles.actionIcon, { backgroundColor: Colors.secondary + '22' }]}>
-                  <IconSymbol name="calendar.badge.checkmark" size={20} color={Colors.secondary} />
+                <View style={[trainerStyles.actionIcon, { backgroundColor: C.secondary + '22' }]}>
+                  <IconSymbol name="calendar.badge.checkmark" size={20} color={C.secondary} />
                 </View>
                 <Text style={trainerStyles.actionLabel}>Bookings</Text>
               </TouchableOpacity>
@@ -615,7 +721,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionLabel}>Recent Client Activity</Text>
             {(trainerData?.recentActivity ?? []).length === 0 ? (
               <View style={styles.emptyCard}>
-                <IconSymbol name="dumbbell.fill" size={28} color={Colors.outlineVariant} />
+                <IconSymbol name="dumbbell.fill" size={28} color={C.outlineVariant} />
                 <Text style={styles.emptyText}>No activity yet</Text>
                 <Text style={styles.emptySub}>Client sessions will appear here once they start training</Text>
               </View>
@@ -623,7 +729,7 @@ export default function HomeScreen() {
               (trainerData?.recentActivity ?? []).map((a, i) => (
                 <View key={i} style={styles.recentCard}>
                   <View style={styles.recentIconBox}>
-                    <Text style={{ ...Typography.labelLg, color: Colors.primary }}>{initials(a.clientName)}</Text>
+                    <Text style={{ ...Typography.labelLg, color: C.primary }}>{initials(a.clientName)}</Text>
                   </View>
                   <View style={styles.recentInfo}>
                     <Text style={styles.recentName}>{a.sessionName}</Text>
@@ -636,14 +742,14 @@ export default function HomeScreen() {
             )}
           </>
         ) : role === 'trainer' && trainerMode === 'own' && ownLoading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+          <ActivityIndicator color={C.primary} style={{ marginTop: 60 }} />
         ) : (
           <>
             {/* Streak banner */}
             {currentStreak > 0 && (
               <View style={styles.streakCard}>
                 <View style={styles.streakLeft}>
-                  <IconSymbol name="flame.fill" size={28} color={Colors.primary} />
+                  <IconSymbol name="flame.fill" size={28} color={C.primary} />
                 </View>
                 <View style={styles.streakMid}>
                   <Text style={styles.streakTitle}>
@@ -663,13 +769,13 @@ export default function HomeScreen() {
             <Text style={styles.sectionLabel}>Quick Start</Text>
             <TouchableOpacity style={styles.quickStartCard} onPress={() => router.push('/start-workout')}>
               <View style={styles.quickStartLeft}>
-                <IconSymbol name="play.fill" size={20} color={Colors.background} />
+                <IconSymbol name="play.fill" size={20} color={C.background} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.quickStartTitle}>Start Empty Workout</Text>
                 <Text style={styles.quickStartSub}>Add exercises as you go</Text>
               </View>
-              <IconSymbol name="chevron.right" size={18} color={Colors.primary} />
+              <IconSymbol name="chevron.right" size={18} color={C.primary} />
             </TouchableOpacity>
 
             {/* Book a session — only for clients with an active trainer */}
@@ -678,14 +784,14 @@ export default function HomeScreen() {
                 style={styles.quickStartCard}
                 onPress={() => router.push('/book-session' as any)}
                 activeOpacity={0.8}>
-                <View style={[styles.quickStartLeft, { backgroundColor: Colors.tertiary }]}>
-                  <IconSymbol name="calendar.badge.plus" size={20} color={Colors.background} />
+                <View style={[styles.quickStartLeft, { backgroundColor: C.tertiary }]}>
+                  <IconSymbol name="calendar.badge.plus" size={20} color={C.background} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.quickStartTitle}>Book a Session</Text>
                   <Text style={styles.quickStartSub}>Schedule time with your trainer</Text>
                 </View>
-                <IconSymbol name="chevron.right" size={18} color={Colors.tertiary} />
+                <IconSymbol name="chevron.right" size={18} color={C.tertiary} />
               </TouchableOpacity>
             )}
 
@@ -712,7 +818,7 @@ export default function HomeScreen() {
               delayLongPress={400}
               activeOpacity={0.8}>
               <View style={styles.weeklyGoalHeader}>
-                <IconSymbol name="trophy.fill" size={16} color={Colors.primary} />
+                <IconSymbol name="trophy.fill" size={16} color={C.primary} />
                 <Text style={styles.weeklyGoalTitle}>Weekly Goal</Text>
                 <Text style={styles.weeklyGoalTapHint}>Hold to change · {weeklyGoal}×/week</Text>
               </View>
@@ -740,7 +846,7 @@ export default function HomeScreen() {
 
             {recentSessions.length === 0 ? (
               <View style={styles.emptyCard}>
-                <IconSymbol name="dumbbell.fill" size={28} color={Colors.outlineVariant} />
+                <IconSymbol name="dumbbell.fill" size={28} color={C.outlineVariant} />
                 <Text style={styles.emptyText}>No sessions yet</Text>
                 <Text style={styles.emptySub}>Complete your first workout to see it here</Text>
               </View>
@@ -752,7 +858,7 @@ export default function HomeScreen() {
                   onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: s.id } })}
                   activeOpacity={0.8}>
                   <View style={styles.recentIconBox}>
-                    <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
+                    <IconSymbol name="dumbbell.fill" size={18} color={C.primary} />
                   </View>
                   <View style={styles.recentInfo}>
                     <Text style={styles.recentName}>{s.name}</Text>
@@ -769,7 +875,7 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       style={styles.recentDoAgainBtn}
                       onPress={() => doAgain(s.id)}>
-                      <IconSymbol name="play.fill" size={10} color={Colors.primary} />
+                      <IconSymbol name="play.fill" size={10} color={C.primary} />
                       <Text style={styles.recentDoAgainText}>Do Again</Text>
                     </TouchableOpacity>
                   </View>
@@ -788,7 +894,7 @@ export default function HomeScreen() {
             style={[trainerStyles.modePill, trainerMode === 'clients' && trainerStyles.modePillActive]}
             onPress={() => setTrainerMode('clients')}
             activeOpacity={0.8}>
-            <IconSymbol name="person.2.fill" size={13} color={trainerMode === 'clients' ? Colors.background : Colors.onSurfaceVariant} />
+            <IconSymbol name="person.2.fill" size={13} color={trainerMode === 'clients' ? C.background : C.onSurfaceVariant} />
             <Text style={[trainerStyles.modePillText, trainerMode === 'clients' && trainerStyles.modePillTextActive]}>
               Client Work
             </Text>
@@ -797,7 +903,7 @@ export default function HomeScreen() {
             style={[trainerStyles.modePill, trainerMode === 'own' && trainerStyles.modePillActive]}
             onPress={() => setTrainerMode('own')}
             activeOpacity={0.8}>
-            <IconSymbol name="dumbbell.fill" size={13} color={trainerMode === 'own' ? Colors.background : Colors.onSurfaceVariant} />
+            <IconSymbol name="dumbbell.fill" size={13} color={trainerMode === 'own' ? C.background : C.onSurfaceVariant} />
             <Text style={[trainerStyles.modePillText, trainerMode === 'own' && trainerStyles.modePillTextActive]}>
               My Training
             </Text>
@@ -834,105 +940,3 @@ export default function HomeScreen() {
   );
 }
 
-const trainerStyles = StyleSheet.create({
-  actionRow: {
-    flexDirection: 'row',
-    marginHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  actionCard: {
-    flex: 1,
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  actionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-    textAlign: 'center',
-  },
-  flagCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    gap: Spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.error,
-  },
-  flagAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.error + '22',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  flagAvatarText: {
-    ...Typography.titleMd,
-    color: Colors.error,
-  },
-  flagName: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-  },
-  flagSub: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    marginTop: 2,
-  },
-  flagBadge: {
-    backgroundColor: Colors.error + '22',
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-  },
-  flagBadgeText: {
-    ...Typography.labelLg,
-    color: Colors.error,
-    fontWeight: '700',
-  },
-  modeBar: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    gap: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.outlineVariant,
-    backgroundColor: Colors.surfaceContainer,
-  },
-  modePill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.xs,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainerHigh,
-  },
-  modePillActive: {
-    backgroundColor: Colors.primary,
-  },
-  modePillText: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-  },
-  modePillTextActive: {
-    color: Colors.background,
-    fontWeight: '600',
-  },
-});

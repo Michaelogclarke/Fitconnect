@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -15,7 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { sendPushNotification } from '@/lib/notifications';
 
@@ -61,7 +62,74 @@ function slotDisplayLabel(date: Date, hour: number): string {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function BookSessionScreen() {
+  const C = useColors();
   const router = useRouter();
+
+  const s = useMemo(() => StyleSheet.create({
+    container:       { flex: 1, backgroundColor: C.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+      borderBottomWidth: 1, borderBottomColor: C.outlineVariant,
+    },
+    title:          { ...Typography.titleLg, color: C.onSurface },
+    trainerLabel: {
+      ...Typography.bodyMd, color: C.onSurfaceVariant,
+      paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
+    },
+    dateStrip:      { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.sm },
+    dateChip: {
+      alignItems: 'center', backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+      minWidth: 52,
+    },
+    dateChipSel:    { backgroundColor: C.primary },
+    dateChipOff:    { opacity: 0.3 },
+    dateChipDay:    { ...Typography.labelMd, color: C.onSurfaceVariant },
+    dateChipNum:    { ...Typography.titleMd, color: C.onSurface },
+    dateChipMon:    { ...Typography.labelMd, color: C.onSurfaceVariant },
+    dateChipTextSel:{ color: C.background },
+    slotList:       { padding: Spacing.lg, gap: Spacing.sm },
+    slotCard: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: C.surfaceContainer, borderRadius: Radius.lg,
+      paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
+      borderWidth: 1, borderColor: C.outlineVariant,
+    },
+    slotCardTaken:  { borderColor: 'transparent', opacity: 0.45 },
+    slotLeft:       { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+    slotTime:       { ...Typography.bodyMd, color: C.onSurface },
+    slotDur:        { ...Typography.labelMd, color: C.onSurfaceVariant },
+    slotMuted:      { color: C.onSurfaceVariant },
+    slotCta:        { ...Typography.labelLg, color: C.primary },
+    slotBooked:     { ...Typography.labelMd, color: C.outlineVariant },
+    empty:          { paddingTop: 60, alignItems: 'center' },
+    emptyText:      { ...Typography.bodyMd, color: C.onSurfaceVariant },
+    noTrainer: {
+      flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md,
+      paddingHorizontal: Spacing.xl,
+    },
+    noTrainerText:  { ...Typography.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
+    overlay:        { flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: C.surfaceContainer,
+      borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
+      padding: Spacing.lg, paddingBottom: 40, gap: Spacing.md,
+    },
+    sheetTitle:     { ...Typography.titleLg, color: C.onSurface },
+    sheetSub:       { ...Typography.bodyMd, color: C.onSurfaceVariant },
+    notesInput: {
+      backgroundColor: C.surfaceContainerHighest,
+      borderRadius: Radius.lg, borderWidth: 1, borderColor: C.outlineVariant,
+      paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+      ...Typography.bodyMd, color: C.onSurface, minHeight: 80, textAlignVertical: 'top',
+    },
+    confirmBtn: {
+      backgroundColor: C.primary, borderRadius: Radius.lg,
+      paddingVertical: Spacing.md, alignItems: 'center',
+    },
+    confirmBtnText: { ...Typography.titleMd, color: C.background },
+  }), [C]);
 
   const [loading,          setLoading]          = useState(true);
   const [userId,           setUserId]           = useState<string | null>(null);
@@ -194,22 +262,22 @@ export default function BookSessionScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={24} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={24} color={C.onSurface} />
         </TouchableOpacity>
         <Text style={s.title}>Book a Session</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {loading ? (
-        <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={C.primary} style={{ marginTop: 40 }} />
       ) : !trainerId ? (
         <View style={s.noTrainer}>
-          <IconSymbol name="person.fill" size={32} color={Colors.outlineVariant} />
+          <IconSymbol name="person.fill" size={32} color={C.outlineVariant} />
           <Text style={s.noTrainerText}>You don't have an active trainer yet.</Text>
         </View>
       ) : avail.length === 0 ? (
         <View style={s.noTrainer}>
-          <IconSymbol name="calendar" size={32} color={Colors.outlineVariant} />
+          <IconSymbol name="calendar" size={32} color={C.outlineVariant} />
           <Text style={s.noTrainerText}>Your trainer hasn't set their availability yet.</Text>
         </View>
       ) : (
@@ -268,7 +336,7 @@ export default function BookSessionScreen() {
                     <IconSymbol
                       name="clock.fill"
                       size={16}
-                      color={available ? Colors.primary : Colors.outlineVariant}
+                      color={available ? C.primary : C.outlineVariant}
                     />
                     <View>
                       <Text style={[s.slotTime, !available && s.slotMuted]}>
@@ -298,7 +366,7 @@ export default function BookSessionScreen() {
             <TextInput
               style={s.notesInput}
               placeholder="Add a note for your trainer (optional)"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               value={notes}
               onChangeText={setNotes}
               multiline
@@ -309,7 +377,7 @@ export default function BookSessionScreen() {
               onPress={requestBooking}
               disabled={submitting}>
               {submitting
-                ? <ActivityIndicator color={Colors.background} size="small" />
+                ? <ActivityIndicator color={C.background} size="small" />
                 : <Text style={s.confirmBtnText}>Request Booking</Text>}
             </TouchableOpacity>
           </Pressable>
@@ -318,71 +386,3 @@ export default function BookSessionScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const s = StyleSheet.create({
-  container:       { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-    borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant,
-  },
-  title:          { ...Typography.titleLg, color: Colors.onSurface },
-  trainerLabel: {
-    ...Typography.bodyMd, color: Colors.onSurfaceVariant,
-    paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
-  },
-  dateStrip:      { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.sm },
-  dateChip: {
-    alignItems: 'center', backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.lg, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    minWidth: 52,
-  },
-  dateChipSel:    { backgroundColor: Colors.primary },
-  dateChipOff:    { opacity: 0.3 },
-  dateChipDay:    { ...Typography.labelMd, color: Colors.onSurfaceVariant },
-  dateChipNum:    { ...Typography.titleMd, color: Colors.onSurface },
-  dateChipMon:    { ...Typography.labelMd, color: Colors.onSurfaceVariant },
-  dateChipTextSel:{ color: Colors.background },
-  slotList:       { padding: Spacing.lg, gap: Spacing.sm },
-  slotCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceContainer, borderRadius: Radius.lg,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
-    borderWidth: 1, borderColor: Colors.outlineVariant,
-  },
-  slotCardTaken:  { borderColor: 'transparent', opacity: 0.45 },
-  slotLeft:       { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  slotTime:       { ...Typography.bodyMd, color: Colors.onSurface },
-  slotDur:        { ...Typography.labelMd, color: Colors.onSurfaceVariant },
-  slotMuted:      { color: Colors.onSurfaceVariant },
-  slotCta:        { ...Typography.labelLg, color: Colors.primary },
-  slotBooked:     { ...Typography.labelMd, color: Colors.outlineVariant },
-  empty:          { paddingTop: 60, alignItems: 'center' },
-  emptyText:      { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  noTrainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-  },
-  noTrainerText:  { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' },
-  overlay:        { flex: 1, backgroundColor: '#00000088', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: Colors.surfaceContainer,
-    borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
-    padding: Spacing.lg, paddingBottom: 40, gap: Spacing.md,
-  },
-  sheetTitle:     { ...Typography.titleLg, color: Colors.onSurface },
-  sheetSub:       { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  notesInput: {
-    backgroundColor: Colors.surfaceContainerHighest,
-    borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    ...Typography.bodyMd, color: Colors.onSurface, minHeight: 80, textAlignVertical: 'top',
-  },
-  confirmBtn: {
-    backgroundColor: Colors.primary, borderRadius: Radius.lg,
-    paddingVertical: Spacing.md, alignItems: 'center',
-  },
-  confirmBtnText: { ...Typography.titleMd, color: Colors.background },
-});

@@ -12,15 +12,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { Linking } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { styles } from '@/styles/auth.styles';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { useStyles } from '@/styles/auth.styles';
+import { Spacing, Radius, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
 type Role = 'client' | 'trainer';
 
 export default function SignUpScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
+  const roleStyles = makeRoleStyles(C);
   const [fullName, setFullName] = useState('');
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -97,7 +100,7 @@ export default function SignUpScreen() {
               value={fullName}
               onChangeText={setFullName}
               placeholder="Alex Clarke"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               autoCapitalize="words"
               returnKeyType="next"
             />
@@ -138,7 +141,7 @@ export default function SignUpScreen() {
               value={email}
               onChangeText={setEmail}
               placeholder="you@example.com"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               autoCapitalize="none"
               keyboardType="email-address"
               returnKeyType="next"
@@ -153,7 +156,7 @@ export default function SignUpScreen() {
               value={password}
               onChangeText={setPassword}
               placeholder="Min. 6 characters"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               secureTextEntry
               returnKeyType="done"
               onSubmitEditing={handleSignUp}
@@ -168,17 +171,17 @@ export default function SignUpScreen() {
             onPress={handleSignUp}
             disabled={!fullName || !email || !password || loading}>
             {loading
-              ? <ActivityIndicator color={Colors.background} />
+              ? <ActivityIndicator color={C.background} />
               : <Text style={styles.primaryBtnText}>Create Account</Text>}
           </TouchableOpacity>
         </View>
 
         {/* Legal */}
-        <Text style={{ textAlign: 'center', color: Colors.onSurfaceVariant, fontSize: 12, marginBottom: Spacing.md, lineHeight: 18 }}>
+        <Text style={{ textAlign: 'center', color: C.onSurfaceVariant, fontSize: 12, marginBottom: Spacing.md, lineHeight: 18 }}>
           By creating an account you agree to our{' '}
-          <Text style={{ color: Colors.primary }} onPress={() => router.push('/terms' as any)}>Terms of Service</Text>
+          <Text style={{ color: C.primary }} onPress={() => router.push('/terms' as any)}>Terms of Service</Text>
           {' '}and{' '}
-          <Text style={{ color: Colors.primary }} onPress={() => router.push('/privacy-policy' as any)}>Privacy Policy</Text>
+          <Text style={{ color: C.primary }} onPress={() => router.push('/privacy-policy' as any)}>Privacy Policy</Text>
         </Text>
 
         {/* Switch to sign in */}
@@ -194,39 +197,41 @@ export default function SignUpScreen() {
   );
 }
 
-const roleStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  option: {
-    flex: 1,
-    borderRadius: Radius.md,
-    borderWidth: 1.5,
-    borderColor: Colors.outlineVariant,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    alignItems: 'center',
-  },
-  optionSelected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primary + '14',
-  },
-  optionText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
-  },
-  optionTextSelected: {
-    color: Colors.primary,
-  },
-  optionSub: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-    marginTop: 2,
-    opacity: 0.7,
-  },
-  optionSubSelected: {
-    color: Colors.primary,
-    opacity: 0.8,
-  },
-});
+function makeRoleStyles(C: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      gap: Spacing.sm,
+    },
+    option: {
+      flex: 1,
+      borderRadius: Radius.md,
+      borderWidth: 1.5,
+      borderColor: C.outlineVariant,
+      paddingVertical: Spacing.md,
+      paddingHorizontal: Spacing.sm,
+      alignItems: 'center',
+    },
+    optionSelected: {
+      borderColor: C.primary,
+      backgroundColor: C.primary + '14',
+    },
+    optionText: {
+      ...Typography.titleMd,
+      color: C.onSurfaceVariant,
+    },
+    optionTextSelected: {
+      color: C.primary,
+    },
+    optionSub: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+      marginTop: 2,
+      opacity: 0.7,
+    },
+    optionSubSelected: {
+      color: C.primary,
+      opacity: 0.8,
+    },
+  });
+}

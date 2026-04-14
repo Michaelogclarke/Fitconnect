@@ -4,14 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
 const LAST_UPDATED = '13 April 2026';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const C = useColors();
   return (
     <View style={{ marginBottom: Spacing.xl }}>
-      <Text style={{ ...Typography.titleLg, color: Colors.onSurface, marginBottom: Spacing.sm }}>
+      <Text style={{ ...Typography.titleLg, color: C.onSurface, marginBottom: Spacing.sm }}>
         {title}
       </Text>
       {children}
@@ -20,36 +22,38 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Body({ children }: { children: string }) {
+  const C = useColors();
   return (
-    <Text style={{ ...Typography.bodyMd, color: Colors.onSurfaceVariant, lineHeight: 22 }}>
+    <Text style={{ ...Typography.bodyMd, color: C.onSurfaceVariant, lineHeight: 22 }}>
       {children}
     </Text>
   );
 }
 
 export default function TermsScreen() {
+  const C = useColors();
   const router = useRouter();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.background }} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={{
         flexDirection: 'row', alignItems: 'center',
         paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
-        borderBottomWidth: 1, borderBottomColor: Colors.outlineVariant,
+        borderBottomWidth: 1, borderBottomColor: C.outlineVariant,
         gap: Spacing.md,
       }}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={22} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={22} color={C.onSurface} />
         </TouchableOpacity>
-        <Text style={{ ...Typography.headlineMd, color: Colors.onSurface }}>Terms of Service</Text>
+        <Text style={{ ...Typography.headlineMd, color: C.onSurface }}>Terms of Service</Text>
       </View>
 
       <ScrollView
         contentContainerStyle={{ padding: Spacing.lg }}
         showsVerticalScrollIndicator={false}>
 
-        <Text style={{ ...Typography.labelLg, color: Colors.onSurfaceVariant, marginBottom: Spacing.xl }}>
+        <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant, marginBottom: Spacing.xl }}>
           Last updated: {LAST_UPDATED}
         </Text>
 

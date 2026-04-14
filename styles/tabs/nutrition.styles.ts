@@ -1,8 +1,12 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
-export const styles = StyleSheet.create({
-  container:     { flex: 1, backgroundColor: Colors.background },
+export function useStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
+  container:     { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: 120 },
 
   // ── Header ─────────────────────────────────────────────────────────────────
@@ -14,11 +18,11 @@ export const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  headerTitle: { ...Typography.headlineLg, color: Colors.onSurface },
+  headerTitle: { ...Typography.headlineLg, color: C.onSurface },
   headerRight:  { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   goalsBtn: {
     width: 36, height: 36, borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     justifyContent: 'center', alignItems: 'center',
   },
 
@@ -32,15 +36,15 @@ export const styles = StyleSheet.create({
   },
   dateBtn: {
     width: 32, height: 32, borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  dateText: { ...Typography.titleMd, color: Colors.onSurface, minWidth: 80, textAlign: 'center' },
+  dateText: { ...Typography.titleMd, color: C.onSurface, minWidth: 80, textAlign: 'center' },
 
   // ── Summary card ───────────────────────────────────────────────────────────
   summaryCard: {
     marginHorizontal: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     marginBottom: Spacing.sm,
@@ -51,19 +55,19 @@ export const styles = StyleSheet.create({
     gap: Spacing.xs,
     marginBottom: Spacing.md,
   },
-  calorieNum:    { ...Typography.displayMd, color: Colors.onSurface },
-  calorieSep:    { ...Typography.titleMd, color: Colors.onSurfaceVariant },
-  calorieGoal:   { ...Typography.titleMd, color: Colors.onSurfaceVariant },
-  calorieLabel:  { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginLeft: 4 },
+  calorieNum:    { ...Typography.displayMd, color: C.onSurface },
+  calorieSep:    { ...Typography.titleMd, color: C.onSurfaceVariant },
+  calorieGoal:   { ...Typography.titleMd, color: C.onSurfaceVariant },
+  calorieLabel:  { ...Typography.labelLg, color: C.onSurfaceVariant, marginLeft: 4 },
   calorieBar: {
     height: 6, borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     overflow: 'hidden',
     marginBottom: Spacing.lg,
   },
   calorieBarFill: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: Radius.full,
   },
   calorieRemaining: {
@@ -77,10 +81,10 @@ export const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   macroItem:  { flex: 1 },
-  macroLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginBottom: 4 },
+  macroLabel: { ...Typography.labelMd, color: C.onSurfaceVariant, marginBottom: 4 },
   macroBar: {
     height: 6, borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     overflow: 'hidden',
     marginBottom: 4,
   },
@@ -88,8 +92,8 @@ export const styles = StyleSheet.create({
     height: '100%',
     borderRadius: Radius.full,
   },
-  macroValue: { ...Typography.labelLg, color: Colors.onSurface },
-  macroGoal:  { ...Typography.labelMd, color: Colors.onSurfaceVariant },
+  macroValue: { ...Typography.labelLg, color: C.onSurface },
+  macroGoal:  { ...Typography.labelMd, color: C.onSurfaceVariant },
 
   // ── Meal section ───────────────────────────────────────────────────────────
   mealSection:   { marginHorizontal: Spacing.lg, marginTop: Spacing.lg },
@@ -101,22 +105,22 @@ export const styles = StyleSheet.create({
   },
   mealLabel: {
     ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  mealCals: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  mealCals: { ...Typography.labelLg, color: C.onSurfaceVariant },
   mealEmpty: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
   },
-  mealEmptyText: { ...Typography.labelLg, color: Colors.outlineVariant },
+  mealEmptyText: { ...Typography.labelLg, color: C.outlineVariant },
 
   // ── Food row ───────────────────────────────────────────────────────────────
   foodRowContainer: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.md,
     marginBottom: 4,
     overflow: 'hidden',
@@ -127,10 +131,10 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
     gap: Spacing.md,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
   },
   foodInfo:    { flex: 1 },
-  foodName:    { ...Typography.titleMd, color: Colors.onSurface },
+  foodName:    { ...Typography.titleMd, color: C.onSurface },
   foodMacroRow: {
     flexDirection: 'row',
     gap: 6,
@@ -138,15 +142,15 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   foodMacroPill: {
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.sm,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   foodMacroText: { ...Typography.labelMd, fontWeight: '600' as const },
-  foodCals:    { ...Typography.titleMd, color: Colors.primary },
+  foodCals:    { ...Typography.titleMd, color: C.primary },
   deleteAction: {
-    backgroundColor: Colors.error,
+    backgroundColor: C.error,
     justifyContent: 'center',
     alignItems: 'center',
     width: 76,
@@ -160,11 +164,11 @@ export const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-    shadowColor: Colors.primary,
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -177,39 +181,39 @@ export const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     padding: Spacing.xl,
     paddingBottom: Spacing.xxxl,
     gap: Spacing.md,
   },
-  modalTitle:    { ...Typography.headlineMd, color: Colors.onSurface },
-  modalSubtitle: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-  modalError:    { ...Typography.labelLg, color: Colors.error },
+  modalTitle:    { ...Typography.headlineMd, color: C.onSurface },
+  modalSubtitle: { ...Typography.bodyMd, color: C.onSurfaceVariant },
+  modalError:    { ...Typography.labelLg, color: C.error },
 
   // ── Method picker (phase 1) ────────────────────────────────────────────────
   methodBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: C.surfaceContainerHigh,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
   methodBtnIcon: {
     width: 44, height: 44, borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center', alignItems: 'center',
   },
-  methodBtnTitle: { ...Typography.titleMd, color: Colors.onSurface },
-  methodBtnSub:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  methodBtnTitle: { ...Typography.titleMd, color: C.onSurface },
+  methodBtnSub:   { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Add food form (phase 2) ────────────────────────────────────────────────
   formCard: {
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: C.surfaceContainerHigh,
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
@@ -221,19 +225,19 @@ export const styles = StyleSheet.create({
     gap: Spacing.md,
     minHeight: 50,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
   },
   fieldRowLast: {
     borderBottomWidth: 0,
   },
-  fieldLabel: { ...Typography.titleMd, color: Colors.onSurface, width: 80 },
+  fieldLabel: { ...Typography.titleMd, color: C.onSurface, width: 80 },
   fieldInput: {
     flex: 1,
     ...Typography.titleMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
     textAlign: 'right',
   },
-  fieldUnit:  { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  fieldUnit:  { ...Typography.labelLg, color: C.onSurfaceVariant },
 
   // ── Meal type pills ────────────────────────────────────────────────────────
   mealPills: {
@@ -245,31 +249,31 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 6,
     borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: C.surfaceContainerHigh,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
   mealPillActive: {
-    backgroundColor: Colors.primary + '22',
-    borderColor: Colors.primary + '66',
+    backgroundColor: C.primary + '22',
+    borderColor: C.primary + '66',
   },
-  mealPillText:       { ...Typography.labelLg, color: Colors.onSurfaceVariant },
-  mealPillTextActive: { color: Colors.primary },
+  mealPillText:       { ...Typography.labelLg, color: C.onSurfaceVariant },
+  mealPillTextActive: { color: C.primary },
 
   // ── Modal action buttons ───────────────────────────────────────────────────
   modalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
   modalCancelBtn: {
     flex: 1, paddingVertical: Spacing.md,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.md, alignItems: 'center',
   },
-  modalCancelText: { ...Typography.titleMd, color: Colors.onSurfaceVariant },
+  modalCancelText: { ...Typography.titleMd, color: C.onSurfaceVariant },
   modalSaveBtn: {
     flex: 2, paddingVertical: Spacing.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: Radius.md, alignItems: 'center',
   },
-  modalSaveText: { ...Typography.titleMd, color: Colors.background },
+  modalSaveText: { ...Typography.titleMd, color: C.background },
 
   // ── Barcode scanner ────────────────────────────────────────────────────────
   scannerContainer: { flex: 1, backgroundColor: '#000' },
@@ -291,7 +295,7 @@ export const styles = StyleSheet.create({
   scannerCorner: {
     position: 'absolute',
     width: 28, height: 28,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
     borderWidth: 3,
   },
   scannerStatus: {
@@ -305,7 +309,7 @@ export const styles = StyleSheet.create({
   scannerStatusText: { ...Typography.titleMd, color: '#fff', textAlign: 'center' },
   scannerStatusSub:  { ...Typography.labelLg, color: 'rgba(255,255,255,0.65)', marginTop: 4 },
   scannerNotFound: {
-    backgroundColor: Colors.error + 'dd',
+    backgroundColor: C.error + 'dd',
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
@@ -319,18 +323,18 @@ export const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     gap: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
     minHeight: 50,
   },
   goalsRowLast: { borderBottomWidth: 0 },
-  goalsLabel:   { ...Typography.titleMd, color: Colors.onSurface, flex: 1 },
+  goalsLabel:   { ...Typography.titleMd, color: C.onSurface, flex: 1 },
   goalsInput: {
     ...Typography.titleMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
     textAlign: 'right',
     width: 80,
   },
-  goalsUnit: { ...Typography.labelLg, color: Colors.onSurfaceVariant, width: 24 },
+  goalsUnit: { ...Typography.labelLg, color: C.onSurfaceVariant, width: 24 },
 
   // ── Pick tabs (Recent / Saved) ─────────────────────────────────────────────
   pickTabRow: {
@@ -344,18 +348,18 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: C.surfaceContainerHigh,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
   pickTabActive: {
-    backgroundColor: Colors.primary + '22',
-    borderColor: Colors.primary,
+    backgroundColor: C.primary + '22',
+    borderColor: C.primary,
   },
-  pickTabText: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
-  pickTabTextActive: { color: Colors.primary },
+  pickTabText: { ...Typography.labelLg, color: C.onSurfaceVariant },
+  pickTabTextActive: { color: C.primary },
   pickTabBadge: {
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: Radius.full,
     minWidth: 16,
     height: 16,
@@ -363,7 +367,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
   },
-  pickTabBadgeText: { ...Typography.labelMd, color: Colors.background, fontSize: 10 },
+  pickTabBadgeText: { ...Typography.labelMd, color: C.background, fontSize: 10 },
 
   // ── Fixed-height results container ────────────────────────────────────────
   pickResultsArea: {
@@ -382,24 +386,24 @@ export const styles = StyleSheet.create({
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: C.surfaceContainerHigh,
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     gap: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
   searchBarInput: {
     flex: 1,
     ...Typography.titleMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
 
   // ── Quick-pick list (recent + search results) ──────────────────────────────
   listSectionLabel: {
     ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: Spacing.xs,
@@ -407,7 +411,7 @@ export const styles = StyleSheet.create({
   quickPickItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: C.surfaceContainerHigh,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
@@ -415,7 +419,8 @@ export const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   quickPickInfo: { flex: 1 },
-  quickPickName: { ...Typography.titleMd, color: Colors.onSurface },
-  quickPickMeta: { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
-  quickPickCals: { ...Typography.labelLg, color: Colors.primary },
-});
+  quickPickName: { ...Typography.titleMd, color: C.onSurface },
+  quickPickMeta: { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
+  quickPickCals: { ...Typography.labelLg, color: C.primary },
+}), [C]);
+}

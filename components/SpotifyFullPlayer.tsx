@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { useSpotify } from '@/contexts/SpotifyContext';
 import { SpotifyPlaylist, SpotifyTrack } from '@/lib/spotify';
 
@@ -41,6 +42,7 @@ function PlaylistRow({
   item: SpotifyPlaylist;
   onPress: () => void;
 }) {
+  const C = useColors();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -56,21 +58,21 @@ function PlaylistRow({
       ) : (
         <View style={{
           width: 48, height: 48, borderRadius: Radius.sm,
-          backgroundColor: Colors.surfaceContainerHighest,
+          backgroundColor: C.surfaceContainerHighest,
           alignItems: 'center', justifyContent: 'center',
         }}>
-          <IconSymbol name="music.note.list" size={20} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="music.note.list" size={20} color={C.onSurfaceVariant} />
         </View>
       )}
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ ...Typography.titleMd, color: Colors.onSurface }}>
+        <Text numberOfLines={1} style={{ ...Typography.titleMd, color: C.onSurface }}>
           {item.name}
         </Text>
-        <Text style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }}>
+        <Text style={{ ...Typography.labelMd, color: C.onSurfaceVariant }}>
           {item.trackCount} tracks
         </Text>
       </View>
-      <IconSymbol name="play.fill" size={14} color={Colors.onSurfaceVariant} />
+      <IconSymbol name="play.fill" size={14} color={C.onSurfaceVariant} />
     </TouchableOpacity>
   );
 }
@@ -84,6 +86,7 @@ function TrackRow({
   onPress:   () => void;
   isPlaying: boolean;
 }) {
+  const C = useColors();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -99,17 +102,17 @@ function TrackRow({
       ) : (
         <View style={{
           width: 48, height: 48, borderRadius: Radius.sm,
-          backgroundColor: Colors.surfaceContainerHighest,
+          backgroundColor: C.surfaceContainerHighest,
           alignItems: 'center', justifyContent: 'center',
         }}>
-          <IconSymbol name="music.note" size={20} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="music.note" size={20} color={C.onSurfaceVariant} />
         </View>
       )}
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ ...Typography.titleMd, color: isPlaying ? '#1DB954' : Colors.onSurface }}>
+        <Text numberOfLines={1} style={{ ...Typography.titleMd, color: isPlaying ? '#1DB954' : C.onSurface }}>
           {item.name}
         </Text>
-        <Text numberOfLines={1} style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }}>
+        <Text numberOfLines={1} style={{ ...Typography.labelMd, color: C.onSurfaceVariant }}>
           {item.artist}
         </Text>
       </View>
@@ -123,6 +126,7 @@ function TrackRow({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function SpotifyFullPlayer({ visible, onClose }: Props) {
+  const C = useColors();
   const {
     playerState,
     play, pause, skipNext, skipPrevious,
@@ -209,7 +213,7 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }} edges={['top', 'bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.background }} edges={['top', 'bottom']}>
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <View style={{
@@ -219,14 +223,14 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
           paddingHorizontal: Spacing.lg,
           paddingVertical:   Spacing.md,
           borderBottomWidth: 1,
-          borderBottomColor: Colors.outlineVariant,
+          borderBottomColor: C.outlineVariant,
         }}>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <IconSymbol name="chevron.down" size={22} color={Colors.onSurface} />
+            <IconSymbol name="chevron.down" size={22} color={C.onSurface} />
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#1DB954' }} />
-            <Text style={{ ...Typography.titleMd, color: Colors.onSurface }}>Spotify</Text>
+            <Text style={{ ...Typography.titleMd, color: C.onSurface }}>Spotify</Text>
           </View>
           <View style={{ width: 22 }} />
         </View>
@@ -236,7 +240,7 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
           flexDirection:    'row',
           marginHorizontal: Spacing.lg,
           marginTop:        Spacing.md,
-          backgroundColor:  Colors.surfaceContainer,
+          backgroundColor:  C.surfaceContainer,
           borderRadius:     Radius.full,
           padding:          3,
         }}>
@@ -249,11 +253,11 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
                 paddingVertical: 7,
                 borderRadius:    Radius.full,
                 alignItems:      'center',
-                backgroundColor: tab === t ? Colors.surfaceContainerHigh : 'transparent',
+                backgroundColor: tab === t ? C.surfaceContainerHigh : 'transparent',
               }}>
               <Text style={{
                 ...Typography.titleMd,
-                color: tab === t ? Colors.onSurface : Colors.onSurfaceVariant,
+                color: tab === t ? C.onSurface : C.onSurfaceVariant,
               }}>
                 {t === 'player' ? 'Now Playing' : 'Browse'}
               </Text>
@@ -282,20 +286,20 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
               ) : (
                 <View style={{
                   width: 260, height: 260, borderRadius: Radius.lg,
-                  backgroundColor: Colors.surfaceContainerHighest,
+                  backgroundColor: C.surfaceContainerHighest,
                   alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <IconSymbol name="music.note" size={64} color={Colors.onSurfaceVariant} />
+                  <IconSymbol name="music.note" size={64} color={C.onSurfaceVariant} />
                 </View>
               )}
             </View>
 
             {/* Track info */}
             <View style={{ marginBottom: Spacing.lg }}>
-              <Text numberOfLines={1} style={{ ...Typography.headlineMd, color: Colors.onSurface }}>
+              <Text numberOfLines={1} style={{ ...Typography.headlineMd, color: C.onSurface }}>
                 {track?.name ?? '—'}
               </Text>
-              <Text numberOfLines={1} style={{ ...Typography.bodyMd, color: Colors.onSurfaceVariant, marginTop: 2 }}>
+              <Text numberOfLines={1} style={{ ...Typography.bodyMd, color: C.onSurfaceVariant, marginTop: 2 }}>
                 {track?.artist ?? '—'}
               </Text>
             </View>
@@ -304,22 +308,22 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
             <View style={{ marginBottom: Spacing.sm }}>
               <View style={{
                 height:          4,
-                backgroundColor: Colors.surfaceContainerHighest,
+                backgroundColor: C.surfaceContainerHighest,
                 borderRadius:    Radius.full,
                 overflow:        'hidden',
               }}>
                 <View style={{
                   height:          4,
                   width:           `${progress * 100}%`,
-                  backgroundColor: Colors.onSurface,
+                  backgroundColor: C.onSurface,
                   borderRadius:    Radius.full,
                 }} />
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                <Text style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }}>
+                <Text style={{ ...Typography.labelMd, color: C.onSurfaceVariant }}>
                   {formatMs(localProgress)}
                 </Text>
-                <Text style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }}>
+                <Text style={{ ...Typography.labelMd, color: C.onSurfaceVariant }}>
                   {formatMs(playerState?.durationMs ?? 0)}
                 </Text>
               </View>
@@ -339,13 +343,13 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
                 <IconSymbol
                   name="shuffle"
                   size={22}
-                  color={playerState?.shuffle ? '#1DB954' : Colors.onSurfaceVariant}
+                  color={playerState?.shuffle ? '#1DB954' : C.onSurfaceVariant}
                 />
               </TouchableOpacity>
 
               {/* Previous */}
               <TouchableOpacity onPress={skipPrevious} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <IconSymbol name="backward.fill" size={28} color={Colors.onSurface} />
+                <IconSymbol name="backward.fill" size={28} color={C.onSurface} />
               </TouchableOpacity>
 
               {/* Play / Pause */}
@@ -368,7 +372,7 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
 
               {/* Next */}
               <TouchableOpacity onPress={skipNext} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <IconSymbol name="forward.fill" size={28} color={Colors.onSurface} />
+                <IconSymbol name="forward.fill" size={28} color={C.onSurface} />
               </TouchableOpacity>
 
               {/* Repeat */}
@@ -376,7 +380,7 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
                 <IconSymbol
                   name={playerState?.repeat === 'track' ? 'repeat.1' : 'repeat'}
                   size={22}
-                  color={playerState?.repeat !== 'off' ? '#1DB954' : Colors.onSurfaceVariant}
+                  color={playerState?.repeat !== 'off' ? '#1DB954' : C.onSurfaceVariant}
                 />
               </TouchableOpacity>
             </View>
@@ -391,28 +395,28 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
             <View style={{
               flexDirection:   'row',
               alignItems:      'center',
-              backgroundColor: Colors.surfaceContainer,
+              backgroundColor: C.surfaceContainer,
               borderRadius:    Radius.lg,
               paddingHorizontal: Spacing.md,
               marginBottom:    Spacing.lg,
               gap:             Spacing.sm,
             }}>
-              <IconSymbol name="magnifyingglass" size={16} color={Colors.onSurfaceVariant} />
+              <IconSymbol name="magnifyingglass" size={16} color={C.onSurfaceVariant} />
               <TextInput
                 value={searchQuery}
                 onChangeText={handleSearch}
                 placeholder="Search tracks or playlists…"
-                placeholderTextColor={Colors.onSurfaceVariant}
+                placeholderTextColor={C.onSurfaceVariant}
                 style={{
                   flex:   1,
                   height: 44,
-                  color:  Colors.onSurface,
+                  color:  C.onSurface,
                   ...Typography.bodyMd,
                 }}
                 returnKeyType="search"
                 clearButtonMode="while-editing"
               />
-              {searching && <ActivityIndicator size="small" color={Colors.onSurfaceVariant} />}
+              {searching && <ActivityIndicator size="small" color={C.onSurfaceVariant} />}
             </View>
 
             {searchQuery.trim() ? (
@@ -429,7 +433,7 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
                 renderItem={({ item: row }) => {
                   if (row.type === 'header') {
                     return (
-                      <Text style={{ ...Typography.labelLg, color: Colors.onSurfaceVariant, marginBottom: Spacing.sm }}>
+                      <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant, marginBottom: Spacing.sm }}>
                         {row.label.toUpperCase()}
                       </Text>
                     );
@@ -454,11 +458,11 @@ export function SpotifyFullPlayer({ visible, onClose }: Props) {
             ) : (
               // ── Your playlists
               <>
-                <Text style={{ ...Typography.labelLg, color: Colors.onSurfaceVariant, marginBottom: Spacing.sm }}>
+                <Text style={{ ...Typography.labelLg, color: C.onSurfaceVariant, marginBottom: Spacing.sm }}>
                   YOUR PLAYLISTS
                 </Text>
                 {loadingLists ? (
-                  <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.xl }} />
+                  <ActivityIndicator color={C.primary} style={{ marginTop: Spacing.xl }} />
                 ) : (
                   <FlatList
                     data={playlists}

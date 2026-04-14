@@ -1,10 +1,14 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, Typography, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 
-export const styles = StyleSheet.create({
+export function useStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -13,7 +17,7 @@ export const styles = StyleSheet.create({
   },
   title: {
     ...Typography.displayMd,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
   lockRow: {
     flexDirection: 'row',
@@ -23,7 +27,7 @@ export const styles = StyleSheet.create({
   },
   lockText: {
     ...Typography.labelLg,
-    color: Colors.success,
+    color: C.success,
   },
   scroll: {
     flex: 1,
@@ -46,13 +50,13 @@ export const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
+    backgroundColor: C.primary + '33',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     ...Typography.titleLg,
-    color: Colors.primary,
+    color: C.primary,
   },
   onlineDot: {
     position: 'absolute',
@@ -61,9 +65,9 @@ export const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: Radius.full,
-    backgroundColor: Colors.success,
+    backgroundColor: C.success,
     borderWidth: 2,
-    borderColor: Colors.background,
+    borderColor: C.background,
   },
   threadInfo: {
     flex: 1,
@@ -75,34 +79,35 @@ export const styles = StyleSheet.create({
   },
   threadName: {
     ...Typography.titleLg,
-    color: Colors.onSurface,
+    color: C.onSurface,
   },
   threadTime: {
     ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
   },
   threadPreview: {
     ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
   unreadBadge: {
     width: 20,
     height: 20,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
   },
   unreadText: {
     ...Typography.labelMd,
-    color: Colors.background,
+    color: C.background,
     fontSize: 10,
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.outlineVariant,
+    backgroundColor: C.outlineVariant,
     marginLeft: 68,
   },
-});
+}), [C]);
+}

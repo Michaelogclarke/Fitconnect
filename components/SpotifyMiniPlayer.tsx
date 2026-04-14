@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { useSpotify } from '@/contexts/SpotifyContext';
 import { SpotifyFullPlayer } from '@/components/SpotifyFullPlayer';
 
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function SpotifyMiniPlayer({ bottom }: Props) {
+  const C = useColors();
   const { isConnected, playerState, play, pause, skipNext, skipPrevious } = useSpotify();
   const [fullOpen, setFullOpen] = useState(false);
 
@@ -42,10 +44,10 @@ export function SpotifyMiniPlayer({ bottom }: Props) {
         {/* Card */}
         <View style={{
           flex:              1,
-          backgroundColor:   Colors.surfaceContainerHigh,
+          backgroundColor:   C.surfaceContainerHigh,
           borderRadius:      Radius.lg,
           borderWidth:       1,
-          borderColor:       Colors.outlineVariant,
+          borderColor:       C.outlineVariant,
           overflow:          'hidden',
         }}>
           {/* Main row */}
@@ -78,19 +80,19 @@ export function SpotifyMiniPlayer({ bottom }: Props) {
             ) : (
               <View style={{
                 width: 40, height: 40, borderRadius: Radius.sm, marginLeft: 8,
-                backgroundColor: Colors.surfaceContainerHighest,
+                backgroundColor: C.surfaceContainerHighest,
                 alignItems: 'center', justifyContent: 'center',
               }}>
-                <IconSymbol name="music.note" size={18} color={Colors.onSurfaceVariant} />
+                <IconSymbol name="music.note" size={18} color={C.onSurfaceVariant} />
               </View>
             )}
 
             {/* Track info */}
             <View style={{ flex: 1 }}>
-              <Text numberOfLines={1} style={{ ...Typography.titleMd, color: Colors.onSurface }}>
+              <Text numberOfLines={1} style={{ ...Typography.titleMd, color: C.onSurface }}>
                 {track.name}
               </Text>
-              <Text numberOfLines={1} style={{ ...Typography.labelMd, color: Colors.onSurfaceVariant }}>
+              <Text numberOfLines={1} style={{ ...Typography.labelMd, color: C.onSurfaceVariant }}>
                 {track.artist}
               </Text>
             </View>
@@ -100,7 +102,7 @@ export function SpotifyMiniPlayer({ bottom }: Props) {
               <TouchableOpacity
                 onPress={skipPrevious}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <IconSymbol name="backward.fill" size={20} color={Colors.onSurface} />
+                <IconSymbol name="backward.fill" size={20} color={C.onSurface} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -121,13 +123,13 @@ export function SpotifyMiniPlayer({ bottom }: Props) {
               <TouchableOpacity
                 onPress={skipNext}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <IconSymbol name="forward.fill" size={20} color={Colors.onSurface} />
+                <IconSymbol name="forward.fill" size={20} color={C.onSurface} />
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
 
           {/* Progress bar — sits at very bottom of card */}
-          <View style={{ height: 2, backgroundColor: Colors.surfaceContainerHighest }}>
+          <View style={{ height: 2, backgroundColor: C.surfaceContainerHighest }}>
             <View style={{
               height:          2,
               width:           `${progress * 100}%`,

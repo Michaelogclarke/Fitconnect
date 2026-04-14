@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,7 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
 
@@ -77,6 +78,64 @@ function PlanPickerModal({
   onClose:    () => void;
   onAssigned: (plan: TrainerPlan) => void;
 }) {
+  const C = useColors();
+  const pickerStyles = useMemo(() => StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    sheet: {
+      backgroundColor: C.surfaceContainer,
+      borderTopLeftRadius: Radius.xl,
+      borderTopRightRadius: Radius.xl,
+      padding: Spacing.xl,
+      paddingBottom: Spacing.xxxl,
+      maxHeight: '70%',
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      borderRadius: Radius.full,
+      backgroundColor: C.outlineVariant,
+      alignSelf: 'center',
+      marginBottom: Spacing.lg,
+    },
+    title: {
+      ...Typography.headlineMd,
+      color: C.onSurface,
+      marginBottom: Spacing.md,
+    },
+    planRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: C.outlineVariant,
+    },
+    planName: {
+      ...Typography.titleMd,
+      color: C.onSurface,
+      flex: 1,
+    },
+    empty: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      marginBottom: Spacing.lg,
+    },
+    cancelBtn: {
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: Spacing.sm,
+    },
+    cancelText: {
+      ...Typography.titleMd,
+      color: C.onSurfaceVariant,
+    },
+  }), [C]);
+
   const [assigningId, setAssigningId] = useState<string | null>(null);
 
   async function handleAssign(plan: TrainerPlan) {
@@ -114,11 +173,11 @@ function PlanPickerModal({
                   style={pickerStyles.planRow}
                   onPress={() => handleAssign(plan)}
                   disabled={!!assigningId}>
-                  <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
+                  <IconSymbol name="dumbbell.fill" size={18} color={C.primary} />
                   <Text style={pickerStyles.planName}>{plan.name}</Text>
                   {assigningId === plan.id
-                    ? <ActivityIndicator size="small" color={Colors.primary} />
-                    : <IconSymbol name="chevron.right" size={16} color={Colors.onSurfaceVariant} />}
+                    ? <ActivityIndicator size="small" color={C.primary} />
+                    : <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -135,8 +194,207 @@ function PlanPickerModal({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ClientDetailScreen() {
+  const C = useColors();
   const router = useRouter();
   const { clientId, clientName } = useLocalSearchParams<{ clientId: string; clientName: string }>();
+
+  const localStyles = useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: C.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.md,
+    },
+    headerTitle: {
+      ...Typography.titleLg,
+      color: C.onSurface,
+    },
+    scroll: { flex: 1 },
+    scrollContent: {
+      paddingBottom: Spacing.xxxl,
+    },
+    hero: {
+      alignItems: 'center',
+      paddingVertical: Spacing.xl,
+    },
+    avatar: {
+      width: 72,
+      height: 72,
+      borderRadius: Radius.full,
+      backgroundColor: C.primary + '33',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: Spacing.md,
+    },
+    avatarText: {
+      ...Typography.headlineLg,
+      color: C.primary,
+    },
+    clientName: {
+      ...Typography.displayMd,
+      color: C.onSurface,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.lg,
+      gap: Spacing.sm,
+      marginBottom: Spacing.lg,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      alignItems: 'center',
+    },
+    statValue: {
+      ...Typography.titleLg,
+      color: C.primary,
+    },
+    statLabel: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+      marginTop: 2,
+    },
+    section: {
+      paddingHorizontal: Spacing.lg,
+      marginBottom: Spacing.lg,
+    },
+    sectionTitle: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+      marginBottom: Spacing.sm,
+      textTransform: 'uppercase',
+    },
+    card: {
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      overflow: 'hidden',
+    },
+    planRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+    },
+    planName: {
+      ...Typography.titleMd,
+      color: C.onSurface,
+      flex: 1,
+    },
+    changeLink: {
+      ...Typography.labelLg,
+      color: C.primary,
+    },
+    assignPrompt: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      padding: Spacing.md,
+    },
+    assignPromptText: {
+      ...Typography.titleMd,
+      color: C.primary,
+    },
+    sessionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+    },
+    sessionBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: C.outlineVariant,
+    },
+    sessionInfo: { flex: 1 },
+    sessionName: {
+      ...Typography.titleMd,
+      color: C.onSurface,
+    },
+    sessionDate: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+    },
+    sessionDuration: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+    },
+    emptyText: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      padding: Spacing.md,
+      textAlign: 'center',
+    },
+    sessionNotePreview: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      fontStyle: 'italic',
+      marginTop: 2,
+    },
+  }), [C]);
+
+  const noteStyles = useMemo(() => StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    sheet: {
+      backgroundColor: C.surfaceContainer,
+      borderTopLeftRadius: Radius.xl,
+      borderTopRightRadius: Radius.xl,
+      padding: Spacing.xl,
+      paddingBottom: Spacing.xxxl,
+    },
+    handle: {
+      width: 40,
+      height: 4,
+      borderRadius: Radius.full,
+      backgroundColor: C.outlineVariant,
+      alignSelf: 'center',
+      marginBottom: Spacing.lg,
+    },
+    title: {
+      ...Typography.headlineMd,
+      color: C.onSurface,
+      marginBottom: Spacing.md,
+    },
+    input: {
+      backgroundColor: C.surfaceContainerHighest,
+      borderRadius: Radius.lg,
+      borderWidth: 1,
+      borderColor: C.outlineVariant,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.md,
+      ...Typography.bodyMd,
+      color: C.onSurface,
+      minHeight: 120,
+      marginBottom: Spacing.md,
+    },
+    saveBtn: {
+      height: 50,
+      borderRadius: Radius.md,
+      backgroundColor: C.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    saveBtnDisabled: { opacity: 0.45 },
+    saveBtnText: { ...Typography.titleLg, color: C.background },
+    cancelBtn: {
+      height: 44,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    cancelText: {
+      ...Typography.titleMd,
+      color: C.onSurfaceVariant,
+    },
+  }), [C]);
 
   const [loading,        setLoading]        = useState(true);
   const [sessions,       setSessions]       = useState<Session[]>([]);
@@ -302,14 +560,14 @@ export default function ClientDetailScreen() {
       {/* Header */}
       <View style={localStyles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="chevron.left" size={24} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={24} color={C.onSurface} />
         </TouchableOpacity>
         <Text style={localStyles.headerTitle}>Client</Text>
         {threadId ? (
           <TouchableOpacity
             onPress={() => router.push({ pathname: '/conversation' as any, params: { threadId, otherName: name } })}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <IconSymbol name="bubble.left.fill" size={22} color={Colors.primary} />
+            <IconSymbol name="bubble.left.fill" size={22} color={C.primary} />
           </TouchableOpacity>
         ) : (
           <View style={{ width: 24 }} />
@@ -330,7 +588,7 @@ export default function ClientDetailScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 40 }} />
+          <ActivityIndicator color={C.primary} style={{ marginVertical: 40 }} />
         ) : (
           <>
             {/* Stats row */}
@@ -357,7 +615,7 @@ export default function ClientDetailScreen() {
               <View style={localStyles.card}>
                 {assignedPlan ? (
                   <View style={localStyles.planRow}>
-                    <IconSymbol name="dumbbell.fill" size={20} color={Colors.primary} />
+                    <IconSymbol name="dumbbell.fill" size={20} color={C.primary} />
                     <Text style={localStyles.planName}>{assignedPlan.name}</Text>
                     <TouchableOpacity onPress={() => setShowPicker(true)}>
                       <Text style={localStyles.changeLink}>Change</Text>
@@ -365,7 +623,7 @@ export default function ClientDetailScreen() {
                   </View>
                 ) : (
                   <TouchableOpacity style={localStyles.assignPrompt} onPress={() => setShowPicker(true)}>
-                    <IconSymbol name="plus.circle.fill" size={18} color={Colors.primary} />
+                    <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
                     <Text style={localStyles.assignPromptText}>Assign a Plan</Text>
                   </TouchableOpacity>
                 )}
@@ -390,13 +648,13 @@ export default function ClientDetailScreen() {
                       </Text>
                       <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
                         <Text style={localStyles.sessionDate}>
-                          Sleep: <Text style={{ color: Colors.onSurface }}>{RATING_LABELS[ci.sleepRating]}</Text>
+                          Sleep: <Text style={{ color: C.onSurface }}>{RATING_LABELS[ci.sleepRating]}</Text>
                         </Text>
                         <Text style={localStyles.sessionDate}>
-                          Energy: <Text style={{ color: Colors.onSurface }}>{RATING_LABELS[ci.energyRating]}</Text>
+                          Energy: <Text style={{ color: C.onSurface }}>{RATING_LABELS[ci.energyRating]}</Text>
                         </Text>
                         <Text style={localStyles.sessionDate}>
-                          Plan: <Text style={{ color: Colors.onSurface }}>{RATING_LABELS[ci.adherenceRating]}</Text>
+                          Plan: <Text style={{ color: C.onSurface }}>{RATING_LABELS[ci.adherenceRating]}</Text>
                         </Text>
                       </View>
                       {ci.notes ? (
@@ -446,7 +704,7 @@ export default function ClientDetailScreen() {
                         <IconSymbol
                           name="note.text"
                           size={18}
-                          color={sessionNotes[s.id] ? Colors.primary : Colors.outlineVariant}
+                          color={sessionNotes[s.id] ? C.primary : C.outlineVariant}
                         />
                       </TouchableOpacity>
                     </View>
@@ -470,7 +728,7 @@ export default function ClientDetailScreen() {
               value={noteText}
               onChangeText={setNoteText}
               placeholder="Add a note for this session…"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               multiline
               numberOfLines={5}
               textAlignVertical="top"
@@ -481,7 +739,7 @@ export default function ClientDetailScreen() {
               onPress={handleSaveNote}
               disabled={savingNote}>
               {savingNote
-                ? <ActivityIndicator color={Colors.background} />
+                ? <ActivityIndicator color={C.background} />
                 : <Text style={noteStyles.saveBtnText}>Save Note</Text>}
             </TouchableOpacity>
             <TouchableOpacity style={noteStyles.cancelBtn} onPress={() => setNoteModalId(null)}>
@@ -501,260 +759,3 @@ export default function ClientDetailScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const localStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  headerTitle: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
-  },
-  scroll: { flex: 1 },
-  scrollContent: {
-    paddingBottom: Spacing.xxxl,
-  },
-  hero: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xl,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  avatarText: {
-    ...Typography.headlineLg,
-    color: Colors.primary,
-  },
-  clientName: {
-    ...Typography.displayMd,
-    color: Colors.onSurface,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    alignItems: 'center',
-  },
-  statValue: {
-    ...Typography.titleLg,
-    color: Colors.primary,
-  },
-  statLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-    marginTop: 2,
-  },
-  section: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.lg,
-  },
-  sectionTitle: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.sm,
-    textTransform: 'uppercase',
-  },
-  card: {
-    backgroundColor: Colors.surfaceContainer,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-  },
-  planRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-  },
-  planName: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-    flex: 1,
-  },
-  changeLink: {
-    ...Typography.labelLg,
-    color: Colors.primary,
-  },
-  assignPrompt: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-  },
-  assignPromptText: {
-    ...Typography.titleMd,
-    color: Colors.primary,
-  },
-  sessionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  sessionBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
-  },
-  sessionInfo: { flex: 1 },
-  sessionName: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-  },
-  sessionDate: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-  },
-  sessionDuration: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
-  },
-  emptyText: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    padding: Spacing.md,
-    textAlign: 'center',
-  },
-  sessionNotePreview: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
-});
-
-const noteStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  sheet: {
-    backgroundColor: Colors.surfaceContainer,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxxl,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.outlineVariant,
-    alignSelf: 'center',
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
-    marginBottom: Spacing.md,
-  },
-  input: {
-    backgroundColor: Colors.surfaceContainerHighest,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.outlineVariant,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
-    ...Typography.bodyMd,
-    color: Colors.onSurface,
-    minHeight: 120,
-    marginBottom: Spacing.md,
-  },
-  saveBtn: {
-    height: 50,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  saveBtnDisabled: { opacity: 0.45 },
-  saveBtnText: { ...Typography.titleLg, color: Colors.background },
-  cancelBtn: {
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
-  },
-});
-
-const pickerStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  sheet: {
-    backgroundColor: Colors.surfaceContainer,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxxl,
-    maxHeight: '70%',
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.outlineVariant,
-    alignSelf: 'center',
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
-    marginBottom: Spacing.md,
-  },
-  planRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
-  },
-  planName: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
-    flex: 1,
-  },
-  empty: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
-    marginBottom: Spacing.lg,
-  },
-  cancelBtn: {
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: Spacing.sm,
-  },
-  cancelText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
-  },
-});

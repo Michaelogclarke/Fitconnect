@@ -9,9 +9,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors, Spacing } from '@/constants/theme';
-import { styles } from '@/styles/tabs/progress.styles';
-import { styles as hStyles } from '@/styles/tabs/history.styles';
+import { Spacing } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/tabs/progress.styles';
+import { useStyles as useHStyles } from '@/styles/tabs/history.styles';
 import { supabase } from '@/lib/supabase';
 import { formatVolume, formatShortDate, formatDuration } from '@/lib/format';
 
@@ -38,11 +39,13 @@ type Range = typeof RANGE_OPTIONS[number];
 // ─── Session card (history) ───────────────────────────────────────────────────
 
 function SessionCard({ session, onPress }: { session: HistorySession; onPress: () => void }) {
+  const C = useColors();
+  const hStyles = useHStyles();
   return (
     <TouchableOpacity style={hStyles.sessionCard} onPress={onPress} activeOpacity={0.8}>
       <View style={hStyles.sessionTop}>
         <View style={hStyles.sessionIconBox}>
-          <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
+          <IconSymbol name="dumbbell.fill" size={18} color={C.primary} />
         </View>
         <View style={hStyles.sessionInfo}>
           <Text style={hStyles.sessionName}>{session.name}</Text>
@@ -83,6 +86,7 @@ function SessionCard({ session, onPress }: { session: HistorySession; onPress: (
 
 function LineChart({ data, color }: { data: BwEntry[]; color: string }) {
   const [chartWidth, setChartWidth] = useState(0);
+  const styles = useStyles();
   const CHART_H = 80;
   const PAD     = 8;
 
@@ -177,6 +181,8 @@ function LogWeightModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const [weight,  setWeight]  = useState('');
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState('');
@@ -239,7 +245,7 @@ function LogWeightModal({
               value={weight}
               onChangeText={setWeight}
               placeholder="e.g. 75.5"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               keyboardType="decimal-pad"
               autoFocus
             />
@@ -272,6 +278,9 @@ function LogWeightModal({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProgressScreen() {
+  const C = useColors();
+  const styles = useStyles();
+  const hStyles = useHStyles();
   const router = useRouter();
 
   const [range,          setRange]          = useState<Range>('1M');
@@ -456,7 +465,7 @@ export default function ProgressScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={async () => { setRefreshing(true); await Promise.all([loadProgress(), loadHistory()]); setRefreshing(false); }}
-            tintColor={Colors.primary}
+            tintColor={C.primary}
           />
         }>
 
@@ -476,14 +485,14 @@ export default function ProgressScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+          <ActivityIndicator color={C.primary} style={{ marginTop: 60 }} />
         ) : (
           <>
             {/* Body weight */}
             <View style={styles.sectionRow}>
               <Text style={[styles.sectionLabel, { marginHorizontal: 0, marginTop: 0, marginBottom: 0 }]}>Body Weight</Text>
               <TouchableOpacity style={styles.logWeightBtn} onPress={() => setShowLogModal(true)}>
-                <IconSymbol name="plus" size={13} color={Colors.primary} />
+                <IconSymbol name="plus" size={13} color={C.primary} />
                 <Text style={styles.logWeightText}>Log</Text>
               </TouchableOpacity>
             </View>
@@ -493,7 +502,7 @@ export default function ProgressScreen() {
                 <TouchableOpacity
                   style={styles.bwEmpty}
                   onPress={() => setShowLogModal(true)}>
-                  <IconSymbol name="scalemass.fill" size={24} color={Colors.outlineVariant} />
+                  <IconSymbol name="scalemass.fill" size={24} color={C.outlineVariant} />
                   <Text style={styles.bwEmptyText}>No weight entries yet</Text>
                   <Text style={styles.bwEmptyHint}>Tap to log your first entry</Text>
                 </TouchableOpacity>
@@ -507,16 +516,16 @@ export default function ProgressScreen() {
                       {bwChange !== null && (
                         <Text style={[
                           styles.bwChange,
-                          { color: bwChange > 0 ? Colors.error : Colors.success },
+                          { color: bwChange > 0 ? C.error : C.success },
                         ]}>
                           {bwChange > 0 ? '+' : ''}{bwChange.toFixed(1)} kg
                         </Text>
                       )}
                     </View>
-                    <IconSymbol name="chart.line.uptrend.xyaxis" size={20} color={Colors.primary} />
+                    <IconSymbol name="chart.line.uptrend.xyaxis" size={20} color={C.primary} />
                   </View>
 
-                  <LineChart data={bodyWeight} color={Colors.primary} />
+                  <LineChart data={bodyWeight} color={C.primary} />
 
                   {/* Labels row spacer */}
                   <View style={{ height: 18 }} />
@@ -535,7 +544,7 @@ export default function ProgressScreen() {
                 prs.map((pr, i) => (
                   <View key={i} style={[styles.prRow, i < prs.length - 1 && styles.prRowBorder]}>
                     <View style={styles.prIconBox}>
-                      <IconSymbol name="trophy.fill" size={16} color={Colors.primary} />
+                      <IconSymbol name="trophy.fill" size={16} color={C.primary} />
                     </View>
                     <View style={styles.prInfo}>
                       <Text style={styles.prExercise}>{pr.exercise}</Text>
@@ -598,11 +607,11 @@ export default function ProgressScreen() {
                 style={styles.viewAllBtn}
                 onPress={() => router.push('/(tabs)/history' as any)}>
                 <Text style={styles.viewAllText}>View All</Text>
-                <IconSymbol name="chevron.right" size={13} color={Colors.primary} />
+                <IconSymbol name="chevron.right" size={13} color={C.primary} />
               </TouchableOpacity>
             </View>
             {historyLoading ? (
-              <ActivityIndicator color={Colors.primary} style={{ marginBottom: Spacing.lg }} />
+              <ActivityIndicator color={C.primary} style={{ marginBottom: Spacing.lg }} />
             ) : recentSessions.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyCardText}>No sessions logged yet</Text>
