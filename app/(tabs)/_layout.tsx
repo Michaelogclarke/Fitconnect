@@ -26,8 +26,8 @@ export default function TabLayout() {
   const { playerState: spotifyState } = useSpotify();
   const spotifyVisible = !!(spotifyState?.track);
 
-  const [role,     setRole]     = useState<'client' | 'trainer' | null>(null);
-  const [showChat, setShowChat] = useState(false);
+  const [role,        setRole]        = useState<'client' | 'trainer' | null>(null);
+  const [showTrainer, setShowTrainer] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -42,15 +42,14 @@ export default function TabLayout() {
       if (r) setRole(r);
 
       if (r !== 'trainer') {
-        // Clients only see chat if they have an active trainer
+        // Show Trainer tab only if client has an active trainer
         const { count } = await supabase
           .from('trainer_clients')
           .select('*', { count: 'exact', head: true })
           .eq('client_id', user.id)
           .eq('status', 'active');
-        setShowChat((count ?? 0) > 0);
+        setShowTrainer((count ?? 0) > 0);
       }
-      // Trainers access messages from the Home screen — no nav tab needed
     });
   }, []);
 
@@ -129,15 +128,18 @@ export default function TabLayout() {
         {/* Clients — accessible from Home, not needed in nav */}
         <Tabs.Screen name="clients" options={{ href: null }} />
 
-        {/* Chat — visible for trainers and clients with an active trainer */}
+        {/* Trainer hub — clients with an active trainer only */}
         <Tabs.Screen
-          name="chat"
+          name="trainer"
           options={{
-            title: 'Messages',
-            href: showChat ? undefined : null,
-            tabBarIcon: ({ color }) => <IconSymbol size={24} name="bubble.left.and.bubble.right.fill" color={color} />,
+            title: 'Trainer',
+            href: showTrainer ? undefined : null,
+            tabBarIcon: ({ color }) => <IconSymbol size={24} name="person.2.fill" color={color} />,
           }}
         />
+
+        {/* Chat — hidden from nav, still reachable from the Trainer tab */}
+        <Tabs.Screen name="chat" options={{ href: null }} />
 
         {/* Hide legacy tabs from the bar */}
         <Tabs.Screen name="workouts" options={{ href: null }} />

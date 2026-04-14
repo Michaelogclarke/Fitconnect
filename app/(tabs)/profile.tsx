@@ -1,18 +1,15 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Radius, Spacing, Typography } from '@/constants/theme';
-import { useColors, useTheme, ACCENT_COLORS } from '@/contexts/ThemeContext';
+import { useColors } from '@/contexts/ThemeContext';
 import { useStyles } from '@/styles/tabs/profile.styles';
 import { supabase } from '@/lib/supabase';
 import { initials } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
-import { useSpotify } from '@/contexts/SpotifyContext';
-import { usePrefs, type FontScale, type RestTimer, type WeightIncrement } from '@/contexts/PrefsContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,8 +45,9 @@ const MENU_SECTIONS = [
   {
     title: 'Account',
     items: [
-      { label: 'Edit Profile',    icon: 'pencil'    as const, route: '/edit-profile'          as const },
-      { label: 'Notifications',   icon: 'bell.fill' as const, route: '/notification-settings' as const },
+      { label: 'Edit Profile',    icon: 'pencil'          as const, route: '/edit-profile'          as const },
+      { label: 'Notifications',   icon: 'bell.fill'       as const, route: '/notification-settings' as const },
+      { label: 'App Settings',    icon: 'gearshape.fill'  as const, route: '/app-settings'          as const },
     ],
   },
   {
@@ -65,8 +63,6 @@ const MENU_SECTIONS = [
 
 export default function ProfileScreen() {
   const C = useColors();
-  const { isDark, setMode, mode, accentColor, setAccentColor } = useTheme();
-  const { restTimer, setRestTimer, fontScale, setFontScale, weightIncrement, setWeightIncrement, homeCards, setHomeCard } = usePrefs();
   const styles = useStyles();
   const router = useRouter();
 
@@ -94,7 +90,6 @@ export default function ProfileScreen() {
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [activeTrainer,  setActiveTrainer]  = useState<ActiveTrainer | null>(null);
   const [acceptingId,    setAcceptingId]    = useState<string | null>(null);
-  const { isConnected: spotifyConnected, connect: connectSpotify, disconnect: disconnectSpotify, playerState } = useSpotify();
 
   function applyData(d: ProfileCache) {
     setFullName(d.fullName);
@@ -421,229 +416,6 @@ export default function ProfileScreen() {
           </View>
         ))}
 
-        {/* Appearance */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
-          <View style={styles.menuCard}>
-            {(['dark', 'light', 'system'] as const).map((m, i, arr) => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.menuItem, i < arr.length - 1 && styles.menuItemBorder]}
-                onPress={() => setMode(m)}
-                activeOpacity={0.7}>
-                <View style={styles.menuIconBox}>
-                  <IconSymbol
-                    name={m === 'dark' ? 'moon.fill' : m === 'light' ? 'sun.max.fill' : 'circle.lefthalf.filled'}
-                    size={18}
-                    color={C.primary}
-                  />
-                </View>
-                <Text style={styles.menuLabel}>
-                  {m === 'dark' ? 'Dark' : m === 'light' ? 'Light' : 'System Default'}
-                </Text>
-                {mode === m && <IconSymbol name="checkmark.circle.fill" size={20} color={C.primary} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Accent colour picker */}
-          <Text style={[styles.sectionTitle, { marginTop: Spacing.md }]}>Accent Colour</Text>
-          <View style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: Spacing.sm,
-            paddingVertical: Spacing.sm,
-          }}>
-            {ACCENT_COLORS.map((ac) => {
-              const selected = accentColor === ac.value;
-              return (
-                <TouchableOpacity
-                  key={ac.value}
-                  onPress={() => setAccentColor(ac.value)}
-                  activeOpacity={0.8}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: ac.value,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: selected ? 3 : 2,
-                    borderColor: selected ? C.onSurface : C.outlineVariant,
-                  }}>
-                  {selected && (
-                    <IconSymbol name="checkmark" size={16} color={isDark ? '#000' : '#fff'} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Workout Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Workout</Text>
-          <View style={styles.menuCard}>
-
-            {/* Rest timer */}
-            <View style={[styles.menuItem, styles.menuItemBorder, { flexDirection: 'column', alignItems: 'flex-start', gap: Spacing.sm }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <View style={styles.menuIconBox}>
-                  <IconSymbol name="timer" size={18} color={C.primary} />
-                </View>
-                <Text style={styles.menuLabel}>Default Rest Timer</Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingLeft: 36 }}>
-                {([60, 90, 120, 180] as RestTimer[]).map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    onPress={() => setRestTimer(t)}
-                    style={{
-                      paddingHorizontal: Spacing.md,
-                      paddingVertical: 6,
-                      borderRadius: Radius.full,
-                      backgroundColor: restTimer === t ? C.primary : C.surfaceContainerHigh,
-                      borderWidth: 1,
-                      borderColor: restTimer === t ? C.primary : C.outlineVariant,
-                    }}>
-                    <Text style={{ ...Typography.labelLg, color: restTimer === t ? C.onPrimary : C.onSurfaceVariant, fontWeight: '600' }}>
-                      {t}s
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Weight increment */}
-            <View style={[styles.menuItem, { flexDirection: 'column', alignItems: 'flex-start', gap: Spacing.sm }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <View style={styles.menuIconBox}>
-                  <IconSymbol name="plusminus" size={18} color={C.primary} />
-                </View>
-                <Text style={styles.menuLabel}>Weight Increment</Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: Spacing.sm, paddingLeft: 36 }}>
-                {([0.5, 1, 2.5, 5] as WeightIncrement[]).map((inc) => (
-                  <TouchableOpacity
-                    key={inc}
-                    onPress={() => setWeightIncrement(inc)}
-                    style={{
-                      paddingHorizontal: Spacing.md,
-                      paddingVertical: 6,
-                      borderRadius: Radius.full,
-                      backgroundColor: weightIncrement === inc ? C.primary : C.surfaceContainerHigh,
-                      borderWidth: 1,
-                      borderColor: weightIncrement === inc ? C.primary : C.outlineVariant,
-                    }}>
-                    <Text style={{ ...Typography.labelLg, color: weightIncrement === inc ? C.onPrimary : C.onSurfaceVariant, fontWeight: '600' }}>
-                      {inc}kg
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Font Size */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Text Size</Text>
-          <View style={styles.menuCard}>
-            {([['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']] as [FontScale, string][]).map(([scale, label], i, arr) => (
-              <TouchableOpacity
-                key={scale}
-                style={[styles.menuItem, i < arr.length - 1 && styles.menuItemBorder]}
-                onPress={() => setFontScale(scale)}
-                activeOpacity={0.7}>
-                <View style={styles.menuIconBox}>
-                  <IconSymbol name="textformat.size" size={18} color={C.primary} />
-                </View>
-                <Text style={[styles.menuLabel, { fontSize: scale === 'small' ? 13 : scale === 'large' ? 17 : 15 }]}>{label}</Text>
-                {fontScale === scale && <IconSymbol name="checkmark.circle.fill" size={20} color={C.primary} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Home Screen Cards */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Home Screen Cards</Text>
-          <View style={styles.menuCard}>
-            {([
-              ['streak',         'Streak Banner',  'flame.fill'            ],
-              ['quickStats',     'Quick Stats',    'chart.bar.fill'        ],
-              ['weeklyGoal',     'Weekly Goal',    'trophy.fill'           ],
-              ['recentSessions', 'Recent Sessions','clock.arrow.circlepath'],
-            ] as [keyof typeof homeCards, string, any][]).map(([key, label, icon], i, arr) => (
-              <TouchableOpacity
-                key={key}
-                style={[styles.menuItem, i < arr.length - 1 && styles.menuItemBorder]}
-                onPress={() => setHomeCard(key, !homeCards[key])}
-                activeOpacity={0.7}>
-                <View style={styles.menuIconBox}>
-                  <IconSymbol name={icon} size={18} color={C.primary} />
-                </View>
-                <Text style={styles.menuLabel}>{label}</Text>
-                <View style={{
-                  width: 44,
-                  height: 26,
-                  borderRadius: 13,
-                  backgroundColor: homeCards[key] ? C.primary : C.surfaceContainerHigh,
-                  borderWidth: 1,
-                  borderColor: homeCards[key] ? C.primary : C.outlineVariant,
-                  justifyContent: 'center',
-                  paddingHorizontal: 3,
-                }}>
-                  <View style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 10,
-                    backgroundColor: homeCards[key] ? C.onPrimary : C.onSurfaceVariant,
-                    alignSelf: homeCards[key] ? 'flex-end' : 'flex-start',
-                  }} />
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Music */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Music</Text>
-          <View style={styles.menuCard}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={spotifyConnected ? disconnectSpotify : connectSpotify}
-              activeOpacity={0.7}>
-              <View style={[styles.menuIconBox, { backgroundColor: '#1DB95422' }]}>
-                <IconSymbol name="music.note" size={18} color="#1DB954" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.menuLabel}>Spotify</Text>
-                {spotifyConnected && playerState?.track ? (
-                  <Text style={{ ...Typography.labelMd, color: C.onSurfaceVariant }} numberOfLines={1}>
-                    {playerState.track.name} · {playerState.track.artist}
-                  </Text>
-                ) : (
-                  <Text style={{ ...Typography.labelMd, color: spotifyConnected ? C.success : C.onSurfaceVariant }}>
-                    {spotifyConnected ? 'Connected — tap to disconnect' : 'Tap to connect'}
-                  </Text>
-                )}
-              </View>
-              <View style={{
-                backgroundColor: spotifyConnected ? '#1DB95422' : C.surfaceContainerHighest,
-                paddingHorizontal: Spacing.sm,
-                paddingVertical: 3,
-                borderRadius: Radius.full,
-              }}>
-                <Text style={{ ...Typography.labelMd, color: spotifyConnected ? '#1DB954' : C.onSurfaceVariant }}>
-                  {spotifyConnected ? 'Connected' : 'Connect'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Sign out + Delete account */}
         <View style={styles.section}>
           <View style={styles.menuCard}>
@@ -665,40 +437,15 @@ export default function ProfileScreen() {
         {/* Dev Tools — only visible to is_dev users */}
         {isDev && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: C.error }]}>Dev Tools</Text>
             <View style={styles.menuCard}>
               <TouchableOpacity
-                style={[styles.menuItem, styles.menuItemBorder]}
-                onPress={async () => {
-                  await AsyncStorage.removeItem('@fitconnect:onboarding_done');
-                  router.replace('/onboarding' as any);
-                }}>
-                <View style={styles.menuIconBox}>
-                  <IconSymbol name="arrow.up.circle.fill" size={18} color={C.error} />
-                </View>
-                <Text style={[styles.menuLabel, { color: C.error }]}>Reset Onboarding</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.menuItem, styles.menuItemBorder]}
-                onPress={async () => {
-                  await AsyncStorage.removeItem('@fitconnect:workout_count');
-                  Alert.alert('Dev', 'Workout count reset to 0');
-                }}>
-                <View style={styles.menuIconBox}>
-                  <IconSymbol name="arrow.up.circle.fill" size={18} color={C.error} />
-                </View>
-                <Text style={[styles.menuLabel, { color: C.error }]}>Reset Workout Count</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 style={styles.menuItem}
-                onPress={async () => {
-                  const { data: { user } } = await supabase.auth.getUser();
-                  Alert.alert('Dev', `User ID:\n${user?.id ?? 'unknown'}`);
-                }}>
-                <View style={styles.menuIconBox}>
-                  <IconSymbol name="person.fill" size={18} color={C.error} />
+                onPress={() => router.push('/dev-tools' as any)}>
+                <View style={[styles.menuIconBox, { backgroundColor: C.error + '22' }]}>
+                  <IconSymbol name="bolt.fill" size={18} color={C.error} />
                 </View>
-                <Text style={[styles.menuLabel, { color: C.error }]}>Show User ID</Text>
+                <Text style={[styles.menuLabel, { color: C.error }]}>Dev Tools</Text>
+                <IconSymbol name="chevron.right" size={16} color={C.error} />
               </TouchableOpacity>
             </View>
           </View>

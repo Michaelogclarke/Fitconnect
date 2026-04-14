@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -317,7 +317,7 @@ export default function ConversationScreen() {
   }
 
   return (
-    <SafeAreaView style={convStyles.container} edges={['top']}>
+    <View style={[convStyles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={convStyles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -329,7 +329,7 @@ export default function ConversationScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}>
 
         {loading ? (
@@ -343,6 +343,7 @@ export default function ConversationScreen() {
             contentContainerStyle={convStyles.messageList}
             showsVerticalScrollIndicator={false}
             style={{ flex: 1 }}
+            keyboardDismissMode="interactive"
             ListEmptyComponent={
               <View style={convStyles.emptyWrap}>
                 <Text style={convStyles.emptyText}>
@@ -353,7 +354,7 @@ export default function ConversationScreen() {
           />
         )}
 
-        {/* Input bar — bottom inset only when keyboard is hidden */}
+        {/* Input bar */}
         <View style={[convStyles.inputBar, { paddingBottom: kbShown ? Spacing.sm : Spacing.sm + insets.bottom }]}>
           <TextInput
             style={convStyles.input}
@@ -375,6 +376,6 @@ export default function ConversationScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

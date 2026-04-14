@@ -206,8 +206,8 @@ export default function BookingsScreen() {
     ]);
   }
 
-  async function cancel(bookingId: string, trainerId: string, startsAt: string) {
-    Alert.alert('Cancel Booking', 'Cancel this session?', [
+  async function cancelAsClient(bookingId: string, trainerId: string, startsAt: string) {
+    Alert.alert('Cancel Session', 'Cancel this booking? Your trainer will be notified.', [
       { text: 'Keep', style: 'cancel' },
       {
         text: 'Cancel Session', style: 'destructive', onPress: async () => {
@@ -215,7 +215,6 @@ export default function BookingsScreen() {
             .from('bookings')
             .update({ status: 'cancelled', updated_at: new Date().toISOString() })
             .eq('id', bookingId);
-
           await sendPushNotification(
             trainerId,
             'Booking Cancelled',
@@ -225,6 +224,31 @@ export default function BookingsScreen() {
         },
       },
     ]);
+  }
+
+  async function cancelAsTrainer(bookingId: string, clientId: string, clientName: string, startsAt: string) {
+    const dateStr = new Date(startsAt).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+    Alert.alert(
+      'Cancel Session',
+      `Cancel the session with ${clientName} on ${dateStr}? They will be notified.`,
+      [
+        { text: 'Keep', style: 'cancel' },
+        {
+          text: 'Cancel Session', style: 'destructive', onPress: async () => {
+            await supabase
+              .from('bookings')
+              .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+              .eq('id', bookingId);
+            await sendPushNotification(
+              clientId,
+              'Session Cancelled',
+              `Your trainer has cancelled the session on ${dateStr}. Please rebook at a new time.`,
+            );
+            loadBookings();
+          },
+        },
+      ]
+    );
   }
 
   const now     = new Date();
@@ -269,7 +293,7 @@ export default function BookingsScreen() {
           <Text style={s.notes}>"{booking.client_notes}"</Text>
         ) : null}
 
-        {/* Trainer actions on pending */}
+        {/* Trainer: confirm/decline pending */}
         {role === 'trainer' && booking.status === 'pending' && (
           <View style={s.actions}>
             <TouchableOpacity
@@ -285,11 +309,20 @@ export default function BookingsScreen() {
           </View>
         )}
 
-        {/* Client cancel on upcoming (pending or confirmed) */}
+        {/* Trainer: cancel confirmed upcoming */}
+        {role === 'trainer' && booking.status === 'confirmed' && !isPast && (
+          <TouchableOpacity
+            style={s.btnCancel}
+            onPress={() => cancelAsTrainer(booking.id, booking.client_id, booking.otherName, booking.starts_at)}>
+            <Text style={s.btnCancelText}>Cancel Session</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Client: cancel pending or confirmed upcoming */}
         {role === 'client' && !isPast && (
           <TouchableOpacity
             style={s.btnCancel}
-            onPress={() => cancel(booking.id, booking.trainer_id, booking.starts_at)}>
+            onPress={() => cancelAsClient(booking.id, booking.trainer_id, booking.starts_at)}>
             <Text style={s.btnCancelText}>Cancel</Text>
           </TouchableOpacity>
         )}

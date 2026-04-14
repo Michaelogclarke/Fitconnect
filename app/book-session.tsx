@@ -77,17 +77,16 @@ export default function BookSessionScreen() {
       ...Typography.bodyMd, color: C.onSurfaceVariant,
       paddingHorizontal: Spacing.lg, paddingTop: Spacing.md,
     },
-    dateStrip:      { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.sm },
+    dateStrip:      { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, gap: Spacing.xs },
     dateChip: {
       alignItems: 'center', backgroundColor: C.surfaceContainer,
-      borderRadius: Radius.lg, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-      minWidth: 52,
+      borderRadius: Radius.md, paddingHorizontal: 10, paddingVertical: 6,
+      minWidth: 44,
     },
     dateChipSel:    { backgroundColor: C.primary },
     dateChipOff:    { opacity: 0.3 },
-    dateChipDay:    { ...Typography.labelMd, color: C.onSurfaceVariant },
-    dateChipNum:    { ...Typography.titleMd, color: C.onSurface },
-    dateChipMon:    { ...Typography.labelMd, color: C.onSurfaceVariant },
+    dateChipDay:    { fontSize: 10, fontWeight: '500', color: C.onSurfaceVariant, lineHeight: 14 },
+    dateChipNum:    { fontSize: 16, fontWeight: '700', color: C.onSurface, lineHeight: 20 },
     dateChipTextSel:{ color: C.background },
     slotList:       { padding: Spacing.lg, gap: Spacing.sm },
     slotCard: {
@@ -282,14 +281,13 @@ export default function BookSessionScreen() {
         </View>
       ) : (
         <>
-          <Text style={s.trainerLabel}>with {trainerName}</Text>
-
           {/* Date strip */}
           <FlatList
             horizontal
             data={days}
             keyExtractor={(d) => d.toISOString()}
             showsHorizontalScrollIndicator={false}
+            style={{ flexGrow: 0 }}
             contentContainerStyle={s.dateStrip}
             renderItem={({ item }) => {
               const dow        = item.getDay();
@@ -297,11 +295,7 @@ export default function BookSessionScreen() {
               const hasAvail   = avail.some((a) => a.day_of_week === dow);
               return (
                 <TouchableOpacity
-                  style={[
-                    s.dateChip,
-                    isSelected && s.dateChipSel,
-                    !hasAvail  && s.dateChipOff,
-                  ]}
+                  style={[s.dateChip, isSelected && s.dateChipSel, !hasAvail && s.dateChipOff]}
                   onPress={() => setSelectedDay(item)}
                   disabled={!hasAvail}>
                   <Text style={[s.dateChipDay, isSelected && s.dateChipTextSel]}>
@@ -310,16 +304,18 @@ export default function BookSessionScreen() {
                   <Text style={[s.dateChipNum, isSelected && s.dateChipTextSel]}>
                     {item.getDate()}
                   </Text>
-                  <Text style={[s.dateChipMon, isSelected && s.dateChipTextSel]}>
-                    {MONTH_SHORT[item.getMonth()]}
-                  </Text>
                 </TouchableOpacity>
               );
             }}
           />
 
+          {/* Selected date label */}
+          <Text style={s.trainerLabel}>
+            {selectedDay.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · with {trainerName}
+          </Text>
+
           {/* Slots */}
-          <ScrollView contentContainerStyle={s.slotList}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={s.slotList}>
             {slots.length === 0 ? (
               <View style={s.empty}>
                 <Text style={s.emptyText}>No available slots on this day.</Text>

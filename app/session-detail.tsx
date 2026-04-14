@@ -105,6 +105,33 @@ export default function SessionDetailScreen() {
     fetchSession();
   }, [sessionId]);
 
+  // ── Delete session ────────────────────────────────────────────────────────
+
+  function handleDelete() {
+    Alert.alert(
+      'Delete Session',
+      'This workout will be permanently removed from your history. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('workout_sessions')
+              .delete()
+              .eq('id', sessionId);
+            if (error) {
+              Alert.alert('Error', error.message);
+            } else {
+              router.back();
+            }
+          },
+        },
+      ]
+    );
+  }
+
   // ── Repeat workout ────────────────────────────────────────────────────────
 
   function handleDoAgain() {
@@ -195,10 +222,16 @@ export default function SessionDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { justifyContent: 'space-between' }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <IconSymbol name="chevron.left" size={20} color={C.onSurfaceVariant} />
           <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleDelete}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ padding: 4 }}>
+          <IconSymbol name="trash" size={20} color={C.error} />
         </TouchableOpacity>
       </View>
 

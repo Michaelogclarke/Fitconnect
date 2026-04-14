@@ -111,6 +111,9 @@ function AppShell() {
             <Stack.Screen name="progress-photos"      options={{ headerShown: false }} />
             <Stack.Screen name="client-onboarding"   options={{ headerShown: false }} />
             <Stack.Screen name="onboarding"           options={{ headerShown: false, gestureEnabled: false }} />
+            <Stack.Screen name="app-settings"         options={{ headerShown: false }} />
+            <Stack.Screen name="dev-tools"            options={{ headerShown: false }} />
+            <Stack.Screen name="conversation"         options={{ headerShown: false }} />
           </Stack>
           <StatusBar style={isDark ? 'light' : 'dark'} />
         </NavThemeProvider>
