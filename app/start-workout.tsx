@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
+import { useKeepAwake } from 'expo-keep-awake';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useColors } from '@/contexts/ThemeContext';
@@ -822,8 +823,10 @@ export default function StartWorkoutScreen() {
     if (!isActive) startWorkout();
   }, [hydrated]);
 
-  const { isConnected, playerState, play, pause, skipNext, skipPrevious } = useSpotify();
+  const { isConnected, playerState, play, pause, skipNext, skipPrevious, connect: connectSpotify } = useSpotify();
   const [spotifyFullOpen, setSpotifyFullOpen] = useState(false);
+
+  useKeepAwake();
 
   // ── Local UI state (resets on unmount — that's fine) ──────────────────────
   const [showAddModal,    setShowAddModal]    = useState(false);
@@ -857,8 +860,10 @@ export default function StartWorkoutScreen() {
   const [numPadTarget, setNumPadTarget] = useState<NumPadTarget | null>(null);
   const [numPadValue,  setNumPadValue]  = useState('0');
 
-  const notifIdRef       = useRef<string | null>(null);
-  const restExerciseRef  = useRef<string>('');
+  const notifIdRef        = useRef<string | null>(null);
+  const restExerciseRef   = useRef<string>('');
+  const scrollViewRef     = useRef<ScrollView>(null);
+  const exerciseYOffsets  = useRef<Record<string, number>>({});
 
   const [finishing,   setFinishing]   = useState(false);
   const [saveError,   setSaveError]   = useState('');
@@ -1005,14 +1010,28 @@ export default function StartWorkoutScreen() {
 
   function toggleSet(exId: string, idx: number, exerciseName: string) {
     const wasDone = setsState[exId][idx].done;
+    const newSets = setsState[exId].map((s, i) => (i === idx ? { ...s, done: !s.done } : s));
 
-    setSetsState((prev) => ({
-      ...prev,
-      [exId]: prev[exId].map((s, i) => (i === idx ? { ...s, done: !s.done } : s)),
-    }));
+    setSetsState((prev) => ({ ...prev, [exId]: newSets }));
 
     if (!wasDone) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const allExDone = newSets.every((s) => s.done);
+      if (allExDone) {
+        // Stronger haptic when the whole exercise is finished
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
+        // Auto-scroll to next exercise
+        const exIdx = exercises.findIndex((e) => e.id === exId);
+        if (exIdx !== -1 && exIdx < exercises.length - 1) {
+          const nextId = exercises[exIdx + 1].id;
+          setTimeout(() => {
+            const y = exerciseYOffsets.current[nextId];
+            if (y !== undefined) scrollViewRef.current?.scrollTo({ y, animated: true });
+          }, 400);
+        }
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       restExerciseRef.current = exerciseName;
       const restSecs = exRestOverrides[exId] ?? REST_SECONDS;
       setActiveRest({ exId, setIdx: idx, endsAt: Date.now() + restSecs * 1000 });
@@ -1251,7 +1270,28 @@ export default function StartWorkoutScreen() {
         </View>
       </View>
 
-      {/* Spotify player */}
+      {/* Spotify player / connect nudge */}
+      {!isConnected && (
+        <TouchableOpacity
+          onPress={connectSpotify}
+          style={{
+            marginHorizontal: 16, marginBottom: 8,
+            flexDirection: 'row', alignItems: 'center', gap: 10,
+            paddingHorizontal: 14, paddingVertical: 10,
+            backgroundColor: C.surfaceContainerHigh,
+            borderRadius: 12, borderWidth: 1, borderColor: C.outlineVariant,
+          }}>
+          <View style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, backgroundColor: '#1DB954', borderRadius: 99 }} />
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1DB954', alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
+            <IconSymbol name="music.note" size={16} color="#000" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: C.onSurface }}>Connect Spotify</Text>
+            <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>Listen while you train</Text>
+          </View>
+          <IconSymbol name="chevron.right" size={14} color={C.onSurfaceVariant} />
+        </TouchableOpacity>
+      )}
       {isConnected && playerState?.track && (() => {
         const { track, isPlaying, progressMs, durationMs } = playerState;
         const progress = durationMs > 0 ? Math.min(progressMs / durationMs, 1) : 0;
@@ -1310,6 +1350,7 @@ export default function StartWorkoutScreen() {
 
       {/* Scrollable exercise list */}
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}>
@@ -1327,8 +1368,8 @@ export default function StartWorkoutScreen() {
         )}
 
         {exercises.map((ex, idx) => (
+          <View key={ex.id} onLayout={(e) => { exerciseYOffsets.current[ex.id] = e.nativeEvent.layout.y; }}>
           <ExerciseSection
-            key={ex.id}
             exercise={ex}
             sets={setsState[ex.id] ?? []}
             activeRest={activeRestDisplay}
@@ -1346,6 +1387,7 @@ export default function StartWorkoutScreen() {
             restSeconds={exRestOverrides[ex.id] ?? REST_SECONDS}
             onCycleRest={(secs) => setRestOverride(ex.id, secs)}
           />
+          </View>
         ))}
 
         <View style={styles.addExerciseSection}>

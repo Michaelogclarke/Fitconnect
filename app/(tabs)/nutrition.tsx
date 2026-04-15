@@ -342,6 +342,8 @@ function AddFoodModal({
   viewDate,
   editLog,
   targetMealType,
+  goals,
+  logs,
   onClose,
   onAdded,
   onEdited,
@@ -350,6 +352,8 @@ function AddFoodModal({
   viewDate:        Date;
   editLog?:        FoodLog;
   targetMealType?: MealType;
+  goals:           NutritionGoals;
+  logs:            FoodLog[];
   onClose:         () => void;
   onAdded:         (log: FoodLog) => void;
   onEdited:        (log: FoodLog) => void;
@@ -930,6 +934,50 @@ function AddFoodModal({
                   </View>
                 </View>
 
+                {/* Macro budget impact */}
+                {goals.calories > 0 && (() => {
+                  const baseCalories = logs.reduce((s, l) => s + l.calories, 0)  - (editLog?.calories  ?? 0);
+                  const baseProtein  = logs.reduce((s, l) => s + l.protein_g, 0) - (editLog?.protein_g ?? 0);
+                  const baseCarbs    = logs.reduce((s, l) => s + l.carbs_g, 0)   - (editLog?.carbs_g   ?? 0);
+                  const baseFat      = logs.reduce((s, l) => s + l.fat_g, 0)     - (editLog?.fat_g     ?? 0);
+                  const items = [
+                    { label: 'Calories', base: baseCalories, add: parseFloat(calories) || 0, goal: goals.calories,  unit: 'kcal', color: C.primary },
+                    { label: 'Protein',  base: baseProtein,  add: parseFloat(protein)  || 0, goal: goals.protein_g, unit: 'g',    color: '#4CAF50' },
+                    { label: 'Carbs',    base: baseCarbs,    add: parseFloat(carbs)    || 0, goal: goals.carbs_g,   unit: 'g',    color: '#FF9800' },
+                    { label: 'Fat',      base: baseFat,      add: parseFloat(fat)      || 0, goal: goals.fat_g,     unit: 'g',    color: '#F44336' },
+                  ];
+                  return (
+                    <View style={{ gap: 8 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: C.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Budget Impact
+                      </Text>
+                      {items.map(({ label, base, add, goal, unit, color }) => {
+                        if (goal <= 0) return null;
+                        const total   = base + add;
+                        const basePct = Math.min(base / goal, 1);
+                        const totPct  = Math.min(total / goal, 1);
+                        const over    = total > goal;
+                        return (
+                          <View key={label}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>{label}</Text>
+                              <Text style={{ fontSize: 12, color: over ? C.error : C.onSurface }}>
+                                {Math.round(total)} / {goal} {unit}
+                              </Text>
+                            </View>
+                            <View style={{ height: 5, backgroundColor: C.surfaceContainerHighest, borderRadius: 3, overflow: 'hidden' }}>
+                              {/* Already consumed */}
+                              <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${basePct * 100}%`, backgroundColor: color, opacity: 0.35, borderRadius: 3 }} />
+                              {/* Total incl. this item */}
+                              <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${totPct * 100}%`, backgroundColor: over ? C.error : color, borderRadius: 3 }} />
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  );
+                })()}
+
                 {/* Meal type */}
                 <View style={styles.mealPills}>
                   {MEAL_TYPES.map((m) => (
@@ -1368,6 +1416,8 @@ export default function NutritionScreen() {
         viewDate={viewDate}
         editLog={editLog}
         targetMealType={targetMeal}
+        goals={goals}
+        logs={logs}
         onClose={() => { setShowAddModal(false); setEditLog(undefined); setTargetMeal(undefined); }}
         onAdded={handleLogAdded}
         onEdited={handleLogEdited}
