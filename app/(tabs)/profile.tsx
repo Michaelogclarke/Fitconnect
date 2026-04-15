@@ -42,7 +42,6 @@ const CLIENT_MENU_SECTIONS = [
   {
     title: 'Fitness',
     items: [
-      { label: 'Progress Photos',  icon: 'camera.fill'       as const, route: '/progress-photos'     as const },
       { label: 'Body Weight Log',  icon: 'scalemass.fill'    as const, route: '/body-weight-log'      as const },
       { label: 'Achievements',     icon: 'trophy.fill'       as const, route: '/achievements'         as const },
       { label: 'Fitness Profile',  icon: 'person.text.rectangle.fill' as const, route: '/client-onboarding' as const },
@@ -324,13 +323,14 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               const { data: { session } } = await supabase.auth.getSession();
-              const { error } = await supabase.functions.invoke('delete-account', {
+              const { error, data } = await supabase.functions.invoke('delete-account', {
                 headers: { Authorization: `Bearer ${session?.access_token}` },
               });
-              if (error) throw error;
+              if (error) throw new Error(error.message ?? JSON.stringify(error));
+              if (data?.error) throw new Error(data.error);
               await supabase.auth.signOut();
-            } catch {
-              Alert.alert('Error', 'Failed to delete account. Please try again or contact mocupsolutions@gmail.com');
+            } catch (e: any) {
+              Alert.alert('Error', e?.message ?? 'Failed to delete account. Please try again or contact mocupsolutions@gmail.com');
             }
           },
         },
