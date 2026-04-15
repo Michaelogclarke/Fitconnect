@@ -630,7 +630,7 @@ function AddFoodModal({
       <Modal visible={visible && !showScan} transparent animationType="slide" onRequestClose={handleClose}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalSheet}>
 
             {phase === 'pick' ? (

@@ -4,6 +4,7 @@ import {
   Alert,
   Animated,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   PanResponder,
@@ -27,6 +28,8 @@ import { usePrefs } from '@/contexts/PrefsContext';
 import { DELETE_WIDTH, useStyles } from '@/styles/start-workout.styles';
 import { supabase } from '@/lib/supabase';
 import { useWorkout, Exercise, SetRow, ActiveRest } from '@/contexts/WorkoutContext';
+import { useSpotify } from '@/contexts/SpotifyContext';
+import { SpotifyFullPlayer } from '@/components/SpotifyFullPlayer';
 import { getCached, getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { enqueueWorkout, isNetworkError, WorkoutSavePayload } from '@/lib/offlineQueue';
 
@@ -301,7 +304,9 @@ function AddExerciseModal({
   if (phase === 'search') {
     return (
       <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
@@ -360,7 +365,7 @@ function AddExerciseModal({
               />
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     );
   }
@@ -817,6 +822,9 @@ export default function StartWorkoutScreen() {
     if (!isActive) startWorkout();
   }, [hydrated]);
 
+  const { isConnected, playerState, play, pause, skipNext, skipPrevious } = useSpotify();
+  const [spotifyFullOpen, setSpotifyFullOpen] = useState(false);
+
   // ── Local UI state (resets on unmount — that's fine) ──────────────────────
   const [showAddModal,    setShowAddModal]    = useState(false);
   const [exRestOverrides, setExRestOverrides] = useState<Record<string, number>>({});
@@ -870,12 +878,16 @@ export default function StartWorkoutScreen() {
     : 0;
 
   // Auto-clear when rest expires + double-pulse to signal it's time
+  // Also tick-haptic on 3, 2, 1 countdown
   useEffect(() => {
-    if (activeRest && restRemaining <= 0) {
+    if (!activeRest) return;
+    if (restRemaining <= 0) {
       setActiveRest(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 180);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 360);
+    } else if (restRemaining <= 3) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   }, [restRemaining]);
 
@@ -1239,6 +1251,63 @@ export default function StartWorkoutScreen() {
         </View>
       </View>
 
+      {/* Spotify player */}
+      {isConnected && playerState?.track && (() => {
+        const { track, isPlaying, progressMs, durationMs } = playerState;
+        const progress = durationMs > 0 ? Math.min(progressMs / durationMs, 1) : 0;
+        return (
+          <View style={{
+            marginHorizontal: 16,
+            marginBottom: 8,
+            borderRadius: 12,
+            backgroundColor: C.surfaceContainerHigh,
+            borderWidth: 1,
+            borderColor: C.outlineVariant,
+            overflow: 'hidden',
+          }}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setSpotifyFullOpen(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, gap: 10 }}>
+              {/* Spotify green accent */}
+              <View style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, backgroundColor: '#1DB954', borderRadius: 99 }} />
+              {/* Album art */}
+              {track.albumArt ? (
+                <Image source={{ uri: track.albumArt }} style={{ width: 36, height: 36, borderRadius: 6, marginLeft: 8 }} />
+              ) : (
+                <View style={{ width: 36, height: 36, borderRadius: 6, marginLeft: 8, backgroundColor: C.surfaceContainerHighest, alignItems: 'center', justifyContent: 'center' }}>
+                  <IconSymbol name="music.note" size={16} color={C.onSurfaceVariant} />
+                </View>
+              )}
+              {/* Track info */}
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '600', color: C.onSurface }}>{track.name}</Text>
+                <Text numberOfLines={1} style={{ fontSize: 12, color: C.onSurfaceVariant }}>{track.artist}</Text>
+              </View>
+              {/* Controls */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TouchableOpacity onPress={skipPrevious} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <IconSymbol name="backward.fill" size={18} color={C.onSurface} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={isPlaying ? pause : play}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#1DB954', alignItems: 'center', justifyContent: 'center' }}>
+                  <IconSymbol name={isPlaying ? 'pause.fill' : 'play.fill'} size={12} color="#000" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={skipNext} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <IconSymbol name="forward.fill" size={18} color={C.onSurface} />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+            {/* Progress bar */}
+            <View style={{ height: 2, backgroundColor: C.surfaceContainerHighest }}>
+              <View style={{ height: 2, width: `${progress * 100}%`, backgroundColor: '#1DB954' }} />
+            </View>
+          </View>
+        );
+      })()}
+
       {/* Scrollable exercise list */}
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -1324,6 +1393,11 @@ export default function StartWorkoutScreen() {
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={addCustomExercise}
+      />
+
+      <SpotifyFullPlayer
+        visible={spotifyFullOpen}
+        onClose={() => setSpotifyFullOpen(false)}
       />
 
       {/* Workout saved overlay */}
