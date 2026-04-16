@@ -38,6 +38,20 @@ type ActiveClient = {
   name:      string;
 };
 
+type MealPlanDay = {
+  id:         string;
+  day_number: number;
+  day_name:   string;
+};
+
+type MealPlan = {
+  id:          string;
+  name:        string;
+  description: string | null;
+  is_active:   boolean;
+  days:        MealPlanDay[];
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function uid() { return Math.random().toString(36).slice(2); }
@@ -190,18 +204,104 @@ function PlanCard({
   );
 }
 
+// ─── Meal Plan Card ───────────────────────────────────────────────────────────
+
+function MealPlanCard({
+  plan,
+  onEdit,
+  onDelete,
+}: {
+  plan:     MealPlan;
+  onEdit:   () => void;
+  onDelete: () => void;
+}) {
+  const C = useColors();
+  const styles = useStyles();
+  const templateStyles = useTemplateStyles();
+  const [expanded, setExpanded] = useState(false);
+
+  const sortedDays = [...plan.days].sort((a, b) => a.day_number - b.day_number);
+
+  return (
+    <View style={styles.planCard}>
+      <TouchableOpacity
+        style={styles.planCardHeader}
+        onPress={() => setExpanded((e) => !e)}
+        activeOpacity={0.8}>
+        <View style={styles.planIconBox}>
+          <IconSymbol name="fork.knife" size={20} color={C.primary} />
+        </View>
+        <View style={styles.planInfo}>
+          <Text style={styles.planName}>{plan.name}</Text>
+          <Text style={styles.planMeta}>
+            {plan.description
+              ? plan.description
+              : `${plan.days.length} day${plan.days.length !== 1 ? 's' : ''}`}
+          </Text>
+        </View>
+        <IconSymbol
+          name={expanded ? 'chevron.up' : 'chevron.down'}
+          size={18}
+          color={C.onSurfaceVariant}
+        />
+      </TouchableOpacity>
+
+      {expanded && (
+        <>
+          <View style={styles.planDivider} />
+          {sortedDays.length === 0 ? (
+            <Text style={[styles.dayFocus, { padding: 16 }]}>
+              No days added yet — edit to add meal days.
+            </Text>
+          ) : (
+            <View style={styles.daysList}>
+              {sortedDays.map((day) => (
+                <View key={day.id} style={styles.dayRow}>
+                  <View style={styles.dayNumber}>
+                    <Text style={styles.dayNumberText}>{day.day_number}</Text>
+                  </View>
+                  <View style={styles.dayInfo}>
+                    <Text style={styles.dayName}>{day.day_name}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={templateStyles.footerRow}>
+            <TouchableOpacity style={[styles.editPlanRow, { flex: 1 }]} onPress={onEdit}>
+              <Text style={styles.editPlanText}>Edit Plan</Text>
+              <IconSymbol name="pencil" size={13} color={C.onSurfaceVariant} />
+            </TouchableOpacity>
+            <View style={templateStyles.footerDivider} />
+            <TouchableOpacity
+              style={[styles.editPlanRow, { flex: 1 }]}
+              onPress={onDelete}>
+              <Text style={[styles.editPlanText, { color: C.error }]}>Delete</Text>
+              <IconSymbol name="trash.fill" size={13} color={C.error} />
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PlansScreen() {
   const C = useColors();
   const styles = useStyles();
   const templateStyles = useTemplateStyles();
+  const segStyles = useSegStyles();
   const router = useRouter();
   const { startWorkoutFromPlan } = useWorkout();
 
   const [loading,        setLoading]        = useState(true);
   const [refreshing,     setRefreshing]     = useState(false);
   const [plans,          setPlans]          = useState<WorkoutPlan[]>([]);
+  const [mealPlans,      setMealPlans]      = useState<MealPlan[]>([]);
+  const [tab,            setTab]            = useState<'workout' | 'meal'>('workout');
   const [isTrainer,      setIsTrainer]      = useState(false);
   const [activeClients,  setActiveClients]  = useState<ActiveClient[]>([]);
   const [deployPlanId,   setDeployPlanId]   = useState<string | null>(null);
@@ -238,6 +338,22 @@ export default function PlansScreen() {
 
       const trainer = profileRes.data?.role === 'trainer';
       setIsTrainer(trainer);
+
+      if (trainer) {
+        const { data: mealPlansData } = await supabase
+          .from('meal_plans')
+          .select('id, name, description, is_active, meal_plan_days(id, day_number, day_name)')
+          .eq('user_id', user.id)
+          .eq('is_template', true)
+          .order('created_at', { ascending: false });
+        setMealPlans((mealPlansData ?? []).map((p: any) => ({
+          id:          p.id,
+          name:        p.name,
+          description: p.description ?? null,
+          is_active:   p.is_active,
+          days:        (p.meal_plan_days ?? []).sort((a: any, b: any) => a.day_number - b.day_number),
+        })));
+      }
 
       const fresh: WorkoutPlan[] = (plansRes.data ?? []).map((p: any) => ({
         id:            p.id,
@@ -304,6 +420,19 @@ export default function PlansScreen() {
     }
   }
 
+  async function deleteMealPlan(planId: string) {
+    Alert.alert('Delete Meal Plan', 'This will delete the template. Assigned copies are not affected.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          await supabase.from('meal_plans').delete().eq('id', planId);
+          setMealPlans((prev) => prev.filter((p) => p.id !== planId));
+        },
+      },
+    ]);
+  }
+
   // Load exercises for a plan day, pre-populate context, navigate to workout
   async function startDayWorkout(dayId: string) {
     const { data: planExs } = await supabase
@@ -351,40 +480,91 @@ export default function PlansScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Plans</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/plan-editor' as any)}>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => router.push(tab === 'meal' ? ('/meal-plan-editor' as any) : ('/plan-editor' as any))}>
             <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
-            <Text style={styles.addBtnText}>New Plan</Text>
+            <Text style={styles.addBtnText}>{tab === 'meal' ? 'New Meal Plan' : 'New Plan'}</Text>
           </TouchableOpacity>
         </View>
 
+        {/* Segment switcher — trainers only */}
+        {isTrainer && (
+          <View style={segStyles.container}>
+            {(['workout', 'meal'] as const).map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[segStyles.tab, tab === t && segStyles.tabActive]}
+                onPress={() => setTab(t)}
+                activeOpacity={0.8}>
+                <IconSymbol
+                  name={t === 'workout' ? 'dumbbell.fill' : 'fork.knife'}
+                  size={14}
+                  color={tab === t ? C.primary : C.onSurfaceVariant}
+                />
+                <Text style={[segStyles.tabText, tab === t && segStyles.tabTextActive]}>
+                  {t === 'workout' ? 'Workout' : 'Meal'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {loading ? (
           <ActivityIndicator color={C.primary} style={{ marginVertical: 40 }} />
-        ) : plans.length === 0 ? (
-          <View style={styles.emptyState}>
-            <IconSymbol name="list.bullet" size={36} color={C.outlineVariant} />
-            <Text style={[styles.emptyText, { marginTop: Spacing.md }]}>No plans yet</Text>
-            <Text style={styles.emptySubtext}>
-              Build a training plan with your exercises, sets, and reps — then start any day with one tap.
-            </Text>
-            <TouchableOpacity
-              style={styles.emptyCreateBtn}
-              onPress={() => router.push('/plan-editor' as any)}>
-              <IconSymbol name="plus.circle.fill" size={16} color={C.background} />
-              <Text style={styles.emptyCreateText}>Create Your First Plan</Text>
-            </TouchableOpacity>
-          </View>
+        ) : tab === 'workout' ? (
+          plans.length === 0 ? (
+            <View style={styles.emptyState}>
+              <IconSymbol name="list.bullet" size={36} color={C.outlineVariant} />
+              <Text style={[styles.emptyText, { marginTop: Spacing.md }]}>No plans yet</Text>
+              <Text style={styles.emptySubtext}>
+                Build a training plan with your exercises, sets, and reps — then start any day with one tap.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyCreateBtn}
+                onPress={() => router.push('/plan-editor' as any)}>
+                <IconSymbol name="plus.circle.fill" size={16} color={C.background} />
+                <Text style={styles.emptyCreateText}>Create Your First Plan</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            plans.map((plan) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                onStartDay={startDayWorkout}
+                onEdit={() => router.push({ pathname: '/plan-editor' as any, params: { planId: plan.id } })}
+                isTrainer={isTrainer}
+                onToggleTemplate={() => toggleTemplate(plan.id, plan.is_template)}
+                onDeploy={() => setDeployPlanId(plan.id)}
+              />
+            ))
+          )
         ) : (
-          plans.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              onStartDay={startDayWorkout}
-              onEdit={() => router.push({ pathname: '/plan-editor' as any, params: { planId: plan.id } })}
-              isTrainer={isTrainer}
-              onToggleTemplate={() => toggleTemplate(plan.id, plan.is_template)}
-              onDeploy={() => setDeployPlanId(plan.id)}
-            />
-          ))
+          mealPlans.length === 0 ? (
+            <View style={styles.emptyState}>
+              <IconSymbol name="fork.knife" size={36} color={C.outlineVariant} />
+              <Text style={[styles.emptyText, { marginTop: Spacing.md }]}>No meal plans yet</Text>
+              <Text style={styles.emptySubtext}>
+                Create meal plan templates to assign to your clients.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyCreateBtn}
+                onPress={() => router.push('/meal-plan-editor' as any)}>
+                <IconSymbol name="plus.circle.fill" size={16} color={C.background} />
+                <Text style={styles.emptyCreateText}>Create Your First Meal Plan</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            mealPlans.map((plan) => (
+              <MealPlanCard
+                key={plan.id}
+                plan={plan}
+                onEdit={() => router.push({ pathname: '/meal-plan-editor' as any, params: { planId: plan.id } })}
+                onDelete={() => deleteMealPlan(plan.id)}
+              />
+            ))
+          )
         )}
 
       </ScrollView>
@@ -427,6 +607,44 @@ export default function PlansScreen() {
       </Modal>
     </SafeAreaView>
   );
+}
+
+function useSegStyles() {
+  const C = useColors();
+  return useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.md,
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      padding: 4,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      paddingVertical: Spacing.sm,
+      borderRadius: Radius.md,
+    },
+    tabActive: {
+      backgroundColor: C.background,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    tabText: {
+      ...Typography.titleMd,
+      color: C.onSurfaceVariant,
+    },
+    tabTextActive: {
+      color: C.primary,
+    },
+  }), [C]);
 }
 
 function useTemplateStyles() {

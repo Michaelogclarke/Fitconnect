@@ -60,12 +60,38 @@ type ScannedProduct = {
   per100g: { calories: number; protein_g: number; carbs_g: number; fat_g: number };
 };
 
+type SuggestedMeal = {
+  id:        string;
+  meal_type: MealType;
+  name:      string;
+  calories:  number;
+  protein_g: number;
+  carbs_g:   number;
+  fat_g:     number;
+  notes:     string | null;
+};
+
 type RecentFood = {
   name:      string;
   calories:  number;
   protein_g: number;
   carbs_g:   number;
   fat_g:     number;
+};
+
+type SavedMealItem = {
+  id:        string;
+  name:      string;
+  calories:  number;
+  protein_g: number;
+  carbs_g:   number;
+  fat_g:     number;
+};
+
+type SavedMealCombo = {
+  id:    string;
+  name:  string;
+  items: SavedMealItem[];
 };
 
 type NutritionDayCache = { date: string; goals: NutritionGoals; logs: FoodLog[] };
@@ -344,6 +370,7 @@ function AddFoodModal({
   targetMealType,
   goals,
   logs,
+  prefill,
   onClose,
   onAdded,
   onEdited,
@@ -354,6 +381,7 @@ function AddFoodModal({
   targetMealType?: MealType;
   goals:           NutritionGoals;
   logs:            FoodLog[];
+  prefill?:        SuggestedMeal;
   onClose:         () => void;
   onAdded:         (log: FoodLog) => void;
   onEdited:        (log: FoodLog) => void;
@@ -385,11 +413,22 @@ function AddFoodModal({
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Saved foods + tab
-  const [savedFoods,   setSavedFoods]   = useState<RecentFood[]>([]);
-  const [activePickTab, setActivePickTab] = useState<'recent' | 'saved'>('recent');
-  const [isSaved,      setIsSaved]      = useState(false);
+  const [savedFoods,     setSavedFoods]     = useState<RecentFood[]>([]);
+  const [activePickTab,  setActivePickTab]  = useState<'recent' | 'saved' | 'meals'>('recent');
+  const [isSaved,        setIsSaved]        = useState(false);
 
-  // Pre-fill form when editing an existing log; set meal type when opening for specific meal
+  // Saved meal combos (Meals tab)
+  const [savedMealCombos,  setSavedMealCombos]  = useState<SavedMealCombo[]>([]);
+  const [loadingCombos,    setLoadingCombos]    = useState(false);
+  const [expandedComboId,  setExpandedComboId]  = useState<string | null>(null);
+
+  // Add to meal plan
+  const [showPlanPicker,  setShowPlanPicker]  = useState(false);
+  const [planOptions,     setPlanOptions]     = useState<{ id: string; name: string }[]>([]);
+  const [loadingPlans,    setLoadingPlans]    = useState(false);
+  const [savingToPlan,    setSavingToPlan]    = useState(false);
+
+  // Pre-fill form when editing, using a trainer suggestion, or opening for a specific meal
   useEffect(() => {
     if (!visible) return;
     if (editLog) {
@@ -400,10 +439,19 @@ function AddFoodModal({
       setFat(String(editLog.fat_g));
       setMealType(editLog.meal_type);
       setPhase('configure');
+    } else if (prefill) {
+      setFoodName(prefill.name);
+      setCalories(String(prefill.calories));
+      setProtein(String(prefill.protein_g));
+      setCarbs(String(prefill.carbs_g));
+      setFat(String(prefill.fat_g));
+      setMealType(prefill.meal_type);
+      setScannedProduct(null);
+      setPhase('configure');
     } else {
       setMealType(targetMealType ?? mealTypeForNow());
     }
-  }, [visible, editLog, targetMealType]);
+  }, [visible, editLog, targetMealType, prefill]);
 
   // Load recent foods when modal opens
   useEffect(() => {
@@ -441,6 +489,35 @@ function AddFoodModal({
       if (val) setSavedFoods(JSON.parse(val));
     });
   }, [visible]);
+
+  // Load saved meal combos when Meals tab is selected
+  useEffect(() => {
+    if (!visible || activePickTab !== 'meals') return;
+    (async () => {
+      setLoadingCombos(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('saved_meals')
+          .select('id, name, saved_meal_items(id, name, calories, protein_g, carbs_g, fat_g, sort_order)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        setSavedMealCombos((data ?? []).map((m: any) => ({
+          id:    m.id,
+          name:  m.name,
+          items: (m.saved_meal_items ?? [])
+            .sort((a: any, b: any) => a.sort_order - b.sort_order)
+            .map((i: any) => ({
+              id: i.id, name: i.name,
+              calories: i.calories, protein_g: i.protein_g,
+              carbs_g: i.carbs_g, fat_g: i.fat_g,
+            })),
+        })));
+      } catch {}
+      setLoadingCombos(false);
+    })();
+  }, [visible, activePickTab]);
 
   // Sync isSaved with current food name
   useEffect(() => {
@@ -542,6 +619,74 @@ function AddFoodModal({
     } catch {}
   }
 
+  async function quickLogMeal(combo: SavedMealCombo) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const mt = targetMealType ?? mealTypeForNow();
+      const inserts = combo.items.map((item, i) => ({
+        user_id:   user.id,
+        name:      item.name,
+        calories:  item.calories,
+        protein_g: item.protein_g,
+        carbs_g:   item.carbs_g,
+        fat_g:     item.fat_g,
+        meal_type: mt,
+        logged_at: toLocalDate(viewDate),
+      }));
+      const { data, error } = await supabase.from('food_logs').insert(inserts).select();
+      if (error) throw error;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      (data as FoodLog[]).forEach((log) => onAdded(log));
+      handleClose();
+    } catch {}
+  }
+
+  async function deleteSavedMealCombo(id: string) {
+    await supabase.from('saved_meals').delete().eq('id', id);
+    setSavedMealCombos((prev) => prev.filter((c) => c.id !== id));
+    if (expandedComboId === id) setExpandedComboId(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }
+
+  async function openMealPlanPicker() {
+    if (!foodName.trim()) return;
+    setLoadingPlans(true);
+    setShowPlanPicker(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('meal_plans')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .eq('is_template', true)
+        .order('created_at', { ascending: false });
+      setPlanOptions((data ?? []).map((p: any) => ({ id: p.id, name: p.name })));
+    } catch {}
+    setLoadingPlans(false);
+  }
+
+  async function handleSelectPlan(planId: string) {
+    if (!foodName.trim()) return;
+    setSavingToPlan(true);
+    const { error } = await supabase.from('meal_plan_meals').insert({
+      meal_plan_id: planId,
+      meal_type:    mealType,
+      name:         foodName.trim(),
+      calories:     parseInt(calories, 10) || 0,
+      protein_g:    parseFloat(protein)   || 0,
+      carbs_g:      parseFloat(carbs)     || 0,
+      fat_g:        parseFloat(fat)       || 0,
+      sort_order:   0,
+    });
+    setSavingToPlan(false);
+    setShowPlanPicker(false);
+    if (!error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }
+
   // Auto-recalculate macros when quantity changes (scanned products only)
   useEffect(() => {
     if (!scannedProduct) return;
@@ -566,6 +711,8 @@ function AddFoodModal({
     setScannedProduct(null); setSaving(false); setError('');
     setSearchQuery(''); setSearchResults([]);
     setActivePickTab('recent'); setIsSaved(false);
+    setExpandedComboId(null);
+    setShowPlanPicker(false); setPlanOptions([]);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     onClose();
   }
@@ -631,6 +778,51 @@ function AddFoodModal({
         onProductFound={handleProductFound}
       />
 
+      {/* Add to Meal Plan sheet */}
+      <Modal visible={showPlanPicker} transparent animationType="slide" onRequestClose={() => setShowPlanPicker(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowPlanPicker(false)} activeOpacity={1} />
+          <View style={{
+            backgroundColor: C.surfaceContainer,
+            borderTopLeftRadius: 20, borderTopRightRadius: 20,
+            padding: Spacing.xl, paddingBottom: Spacing.xxxl, maxHeight: '65%',
+          }}>
+            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.outlineVariant, alignSelf: 'center', marginBottom: Spacing.lg }} />
+            <Text style={{ fontSize: 17, fontWeight: '700', color: C.onSurface, marginBottom: Spacing.xs }}>
+              Add to Meal Plan
+            </Text>
+            <Text style={{ fontSize: 13, color: C.onSurfaceVariant, marginBottom: Spacing.md }}>
+              "{foodName}" will be added as {mealType}
+            </Text>
+            {loadingPlans ? (
+              <ActivityIndicator color={C.primary} style={{ marginVertical: Spacing.lg }} />
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {planOptions.length === 0 ? (
+                  <Text style={{ fontSize: 14, color: C.onSurfaceVariant, paddingVertical: Spacing.md }}>
+                    No meal plan templates yet. Create one in the Plans tab.
+                  </Text>
+                ) : (
+                  planOptions.map((plan) => (
+                    <TouchableOpacity
+                      key={plan.id}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: C.outlineVariant }}
+                      onPress={() => handleSelectPlan(plan.id)}
+                      disabled={savingToPlan}>
+                      <IconSymbol name="fork.knife" size={16} color={C.primary} />
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: C.onSurface, flex: 1 }}>{plan.name}</Text>
+                      {savingToPlan
+                        ? <ActivityIndicator size="small" color={C.primary} />
+                        : <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={visible && !showScan} transparent animationType="slide" onRequestClose={handleClose}>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
@@ -665,17 +857,22 @@ function AddFoodModal({
                 {/* Tab row — hidden while searching */}
                 {searchQuery.length < 2 && (
                   <View style={styles.pickTabRow}>
-                    {(['recent', 'saved'] as const).map((tab) => (
+                    {(['recent', 'saved', 'meals'] as const).map((tab) => (
                       <TouchableOpacity
                         key={tab}
                         style={[styles.pickTab, activePickTab === tab && styles.pickTabActive]}
                         onPress={() => setActivePickTab(tab)}>
                         <Text style={[styles.pickTabText, activePickTab === tab && styles.pickTabTextActive]}>
-                          {tab === 'recent' ? 'Recent' : 'Saved'}
+                          {tab === 'recent' ? 'Recent' : tab === 'saved' ? 'Saved' : 'Meals'}
                         </Text>
                         {tab === 'saved' && savedFoods.length > 0 && (
                           <View style={styles.pickTabBadge}>
                             <Text style={styles.pickTabBadgeText}>{savedFoods.length}</Text>
+                          </View>
+                        )}
+                        {tab === 'meals' && savedMealCombos.length > 0 && (
+                          <View style={styles.pickTabBadge}>
+                            <Text style={styles.pickTabBadgeText}>{savedMealCombos.length}</Text>
                           </View>
                         )}
                       </TouchableOpacity>
@@ -753,7 +950,7 @@ function AddFoodModal({
                         No recent foods yet
                       </Text>
                     )
-                  ) : (
+                  ) : activePickTab === 'saved' ? (
                     // ── Saved ─────────────────────────────────────────────────
                     savedFoods.length > 0 ? (
                       savedFoods.map((food, i) => (
@@ -786,6 +983,68 @@ function AddFoodModal({
                       <Text style={[styles.mealEmptyText, { textAlign: 'center', paddingVertical: Spacing.md }]}>
                         No saved foods yet — tap ★ on a recent food
                       </Text>
+                    )
+                  ) : (
+                    // ── Meals (saved combos) ──────────────────────────────────
+                    loadingCombos ? (
+                      <ActivityIndicator color={C.primary} style={{ marginVertical: Spacing.md }} />
+                    ) : savedMealCombos.length > 0 ? (
+                      savedMealCombos.map((combo) => {
+                        const totalCal  = combo.items.reduce((s, i) => s + i.calories,  0);
+                        const totalProt = combo.items.reduce((s, i) => s + i.protein_g, 0);
+                        const totalCarbs= combo.items.reduce((s, i) => s + i.carbs_g,   0);
+                        const totalFat  = combo.items.reduce((s, i) => s + i.fat_g,     0);
+                        const isExpanded = expandedComboId === combo.id;
+                        return (
+                          <View key={combo.id}>
+                            <TouchableOpacity
+                              style={styles.quickPickItem}
+                              onPress={() => setExpandedComboId(isExpanded ? null : combo.id)}
+                              activeOpacity={0.7}>
+                              <View style={styles.quickPickInfo}>
+                                <Text style={styles.quickPickName} numberOfLines={1}>{combo.name}</Text>
+                                <Text style={styles.quickPickMeta}>
+                                  {combo.items.length} items · P {totalProt.toFixed(0)}g · C {totalCarbs.toFixed(0)}g · F {totalFat.toFixed(0)}g
+                                </Text>
+                              </View>
+                              <Text style={styles.quickPickCals}>{totalCal}</Text>
+                              <TouchableOpacity
+                                style={styles.foodActionBtn}
+                                onPress={() => deleteSavedMealCombo(combo.id)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <IconSymbol name="trash.fill" size={15} color={C.error} />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.foodActionBtn}
+                                onPress={() => quickLogMeal(combo)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
+                              </TouchableOpacity>
+                            </TouchableOpacity>
+                            {isExpanded && (
+                              <View style={{ paddingLeft: Spacing.md, paddingRight: Spacing.sm, paddingBottom: Spacing.xs }}>
+                                {combo.items.map((item) => (
+                                  <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 3 }}>
+                                    <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: C.onSurfaceVariant, marginRight: Spacing.sm }} />
+                                    <Text style={[styles.quickPickName, { flex: 1, fontSize: 13 }]} numberOfLines={1}>{item.name}</Text>
+                                    <Text style={[styles.quickPickCals, { fontSize: 12 }]}>{item.calories}</Text>
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })
+                    ) : (
+                      <View style={{ alignItems: 'center', paddingVertical: Spacing.lg, gap: Spacing.sm }}>
+                        <IconSymbol name="fork.knife" size={28} color={C.outlineVariant} />
+                        <Text style={[styles.mealEmptyText, { textAlign: 'center' }]}>
+                          No saved meals yet
+                        </Text>
+                        <Text style={[styles.mealEmptyText, { textAlign: 'center', fontSize: 12 }]}>
+                          Log a meal then tap "Save as Meal" to create one
+                        </Text>
+                      </View>
                     )
                   )}
                 </View>
@@ -994,6 +1253,21 @@ function AddFoodModal({
 
                 {!!error && <Text style={styles.modalError}>{error}</Text>}
 
+                {/* Add to Meal Plan (secondary action) */}
+                {!isEditMode && (
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                      gap: Spacing.xs, paddingVertical: Spacing.sm,
+                      borderWidth: 1, borderColor: C.primary + '66',
+                      borderRadius: 10, marginBottom: Spacing.sm,
+                    }}
+                    onPress={openMealPlanPicker}>
+                    <IconSymbol name="fork.knife" size={14} color={C.primary} />
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: C.primary }}>Add to Meal Plan</Text>
+                  </TouchableOpacity>
+                )}
+
                 <View style={styles.modalActions}>
                   <TouchableOpacity style={styles.modalCancelBtn} onPress={handleClose}>
                     <Text style={styles.modalCancelText}>Cancel</Text>
@@ -1013,6 +1287,121 @@ function AddFoodModal({
         </KeyboardAvoidingView>
       </Modal>
     </>
+  );
+}
+
+// ─── Save-as-meal modal ───────────────────────────────────────────────────────
+
+function SaveAsMealModal({
+  visible,
+  items,
+  onClose,
+  onSaved,
+}: {
+  visible:  boolean;
+  items:    FoodLog[];
+  onClose:  () => void;
+  onSaved:  () => void;
+}) {
+  const C = useColors();
+  const [name,   setName]   = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible) setName('');
+  }, [visible]);
+
+  async function handleSave() {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: meal, error } = await supabase
+        .from('saved_meals')
+        .insert({ user_id: user.id, name: name.trim() })
+        .select('id')
+        .single();
+      if (error || !meal) throw error;
+      await supabase.from('saved_meal_items').insert(
+        items.map((item, i) => ({
+          saved_meal_id: meal.id,
+          name:          item.name,
+          calories:      item.calories,
+          protein_g:     item.protein_g,
+          carbs_g:       item.carbs_g,
+          fat_g:         item.fat_g,
+          sort_order:    i,
+        }))
+      );
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onSaved();
+      onClose();
+    } catch {}
+    setSaving(false);
+  }
+
+  const totalCal = items.reduce((s, i) => s + i.calories, 0);
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
+        <View style={{
+          backgroundColor: C.surfaceContainer,
+          borderTopLeftRadius: 20, borderTopRightRadius: 20,
+          padding: Spacing.xl, paddingBottom: Spacing.xxxl,
+        }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: C.outlineVariant, alignSelf: 'center', marginBottom: Spacing.lg }} />
+          <Text style={{ fontSize: 17, fontWeight: '700', color: C.onSurface, marginBottom: 4 }}>Save as Meal</Text>
+          <Text style={{ fontSize: 13, color: C.onSurfaceVariant, marginBottom: Spacing.lg }}>
+            {items.length} item{items.length !== 1 ? 's' : ''} · {totalCal} kcal total
+          </Text>
+
+          {/* Item list preview */}
+          {items.map((item) => (
+            <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4, gap: Spacing.sm }}>
+              <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: C.primary }} />
+              <Text style={{ fontSize: 13, color: C.onSurface, flex: 1 }} numberOfLines={1}>{item.name}</Text>
+              <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>{item.calories} kcal</Text>
+            </View>
+          ))}
+
+          <View style={{
+            flexDirection: 'row', alignItems: 'center',
+            backgroundColor: C.surfaceContainerHighest,
+            borderRadius: 10, borderWidth: 1, borderColor: C.outlineVariant,
+            paddingHorizontal: Spacing.md, marginTop: Spacing.lg, marginBottom: Spacing.md,
+          }}>
+            <TextInput
+              style={{ flex: 1, fontSize: 15, color: C.onSurface, paddingVertical: Spacing.md }}
+              value={name}
+              onChangeText={setName}
+              placeholder="Meal name (e.g. Turkey bagel breakfast)"
+              placeholderTextColor={C.onSurfaceVariant}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleSave}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={{
+              height: 50, borderRadius: 12, backgroundColor: C.primary,
+              justifyContent: 'center', alignItems: 'center',
+              opacity: !name.trim() || saving ? 0.5 : 1,
+            }}
+            onPress={handleSave}
+            disabled={!name.trim() || saving}>
+            {saving
+              ? <ActivityIndicator color={C.background} />
+              : <Text style={{ fontSize: 16, fontWeight: '700', color: C.background }}>Save Meal</Text>}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -1131,17 +1520,21 @@ export default function NutritionScreen() {
   const styles = useStyles();
   const insets = useSafeAreaInsets();
 
-  const [loading,        setLoading]        = useState(true);
-  const [refreshing,     setRefreshing]     = useState(false);
-  const [viewDate,       setViewDate]       = useState(new Date());
-  const [goals,          setGoals]          = useState<NutritionGoals>(DEFAULT_GOALS);
-  const [logs,           setLogs]           = useState<FoodLog[]>([]);
-  const [showAddModal,   setShowAddModal]   = useState(false);
-  const [showGoalsModal, setShowGoalsModal] = useState(false);
-  const [editLog,        setEditLog]        = useState<FoodLog | undefined>(undefined);
-  const [targetMeal,     setTargetMeal]     = useState<MealType | undefined>(undefined);
+  const [loading,         setLoading]         = useState(true);
+  const [refreshing,      setRefreshing]      = useState(false);
+  const [viewDate,        setViewDate]        = useState(new Date());
+  const [goals,           setGoals]           = useState<NutritionGoals>(DEFAULT_GOALS);
+  const [logs,            setLogs]            = useState<FoodLog[]>([]);
+  const [suggestedMeals,  setSuggestedMeals]  = useState<SuggestedMeal[]>([]);
+  const [prefillMeal,     setPrefillMeal]     = useState<SuggestedMeal | null>(null);
+  const [showAddModal,    setShowAddModal]    = useState(false);
+  const [showGoalsModal,  setShowGoalsModal]  = useState(false);
+  const [editLog,         setEditLog]         = useState<FoodLog | undefined>(undefined);
+  const [targetMeal,      setTargetMeal]      = useState<MealType | undefined>(undefined);
   // Meals with entries start expanded; empty meals start collapsed
-  const [expandedMeals,  setExpandedMeals]  = useState<Set<MealType>>(new Set());
+  const [expandedMeals,    setExpandedMeals]    = useState<Set<MealType>>(new Set());
+  const [saveMealItems,    setSaveMealItems]    = useState<FoodLog[]>([]);
+  const [showSaveMeal,     setShowSaveMeal]     = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -1149,16 +1542,17 @@ export default function NutritionScreen() {
     }, [viewDate])
   );
 
-  // Expand meals that have logs when logs change
+  // Expand meals that have logs or trainer suggestions
   useEffect(() => {
     setExpandedMeals((prev) => {
       const next = new Set(prev);
       MEAL_TYPES.forEach((meal) => {
         if (logs.some((l) => l.meal_type === meal)) next.add(meal);
+        if (suggestedMeals.some((m) => m.meal_type === meal)) next.add(meal);
       });
       return next;
     });
-  }, [logs]);
+  }, [logs, suggestedMeals]);
 
   async function loadData(date: Date, silent = false) {
     const dateStr = toLocalDate(date);
@@ -1178,13 +1572,19 @@ export default function NutritionScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const [{ data: goalRow }, { data: logRows }] = await Promise.all([
+      const [{ data: goalRow }, { data: logRows }, { data: planRow }] = await Promise.all([
         supabase.from('nutrition_goals').select('*').eq('user_id', user.id).single(),
         supabase.from('food_logs')
           .select('*')
           .eq('user_id', user.id)
           .eq('logged_at', dateStr)
           .order('created_at'),
+        supabase.from('meal_plans')
+          .select('id')
+          .eq('assigned_to', user.id)
+          .eq('is_template', false)
+          .eq('is_active', true)
+          .maybeSingle(),
       ]);
 
       const freshGoals = goalRow
@@ -1195,6 +1595,27 @@ export default function NutritionScreen() {
       setGoals(freshGoals);
       setLogs(freshLogs);
       await setCached(CACHE_KEYS.NUTRITION_DAY, { date: dateStr, goals: freshGoals, logs: freshLogs });
+
+      // Fetch trainer suggestions — all meals in the assigned plan
+      if (planRow) {
+        const { data: mealRows } = await supabase
+          .from('meal_plan_meals')
+          .select('id, meal_type, name, calories, protein_g, carbs_g, fat_g, notes')
+          .eq('meal_plan_id', planRow.id)
+          .order('sort_order');
+        setSuggestedMeals((mealRows ?? []).map((m: any) => ({
+          id:        m.id,
+          meal_type: m.meal_type as MealType,
+          name:      m.name,
+          calories:  m.calories,
+          protein_g: m.protein_g,
+          carbs_g:   m.carbs_g,
+          fat_g:     m.fat_g,
+          notes:     m.notes,
+        })));
+      } else {
+        setSuggestedMeals([]);
+      }
     } catch {}
 
     setLoading(false);
@@ -1353,9 +1774,11 @@ export default function NutritionScreen() {
 
           {/* Meal sections */}
           {MEAL_TYPES.map((meal) => {
-            const mealLogs  = logs.filter((l) => l.meal_type === meal);
-            const mealCals  = mealLogs.reduce((s, l) => s + l.calories, 0);
-            const isExpanded = expandedMeals.has(meal);
+            const mealLogs        = logs.filter((l) => l.meal_type === meal);
+            const mealSuggestions = suggestedMeals.filter((m) => m.meal_type === meal);
+            const mealCals        = mealLogs.reduce((s, l) => s + l.calories, 0);
+            const isExpanded      = expandedMeals.has(meal);
+            const hasTrainer      = mealSuggestions.length > 0;
             return (
               <View key={meal} style={styles.mealSection}>
                 <View style={styles.mealHeader}>
@@ -1364,6 +1787,16 @@ export default function NutritionScreen() {
                     onPress={() => toggleMeal(meal)}
                     activeOpacity={0.7}>
                     <Text style={styles.mealLabel}>{MEAL_LABELS[meal]}</Text>
+                    {hasTrainer && (
+                      <View style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 3,
+                        backgroundColor: C.primary + '18',
+                        borderRadius: 99, paddingHorizontal: 6, paddingVertical: 2,
+                      }}>
+                        <IconSymbol name="person.fill" size={9} color={C.primary} />
+                        <Text style={{ fontSize: 10, fontWeight: '600', color: C.primary }}>From Trainer</Text>
+                      </View>
+                    )}
                     <IconSymbol
                       name={isExpanded ? 'chevron.left' : 'chevron.right'}
                       size={12}
@@ -1374,7 +1807,7 @@ export default function NutritionScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
                     {mealCals > 0 && <Text style={styles.mealCals}>{mealCals} kcal</Text>}
                     <TouchableOpacity
-                      onPress={() => { setEditLog(undefined); setTargetMeal(meal); setShowAddModal(true); }}
+                      onPress={() => { setEditLog(undefined); setPrefillMeal(null); setTargetMeal(meal); setShowAddModal(true); }}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
                     </TouchableOpacity>
@@ -1382,20 +1815,107 @@ export default function NutritionScreen() {
                 </View>
 
                 {isExpanded && (
-                  mealLogs.length === 0 ? (
-                    <View style={styles.mealEmpty}>
-                      <Text style={styles.mealEmptyText}>Nothing logged yet</Text>
-                    </View>
-                  ) : (
-                    mealLogs.map((log) => (
-                      <SwipeableFoodRow
-                        key={log.id}
-                        log={log}
-                        onDelete={() => deleteLog(log.id)}
-                        onEdit={() => { setEditLog(log); setShowAddModal(true); }}
-                      />
-                    ))
-                  )
+                  <>
+                    {/* Trainer suggestions */}
+                    {hasTrainer && (
+                      <>
+                        <View style={{
+                          flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+                          paddingHorizontal: Spacing.md, paddingTop: Spacing.xs, paddingBottom: 4,
+                        }}>
+                          <View style={{ flex: 1, height: 1, backgroundColor: C.primary + '30' }} />
+                          <Text style={{ fontSize: 10, fontWeight: '600', color: C.primary, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                            Suggested
+                          </Text>
+                          <View style={{ flex: 1, height: 1, backgroundColor: C.primary + '30' }} />
+                        </View>
+                        {mealSuggestions.map((s) => (
+                          <View
+                            key={s.id}
+                            style={{
+                              flexDirection: 'row', alignItems: 'center',
+                              marginHorizontal: Spacing.md, marginBottom: 4,
+                              backgroundColor: C.primary + '0D',
+                              borderRadius: 10, padding: Spacing.sm,
+                              borderWidth: 1, borderColor: C.primary + '25',
+                              gap: Spacing.sm,
+                            }}>
+                            <View style={{
+                              width: 3, alignSelf: 'stretch',
+                              backgroundColor: C.primary, borderRadius: 2,
+                            }} />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: C.onSurface }}>{s.name}</Text>
+                              <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>
+                                {s.calories} kcal · {s.protein_g}P {s.carbs_g}C {s.fat_g}F
+                              </Text>
+                              {s.notes ? (
+                                <Text style={{ fontSize: 11, color: C.onSurfaceVariant, fontStyle: 'italic' }}>{s.notes}</Text>
+                              ) : null}
+                            </View>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setEditLog(undefined);
+                                setTargetMeal(undefined);
+                                setPrefillMeal(s);
+                                setShowAddModal(true);
+                              }}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              style={{
+                                flexDirection: 'row', alignItems: 'center', gap: 4,
+                                backgroundColor: C.primary, borderRadius: 99,
+                                paddingHorizontal: 10, paddingVertical: 5,
+                              }}>
+                              <IconSymbol name="plus" size={11} color={C.background} />
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: C.background }}>Log</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                        {mealLogs.length > 0 && (
+                          <View style={{
+                            flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+                            paddingHorizontal: Spacing.md, paddingTop: 4, paddingBottom: 4,
+                          }}>
+                            <View style={{ flex: 1, height: 1, backgroundColor: C.outlineVariant }} />
+                            <Text style={{ fontSize: 10, color: C.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.4 }}>Logged</Text>
+                            <View style={{ flex: 1, height: 1, backgroundColor: C.outlineVariant }} />
+                          </View>
+                        )}
+                      </>
+                    )}
+
+                    {/* Logged items */}
+                    {mealLogs.length === 0 && !hasTrainer ? (
+                      <View style={styles.mealEmpty}>
+                        <Text style={styles.mealEmptyText}>Nothing logged yet</Text>
+                      </View>
+                    ) : (
+                      mealLogs.map((log) => (
+                        <SwipeableFoodRow
+                          key={log.id}
+                          log={log}
+                          onDelete={() => deleteLog(log.id)}
+                          onEdit={() => { setEditLog(log); setPrefillMeal(null); setShowAddModal(true); }}
+                        />
+                      ))
+                    )}
+
+                    {/* Save as Meal */}
+                    {mealLogs.length > 0 && (
+                      <TouchableOpacity
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
+                          paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+                          borderTopWidth: 1, borderTopColor: C.outlineVariant,
+                        }}
+                        onPress={() => { setSaveMealItems(mealLogs); setShowSaveMeal(true); }}>
+                        <IconSymbol name="bookmark.fill" size={13} color={C.primary} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: C.primary }}>
+                          Save as Meal
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
             );
@@ -1418,7 +1938,8 @@ export default function NutritionScreen() {
         targetMealType={targetMeal}
         goals={goals}
         logs={logs}
-        onClose={() => { setShowAddModal(false); setEditLog(undefined); setTargetMeal(undefined); }}
+        prefill={prefillMeal ?? undefined}
+        onClose={() => { setShowAddModal(false); setEditLog(undefined); setTargetMeal(undefined); setPrefillMeal(null); }}
         onAdded={handleLogAdded}
         onEdited={handleLogEdited}
       />
@@ -1428,6 +1949,13 @@ export default function NutritionScreen() {
         goals={goals}
         onClose={() => setShowGoalsModal(false)}
         onSaved={handleGoalsSaved}
+      />
+
+      <SaveAsMealModal
+        visible={showSaveMeal}
+        items={saveMealItems}
+        onClose={() => setShowSaveMeal(false)}
+        onSaved={() => {}}
       />
     </SafeAreaView>
   );

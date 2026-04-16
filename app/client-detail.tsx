@@ -38,6 +38,46 @@ type TrainerPlan = {
   name: string;
 };
 
+type AssignedMealPlan = {
+  id:   string;
+  name: string;
+};
+
+type TrainerMealPlan = {
+  id:   string;
+  name: string;
+};
+
+type ComplianceItem = {
+  name:       string;
+  meal_type:  string;
+  calories:   number;
+  protein_g:  number;
+  carbs_g:    number;
+  fat_g:      number;
+};
+
+type ComplianceDay = {
+  date:             string;
+  day_number:       number;
+  logged_calories:  number;
+  logged_protein:   number;
+  logged_carbs:     number;
+  logged_fat:       number;
+  logged_items:     ComplianceItem[];
+};
+
+type PlanMeal = {
+  id:        string;
+  meal_type: string;
+  name:      string;
+  calories:  number;
+  protein_g: number;
+  carbs_g:   number;
+  fat_g:     number;
+  notes:     string | null;
+};
+
 type CheckIn = {
   id:              string;
   weekStart:       string;
@@ -207,6 +247,127 @@ function PlanPickerModal({
           )}
           <TouchableOpacity style={pickerStyles.cancelBtn} onPress={onClose}>
             <Text style={pickerStyles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Meal Plan Picker Modal ───────────────────────────────────────────────────
+
+function MealPlanPickerModal({
+  visible,
+  plans,
+  clientId,
+  onClose,
+  onAssigned,
+}: {
+  visible:    boolean;
+  plans:      TrainerMealPlan[];
+  clientId:   string;
+  onClose:    () => void;
+  onAssigned: (plan: TrainerMealPlan) => void;
+}) {
+  const C = useColors();
+  const [assigningId,  setAssigningId]  = useState<string | null>(null);
+  const [pushMacros,   setPushMacros]   = useState(false);
+
+  const s = useMemo(() => StyleSheet.create({
+    backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+    sheet: {
+      backgroundColor: C.surfaceContainer,
+      borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
+      padding: Spacing.xl, paddingBottom: Spacing.xxxl, maxHeight: '75%',
+    },
+    handle: {
+      width: 40, height: 4, borderRadius: Radius.full,
+      backgroundColor: C.outlineVariant, alignSelf: 'center', marginBottom: Spacing.lg,
+    },
+    title:   { ...Typography.headlineMd, color: C.onSurface, marginBottom: Spacing.md },
+    row: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1, borderBottomColor: C.outlineVariant,
+    },
+    rowName: { ...Typography.titleMd, color: C.onSurface, flex: 1 },
+    empty:   { ...Typography.bodyMd, color: C.onSurfaceVariant, marginBottom: Spacing.lg },
+    toggleRow: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+      paddingVertical: Spacing.md,
+      borderBottomWidth: 1, borderBottomColor: C.outlineVariant,
+      marginBottom: Spacing.xs,
+    },
+    toggleLabel:  { ...Typography.bodyMd, color: C.onSurface, flex: 1 },
+    toggleBox: {
+      width: 22, height: 22, borderRadius: 6,
+      borderWidth: 2, borderColor: C.primary,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    toggleBoxOn:  { backgroundColor: C.primary },
+    cancelBtn: { height: 44, justifyContent: 'center', alignItems: 'center', marginTop: Spacing.sm },
+    cancelText: { ...Typography.titleMd, color: C.onSurfaceVariant },
+  }), [C]);
+
+  async function handleAssign(plan: TrainerMealPlan) {
+    setAssigningId(plan.id);
+    const { data, error } = await supabase.rpc('assign_meal_plan_to_client', {
+      p_plan_id:     plan.id,
+      p_client_id:   clientId,
+      p_push_macros: pushMacros,
+    });
+    setAssigningId(null);
+    if (error || data?.error) {
+      Alert.alert('Error', data?.error ?? error?.message ?? 'Could not assign meal plan.');
+      return;
+    }
+    onAssigned(plan);
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={s.backdrop}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
+        <View style={s.sheet}>
+          <View style={s.handle} />
+          <Text style={s.title}>Assign a Meal Plan</Text>
+
+          {/* Push macros toggle */}
+          <TouchableOpacity style={s.toggleRow} onPress={() => setPushMacros((v) => !v)}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.toggleLabel}>Also update daily macro targets</Text>
+              <Text style={{ ...Typography.bodyMd, color: C.onSurfaceVariant }}>
+                Pushes averaged daily macros to client's nutrition goals
+              </Text>
+            </View>
+            <View style={[s.toggleBox, pushMacros && s.toggleBoxOn]}>
+              {pushMacros && <IconSymbol name="checkmark" size={12} color={C.background} />}
+            </View>
+          </TouchableOpacity>
+
+          {plans.length === 0 ? (
+            <Text style={s.empty}>You haven't created any meal plans yet.</Text>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {plans.map((plan) => (
+                <TouchableOpacity
+                  key={plan.id}
+                  style={s.row}
+                  onPress={() => handleAssign(plan)}
+                  disabled={!!assigningId}>
+                  <IconSymbol name="fork.knife" size={18} color={C.primary} />
+                  <Text style={s.rowName}>{plan.name}</Text>
+                  {assigningId === plan.id
+                    ? <ActivityIndicator size="small" color={C.primary} />
+                    : <IconSymbol name="chevron.right" size={16} color={C.onSurfaceVariant} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
+            <Text style={s.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -419,13 +580,86 @@ export default function ClientDetailScreen() {
     },
   }), [C]);
 
-  const [loading,        setLoading]        = useState(true);
-  const [sessions,       setSessions]       = useState<Session[]>([]);
-  const [assignedPlan,   setAssignedPlan]   = useState<AssignedPlan | null>(null);
-  const [trainerPlans,   setTrainerPlans]   = useState<TrainerPlan[]>([]);
-  const [totalSessions,  setTotalSessions]  = useState(0);
-  const [lastWeight,     setLastWeight]     = useState<string | null>(null);
-  const [showPicker,     setShowPicker]     = useState(false);
+  const compStyles = useMemo(() => StyleSheet.create({
+    dotStrip: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.md,
+      paddingBottom: Spacing.sm,
+      justifyContent: 'space-between',
+    },
+    dotCol:        { alignItems: 'center', flex: 1, gap: 4 },
+    dotDayLabel:   { ...Typography.labelMd, color: C.onSurfaceVariant, fontSize: 11 },
+    dot:           { width: 28, height: 28, borderRadius: 14 },
+    dotSelected:   { borderWidth: 2.5, borderColor: C.onSurface },
+    dotCalLabel:   { ...Typography.labelMd, color: C.onSurfaceVariant, fontSize: 10 },
+    expandedCard: {
+      borderTopWidth: 1,
+      borderTopColor: C.outlineVariant,
+      padding: Spacing.md,
+    },
+    expandedTitle: { ...Typography.titleMd, color: C.onSurface, marginBottom: Spacing.sm },
+    macroRow: {
+      flexDirection: 'row',
+      backgroundColor: C.surfaceContainerHighest,
+      borderRadius: Radius.md,
+      padding: Spacing.sm,
+      marginBottom: Spacing.sm,
+    },
+    macroCell:   { flex: 1, alignItems: 'center' },
+    macroLabel:  { ...Typography.labelMd, color: C.onSurfaceVariant, fontSize: 11 },
+    macroLogged: { ...Typography.titleMd, color: C.onSurface, fontSize: 14 },
+    macroPlan:   { ...Typography.bodyMd,  color: C.onSurfaceVariant, fontSize: 11 },
+    subHeading:  { ...Typography.labelLg, color: C.onSurfaceVariant, marginTop: Spacing.sm, marginBottom: 2 },
+    mealRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      paddingVertical: 4,
+    },
+    mealBadge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: C.outlineVariant + '66',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    mealBadgeText: { ...Typography.labelMd, color: C.onSurfaceVariant, fontSize: 11, fontWeight: '700' },
+    mealName:      { ...Typography.bodyMd, color: C.onSurface, flex: 1 },
+    mealCal:       { ...Typography.labelLg, color: C.onSurfaceVariant },
+    emptyDay: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      paddingVertical: Spacing.sm,
+    },
+    legend: {
+      flexDirection: 'row',
+      gap: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      paddingBottom: Spacing.sm,
+      flexWrap: 'wrap',
+    },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    legendDot:  { width: 8, height: 8, borderRadius: 4 },
+    legendText: { ...Typography.labelMd, color: C.onSurfaceVariant, fontSize: 11 },
+  }), [C]);
+
+  const [loading,           setLoading]           = useState(true);
+  const [sessions,          setSessions]          = useState<Session[]>([]);
+  const [assignedPlan,      setAssignedPlan]      = useState<AssignedPlan | null>(null);
+  const [trainerPlans,      setTrainerPlans]      = useState<TrainerPlan[]>([]);
+  const [assignedMealPlan,  setAssignedMealPlan]  = useState<AssignedMealPlan | null>(null);
+  const [trainerMealPlans,  setTrainerMealPlans]  = useState<TrainerMealPlan[]>([]);
+  const [totalSessions,     setTotalSessions]     = useState(0);
+  const [lastWeight,        setLastWeight]        = useState<string | null>(null);
+  const [showPicker,        setShowPicker]        = useState(false);
+  const [showMealPicker,    setShowMealPicker]    = useState(false);
+  const [compliance,       setCompliance]       = useState<ComplianceDay[]>([]);
+  const [planMeals,        setPlanMeals]        = useState<PlanMeal[]>([]);
+  const [expandedCompDay,  setExpandedCompDay]  = useState<string | null>(null);
   const [checkIns,       setCheckIns]       = useState<CheckIn[]>([]);
   const [threadId,       setThreadId]       = useState<string | null>(null);
   const [sessionNotes,   setSessionNotes]   = useState<Record<string, string>>({});
@@ -444,7 +678,7 @@ export default function ClientDetailScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user || !clientId) { setLoading(false); return; }
 
-    const [sessionsRes, weightRes, assignedRes, trainerPlansRes, linkRes] = await Promise.all([
+    const [sessionsRes, weightRes, assignedRes, trainerPlansRes, linkRes, assignedMealRes, trainerMealPlansRes] = await Promise.all([
       // Recent sessions
       supabase
         .from('workout_sessions')
@@ -487,6 +721,25 @@ export default function ClientDetailScreen() {
         .eq('client_id', clientId)
         .eq('status', 'active')
         .maybeSingle(),
+
+      // Active meal plan assigned to this client by this trainer
+      supabase
+        .from('meal_plans')
+        .select('id, name')
+        .eq('assigned_to', clientId)
+        .eq('assigned_by', user.id)
+        .eq('is_template', false)
+        .eq('is_active', true)
+        .maybeSingle(),
+
+      // Trainer's own meal plan templates for the picker
+      supabase
+        .from('meal_plans')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .is('assigned_to', null)
+        .eq('is_template', true)
+        .order('created_at', { ascending: false }),
     ]);
 
     const rawSessions = sessionsRes.data ?? [];
@@ -505,14 +758,17 @@ export default function ClientDetailScreen() {
 
     setAssignedPlan(assignedRes.data ?? null);
     setTrainerPlans((trainerPlansRes.data ?? []).map((p: any) => ({ id: p.id, name: p.name })));
+    setAssignedMealPlan((assignedMealRes as any).data ?? null);
+    setTrainerMealPlans(((trainerMealPlansRes as any).data ?? []).map((p: any) => ({ id: p.id, name: p.name })));
 
     const link = linkRes.data;
     if (link) {
       setThreadId(link.id);
 
-      // Load check-ins, session notes, and onboarding in parallel
+      // Load check-ins, session notes, onboarding, compliance and plan days in parallel
       const sessionIds = mappedSessions.map((s) => s.id);
-      const [checkInsRes, notesRes, onboardingRes] = await Promise.all([
+      const assignedMealPlanId = (assignedMealRes as any).data?.id ?? null;
+      const [checkInsRes, notesRes, onboardingRes, complianceRes, planDaysRes] = await Promise.all([
         supabase
           .from('check_ins')
           .select('id, week_start, sleep_rating, energy_rating, adherence_rating, notes')
@@ -531,6 +787,16 @@ export default function ClientDetailScreen() {
           .select('goals, experience, training_days, injuries, medical_notes')
           .eq('user_id', clientId)
           .maybeSingle(),
+        // 7-day nutrition compliance via SECURITY DEFINER RPC
+        supabase.rpc('get_client_compliance', { p_client_id: clientId, p_days: 7 }),
+        // Flat meal list for the assigned meal plan (if any)
+        assignedMealPlanId
+          ? supabase
+              .from('meal_plan_meals')
+              .select('id, meal_type, name, calories, protein_g, carbs_g, fat_g, notes')
+              .eq('meal_plan_id', assignedMealPlanId)
+              .order('sort_order')
+          : Promise.resolve({ data: [] }),
       ]);
 
       setCheckIns((checkInsRes.data ?? []).map((c: any) => ({
@@ -558,6 +824,30 @@ export default function ClientDetailScreen() {
           medical:      ob.medical_notes,
         });
       }
+
+      // Compliance
+      const rawComp: any[] = (complianceRes as any).data ?? [];
+      setCompliance(rawComp.map((d) => ({
+        date:            d.date,
+        day_number:      d.day_number,
+        logged_calories: d.logged_calories ?? 0,
+        logged_protein:  d.logged_protein  ?? 0,
+        logged_carbs:    d.logged_carbs    ?? 0,
+        logged_fat:      d.logged_fat      ?? 0,
+        logged_items:    d.logged_items    ?? [],
+      })));
+
+      // Flat plan meals
+      setPlanMeals(((planDaysRes as any).data ?? []).map((m: any) => ({
+        id:        m.id,
+        meal_type: m.meal_type,
+        name:      m.name,
+        calories:  m.calories,
+        protein_g: m.protein_g,
+        carbs_g:   m.carbs_g,
+        fat_g:     m.fat_g,
+        notes:     m.notes,
+      })));
     }
 
     setLoading(false);
@@ -741,6 +1031,171 @@ export default function ClientDetailScreen() {
               </View>
             </View>
 
+            {/* Assigned Meal Plan */}
+            <View style={localStyles.section}>
+              <Text style={localStyles.sectionTitle}>Meal Plan</Text>
+              <View style={localStyles.card}>
+                {assignedMealPlan ? (
+                  <View style={localStyles.planRow}>
+                    <IconSymbol name="fork.knife" size={20} color={C.primary} />
+                    <Text style={localStyles.planName}>{assignedMealPlan.name}</Text>
+                    <TouchableOpacity onPress={() => setShowMealPicker(true)}>
+                      <Text style={localStyles.changeLink}>Change</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity style={localStyles.assignPrompt} onPress={() => setShowMealPicker(true)}>
+                      <IconSymbol name="plus.circle.fill" size={18} color={C.primary} />
+                      <Text style={localStyles.assignPromptText}>Assign a Meal Plan</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[localStyles.assignPrompt, { borderTopWidth: 1, borderTopColor: C.outlineVariant }]}
+                      onPress={() => router.push('/meal-plan-editor' as any)}>
+                      <IconSymbol name="plus.circle.fill" size={18} color={C.onSurfaceVariant} />
+                      <Text style={{ ...Typography.titleMd, color: C.onSurfaceVariant }}>Create New Meal Plan</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+
+            {/* Nutrition Compliance */}
+            {compliance.length > 0 && (
+              <View style={localStyles.section}>
+                <Text style={localStyles.sectionTitle}>Nutrition Compliance</Text>
+                <View style={localStyles.card}>
+                  {/* 7-day dot strip */}
+                  <View style={compStyles.dotStrip}>
+                    {compliance.map((day) => {
+                      const planTotalCal = planMeals.reduce((s, m) => s + m.calories, 0);
+                      const hasPlan   = planTotalCal > 0;
+                      const hasLogged = day.logged_calories > 0;
+
+                      let dotColor = C.outlineVariant;
+                      if (hasLogged) {
+                        if (hasPlan) {
+                          const pct = day.logged_calories / planTotalCal;
+                          dotColor = pct >= 0.8 ? '#22c55e' : pct >= 0.5 ? '#f59e0b' : '#ef4444';
+                        } else {
+                          dotColor = C.primary;
+                        }
+                      }
+
+                      const dayLabel = new Date(day.date + 'T12:00:00')
+                        .toLocaleDateString(undefined, { weekday: 'short' })
+                        .slice(0, 3);
+                      const isExpanded = expandedCompDay === day.date;
+
+                      return (
+                        <TouchableOpacity
+                          key={day.date}
+                          style={compStyles.dotCol}
+                          onPress={() => setExpandedCompDay(isExpanded ? null : day.date)}
+                          activeOpacity={0.7}>
+                          <Text style={compStyles.dotDayLabel}>{dayLabel}</Text>
+                          <View style={[compStyles.dot, { backgroundColor: dotColor }, isExpanded && compStyles.dotSelected]} />
+                          <Text style={compStyles.dotCalLabel}>
+                            {hasLogged ? `${day.logged_calories}` : '—'}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  {/* Legend */}
+                  <View style={compStyles.legend}>
+                    {[
+                      { color: '#22c55e', label: '≥80%' },
+                      { color: '#f59e0b', label: '50–79%' },
+                      { color: '#ef4444', label: '<50%' },
+                      { color: C.outlineVariant, label: 'Not logged' },
+                    ].map(({ color, label }) => (
+                      <View key={label} style={compStyles.legendItem}>
+                        <View style={[compStyles.legendDot, { backgroundColor: color }]} />
+                        <Text style={compStyles.legendText}>{label}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Expanded day detail */}
+                  {expandedCompDay && (() => {
+                    const day = compliance.find((d) => d.date === expandedCompDay);
+                    if (!day) return null;
+                    const planTotalCal  = planMeals.reduce((s, m) => s + m.calories,  0);
+                    const planTotalProt = planMeals.reduce((s, m) => s + m.protein_g, 0);
+                    const planTotalCarbs= planMeals.reduce((s, m) => s + m.carbs_g,   0);
+                    const planTotalFat  = planMeals.reduce((s, m) => s + m.fat_g,     0);
+                    return (
+                      <View style={compStyles.expandedCard}>
+                        <Text style={compStyles.expandedTitle}>
+                          {new Date(day.date + 'T12:00:00').toLocaleDateString(undefined, {
+                            weekday: 'long', month: 'short', day: 'numeric',
+                          })}
+                        </Text>
+
+                        {/* Macro comparison */}
+                        <View style={compStyles.macroRow}>
+                          {[
+                            { label: 'Cal',   logged: day.logged_calories, plan: planTotalCal  },
+                            { label: 'P (g)', logged: day.logged_protein,  plan: planTotalProt },
+                            { label: 'C (g)', logged: day.logged_carbs,    plan: planTotalCarbs},
+                            { label: 'F (g)', logged: day.logged_fat,      plan: planTotalFat  },
+                          ].map(({ label, logged, plan }) => (
+                            <View key={label} style={compStyles.macroCell}>
+                              <Text style={compStyles.macroLabel}>{label}</Text>
+                              <Text style={compStyles.macroLogged}>{Math.round(logged)}</Text>
+                              {plan > 0 && (
+                                <Text style={compStyles.macroPlan}>/ {Math.round(plan)}</Text>
+                              )}
+                            </View>
+                          ))}
+                        </View>
+
+                        {/* Plan meals */}
+                        {planMeals.length > 0 && (
+                          <>
+                            <Text style={compStyles.subHeading}>PLAN</Text>
+                            {planMeals.map((m) => (
+                              <View key={m.id} style={compStyles.mealRow}>
+                                <View style={compStyles.mealBadge}>
+                                  <Text style={compStyles.mealBadgeText}>
+                                    {m.meal_type.slice(0, 1).toUpperCase()}
+                                  </Text>
+                                </View>
+                                <Text style={compStyles.mealName} numberOfLines={1}>{m.name}</Text>
+                                <Text style={compStyles.mealCal}>{m.calories} kcal</Text>
+                              </View>
+                            ))}
+                          </>
+                        )}
+
+                        {/* Logged items */}
+                        {day.logged_items.length > 0 ? (
+                          <>
+                            <Text style={compStyles.subHeading}>LOGGED</Text>
+                            {day.logged_items.map((item, i) => (
+                              <View key={i} style={compStyles.mealRow}>
+                                <View style={[compStyles.mealBadge, { backgroundColor: C.primary + '22' }]}>
+                                  <Text style={[compStyles.mealBadgeText, { color: C.primary }]}>
+                                    {item.meal_type.slice(0, 1).toUpperCase()}
+                                  </Text>
+                                </View>
+                                <Text style={compStyles.mealName} numberOfLines={1}>{item.name}</Text>
+                                <Text style={compStyles.mealCal}>{item.calories} kcal</Text>
+                              </View>
+                            ))}
+                          </>
+                        ) : (
+                          <Text style={compStyles.emptyDay}>Nothing logged this day.</Text>
+                        )}
+                      </View>
+                    );
+                  })()}
+                </View>
+              </View>
+            )}
+
             {/* Weekly check-ins */}
             {checkIns.length > 0 && (
               <View style={localStyles.section}>
@@ -866,6 +1321,14 @@ export default function ClientDetailScreen() {
         clientId={clientId ?? ''}
         onClose={() => setShowPicker(false)}
         onAssigned={(plan) => setAssignedPlan(plan)}
+      />
+
+      <MealPlanPickerModal
+        visible={showMealPicker}
+        plans={trainerMealPlans}
+        clientId={clientId ?? ''}
+        onClose={() => setShowMealPicker(false)}
+        onAssigned={(plan) => setAssignedMealPlan(plan)}
       />
     </SafeAreaView>
   );
