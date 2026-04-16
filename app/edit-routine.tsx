@@ -11,8 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { styles } from '@/styles/edit-routine.styles';
+import { useColors } from '@/contexts/ThemeContext';
+import { useStyles } from '@/styles/edit-routine.styles';
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -48,12 +48,14 @@ function ExerciseCard({
   onUpdate: (field: keyof Exercise, value: string) => void;
   onDelete: () => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   return (
     <View style={[styles.exerciseCard, expanded && styles.exerciseCardExpanded]}>
       <View style={styles.exerciseRow}>
         {/* Drag handle placeholder */}
         <View style={styles.dragHandle}>
-          <Text style={{ color: Colors.onSurfaceVariant, fontSize: 16 }}>⠿</Text>
+          <Text style={{ color: C.onSurfaceVariant, fontSize: 16 }}>⠿</Text>
         </View>
 
         {/* Info */}
@@ -80,11 +82,11 @@ function ExerciseCard({
           <IconSymbol
             name={expanded ? 'xmark.circle.fill' : 'pencil'}
             size={18}
-            color={expanded ? Colors.onSurfaceVariant : Colors.primary}
+            color={expanded ? C.onSurfaceVariant : C.primary}
           />
         </TouchableOpacity>
         <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
-          <IconSymbol name="trash" size={16} color={Colors.error} />
+          <IconSymbol name="trash" size={16} color={C.error} />
         </TouchableOpacity>
       </View>
 
@@ -98,7 +100,7 @@ function ExerciseCard({
                 value={exercise.sets}
                 onChangeText={(v) => onUpdate('sets', v)}
                 keyboardType="number-pad"
-                placeholderTextColor={Colors.onSurfaceVariant}
+                placeholderTextColor={C.onSurfaceVariant}
               />
             </View>
             <View style={styles.editField}>
@@ -107,7 +109,7 @@ function ExerciseCard({
                 style={styles.editFieldInput}
                 value={exercise.reps}
                 onChangeText={(v) => onUpdate('reps', v)}
-                placeholderTextColor={Colors.onSurfaceVariant}
+                placeholderTextColor={C.onSurfaceVariant}
               />
             </View>
             <View style={styles.editField}>
@@ -116,7 +118,7 @@ function ExerciseCard({
                 style={styles.editFieldInput}
                 value={exercise.weight}
                 onChangeText={(v) => onUpdate('weight', v)}
-                placeholderTextColor={Colors.onSurfaceVariant}
+                placeholderTextColor={C.onSurfaceVariant}
               />
             </View>
           </View>
@@ -126,7 +128,7 @@ function ExerciseCard({
               value={exercise.notes}
               onChangeText={(v) => onUpdate('notes', v)}
               placeholder="Add a coaching note…"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               multiline
             />
           </View>
@@ -139,6 +141,8 @@ function ExerciseCard({
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
 export default function EditRoutineScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const [routineName, setRoutineName] = useState('Hypertrophy Phase II: Chest');
   const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES);
@@ -170,13 +174,13 @@ export default function EditRoutineScreen() {
       {/* Top bar */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <IconSymbol name="chevron.right" size={20} color={Colors.onSurface} />
+          <IconSymbol name="chevron.right" size={20} color={C.onSurface} />
         </TouchableOpacity>
         <TextInput
           style={styles.titleInput}
           value={routineName}
           onChangeText={setRoutineName}
-          placeholderTextColor={Colors.onSurfaceVariant}
+          placeholderTextColor={C.onSurfaceVariant}
           returnKeyType="done"
         />
         <TouchableOpacity style={styles.saveBtn} onPress={() => router.back()}>
@@ -187,15 +191,15 @@ export default function EditRoutineScreen() {
       {/* Meta chips */}
       <View style={styles.metaRow}>
         <View style={styles.metaChip}>
-          <IconSymbol name="dumbbell.fill" size={12} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="dumbbell.fill" size={12} color={C.onSurfaceVariant} />
           <Text style={styles.metaChipText}>{exercises.length} exercises</Text>
         </View>
         <View style={styles.metaChip}>
-          <IconSymbol name="flame.fill" size={12} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="flame.fill" size={12} color={C.onSurfaceVariant} />
           <Text style={styles.metaChipText}>~45 min</Text>
         </View>
         <View style={styles.metaChip}>
-          <IconSymbol name="heart.fill" size={12} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="heart.fill" size={12} color={C.onSurfaceVariant} />
           <Text style={styles.metaChipText}>Chest</Text>
         </View>
       </View>
@@ -219,7 +223,7 @@ export default function EditRoutineScreen() {
 
         {/* Add exercise */}
         <TouchableOpacity style={styles.addExerciseBtn} onPress={addExercise}>
-          <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
+          <IconSymbol name="plus.circle.fill" size={20} color={C.primary} />
           <Text style={styles.addExerciseBtnText}>Add Exercise</Text>
         </TouchableOpacity>
       </ScrollView>

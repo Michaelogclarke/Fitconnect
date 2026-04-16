@@ -1,10 +1,16 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
-export const styles = StyleSheet.create({
+export function useStyles() {
+  const C = useColors();
+  const T = useTypography();
+  return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
   header: {
     flexDirection: 'row',
@@ -15,14 +21,14 @@ export const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   title: {
-    ...Typography.displayMd,
-    color: Colors.onSurface,
+    ...T.displayMd,
+    color: C.onSurface,
   },
   addBtn: {
     width: 40,
     height: 40,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -34,18 +40,18 @@ export const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     alignItems: 'center',
   },
   statValue: {
-    ...Typography.headlineLg,
-    color: Colors.primary,
+    ...T.headlineLg,
+    color: C.primary,
   },
   statLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
   scroll: {
@@ -59,7 +65,7 @@ export const styles = StyleSheet.create({
   clientCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     gap: Spacing.md,
@@ -68,24 +74,24 @@ export const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
+    backgroundColor: C.primary + '33',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    ...Typography.titleLg,
-    color: Colors.primary,
+    ...T.titleLg,
+    color: C.primary,
   },
   clientInfo: {
     flex: 1,
   },
   clientName: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
+    ...T.titleLg,
+    color: C.onSurface,
   },
   clientMeta: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    ...T.bodyMd,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
   statusDot: {
@@ -94,9 +100,10 @@ export const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   statusActive: {
-    backgroundColor: Colors.success,
+    backgroundColor: C.success,
   },
   statusPaused: {
-    backgroundColor: Colors.onSurfaceVariant,
+    backgroundColor: C.onSurfaceVariant,
   },
-});
+}), [C, T]);
+}

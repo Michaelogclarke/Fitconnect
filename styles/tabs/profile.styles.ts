@@ -1,10 +1,16 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
-export const styles = StyleSheet.create({
+export function useStyles() {
+  const C = useColors();
+  const T = useTypography();
+  return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
   scroll: {
     flex: 1,
@@ -22,25 +28,25 @@ export const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
+    backgroundColor: C.primary + '33',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.md,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: C.primary,
   },
   avatarText: {
     fontSize: 28,
     fontWeight: '700',
-    color: Colors.primary,
+    color: C.primary,
   },
   userName: {
-    ...Typography.headlineLg,
-    color: Colors.onSurface,
+    ...T.headlineLg,
+    color: C.onSurface,
   },
   userRole: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    ...T.bodyMd,
+    color: C.onSurfaceVariant,
     marginTop: Spacing.xs,
   },
   statsRow: {
@@ -53,12 +59,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    ...Typography.headlineLg,
-    color: Colors.primary,
+    ...T.headlineLg,
+    color: C.primary,
   },
   statLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
   section: {
@@ -66,14 +72,14 @@ export const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   sectionTitle: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     marginBottom: Spacing.sm,
     marginLeft: Spacing.xs,
   },
   menuCard: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
@@ -86,43 +92,44 @@ export const styles = StyleSheet.create({
   },
   menuItemBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
   },
   menuIconBox: {
     width: 36,
     height: 36,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuLabel: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
+    ...T.titleMd,
+    color: C.onSurface,
     flex: 1,
   },
   menuChevron: {
-    color: Colors.onSurfaceVariant,
+    color: C.onSurfaceVariant,
   },
   streakBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary + '15',
+    backgroundColor: C.primary + '15',
     borderRadius: Radius.lg,
     marginHorizontal: Spacing.lg,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
     gap: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.primary + '40',
+    borderColor: C.primary + '40',
   },
   streakText: {
-    ...Typography.titleMd,
-    color: Colors.primary,
+    ...T.titleMd,
+    color: C.primary,
     flex: 1,
   },
   streakCount: {
-    ...Typography.displayMd,
-    color: Colors.primary,
+    ...T.displayMd,
+    color: C.primary,
   },
-});
+}), [C, T]);
+}

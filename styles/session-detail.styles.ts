@@ -1,10 +1,16 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
-export const styles = StyleSheet.create({
+export function useStyles() {
+  const C = useColors();
+  const T = useTypography();
+  return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
 
   scrollContent: {
@@ -27,27 +33,27 @@ export const styles = StyleSheet.create({
   },
 
   backText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
+    ...T.titleMd,
+    color: C.onSurfaceVariant,
   },
 
   // ── Hero card ─────────────────────────────────────────────────────────────
   heroCard: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.sm,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
   },
 
   sessionName: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
+    ...T.headlineMd,
+    color: C.onSurface,
   },
 
   sessionMeta: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     marginTop: 4,
   },
 
@@ -63,32 +69,32 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.xs,
     marginTop: Spacing.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
   },
 
   doAgainText: {
-    ...Typography.titleMd,
-    color: Colors.background,
+    ...T.titleMd,
+    color: C.background,
   },
 
   statBox: {
     flex: 1,
-    backgroundColor: Colors.primary + '11',
+    backgroundColor: C.primary + '11',
     borderRadius: Radius.md,
     padding: Spacing.md,
     alignItems: 'center',
   },
 
   statValue: {
-    ...Typography.headlineMd,
-    color: Colors.primary,
+    ...T.headlineMd,
+    color: C.primary,
   },
 
   statLabel: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
 
@@ -96,7 +102,7 @@ export const styles = StyleSheet.create({
   exCard: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.sm,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
@@ -107,25 +113,25 @@ export const styles = StyleSheet.create({
     padding: Spacing.md,
     gap: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
   },
 
   exName: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
+    ...T.titleMd,
+    color: C.onSurface,
     flex: 1,
   },
 
   muscleBadge: {
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
 
   muscleText: {
-    ...Typography.labelMd,
-    color: Colors.primary,
+    ...T.labelMd,
+    color: C.primary,
   },
 
   // ── Sets table ────────────────────────────────────────────────────────────
@@ -138,7 +144,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingBottom: Spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
     marginBottom: Spacing.xs,
   },
 
@@ -150,21 +156,21 @@ export const styles = StyleSheet.create({
 
   colSet: {
     width: 32,
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
   },
 
   colWeight: {
     flex: 1,
-    ...Typography.labelLg,
-    color: Colors.onSurface,
+    ...T.labelLg,
+    color: C.onSurface,
     textAlign: 'center',
   },
 
   colReps: {
     flex: 1,
-    ...Typography.labelLg,
-    color: Colors.onSurface,
+    ...T.labelLg,
+    color: C.onSurface,
     textAlign: 'center',
   },
 
@@ -174,8 +180,8 @@ export const styles = StyleSheet.create({
   },
 
   headerText: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
     textAlign: 'center',
   },
 
@@ -183,9 +189,9 @@ export const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     borderWidth: 1,
-    borderColor: Colors.primary + '66',
+    borderColor: C.primary + '66',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -194,9 +200,9 @@ export const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderWidth: 1,
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
 
   // ── Utility states ────────────────────────────────────────────────────────
@@ -207,7 +213,8 @@ export const styles = StyleSheet.create({
   },
 
   notFoundText: {
-    ...Typography.bodyLg,
-    color: Colors.onSurfaceVariant,
+    ...T.bodyLg,
+    color: C.onSurfaceVariant,
   },
-});
+}), [C, T]);
+}

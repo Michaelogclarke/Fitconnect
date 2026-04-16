@@ -1,8 +1,14 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
-export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+export function useStyles() {
+  const C = useColors();
+  const T = useTypography();
+  return useMemo(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
 
   // ── Top bar ─────────────────────────────────────────────────────────────────
   topBar: {
@@ -13,32 +19,32 @@ export const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
     gap: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     justifyContent: 'center',
     alignItems: 'center',
   },
   titleInput: {
     flex: 1,
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
+    ...T.headlineMd,
+    color: C.onSurface,
     paddingVertical: 0,
   },
   saveBtn: {
     paddingHorizontal: Spacing.md,
     height: 36,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 56,
   },
-  saveBtnText: { ...Typography.titleMd, color: Colors.background },
+  saveBtnText: { ...T.titleMd, color: C.background },
 
   // ── Scroll ──────────────────────────────────────────────────────────────────
   scroll: { flex: 1 },
@@ -49,8 +55,8 @@ export const styles = StyleSheet.create({
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.md,
     marginBottom: Spacing.sm,
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    ...T.bodyMd,
+    color: C.onSurfaceVariant,
     paddingVertical: Spacing.sm,
   },
 
@@ -58,20 +64,20 @@ export const styles = StyleSheet.create({
   emptyDays: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
-  emptyDaysText:  { ...Typography.titleMd, color: Colors.onSurface, marginBottom: Spacing.xs },
-  emptyDaysSub:   { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' },
+  emptyDaysText:  { ...T.titleMd, color: C.onSurface, marginBottom: Spacing.xs },
+  emptyDaysSub:   { ...T.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' },
 
   // ── Day card ─────────────────────────────────────────────────────────────────
   dayCard: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.md,
     borderRadius: Radius.lg,
@@ -79,7 +85,7 @@ export const styles = StyleSheet.create({
   },
   dayCardExpanded: {
     borderWidth: 1,
-    borderColor: Colors.primary + '44',
+    borderColor: C.primary + '44',
   },
   dayCardHeader: {
     flexDirection: 'row',
@@ -93,21 +99,21 @@ export const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
   },
-  dayNumberText:  { ...Typography.labelLg, color: Colors.primary },
+  dayNumberText:  { ...T.labelLg, color: C.primary },
   dayNameInput: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
+    ...T.titleLg,
+    color: C.onSurface,
     padding: 0,
     marginBottom: 2,
   },
   dayFocusInput: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     padding: 0,
   },
   dayToggleBtn: { padding: 4 },
@@ -115,7 +121,7 @@ export const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: Radius.full,
-    backgroundColor: Colors.error + '18',
+    backgroundColor: C.error + '18',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -125,17 +131,17 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.md,
   },
-  dayCollapsedText: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
+  dayCollapsedText: { ...T.labelLg, color: C.onSurfaceVariant },
   dayCollapsedExs: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
 
   // ── Exercises within a day ───────────────────────────────────────────────────
   dayExercises: {
     borderTopWidth: 1,
-    borderTopColor: Colors.outlineVariant,
+    borderTopColor: C.outlineVariant,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.md,
   },
@@ -146,20 +152,20 @@ export const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     gap: Spacing.sm,
   },
-  exName:  { ...Typography.titleMd, color: Colors.onSurface },
+  exName:  { ...T.titleMd, color: C.onSurface },
   exChips: { flexDirection: 'row', gap: Spacing.xs, marginTop: 4, flexWrap: 'wrap' },
   exChip: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
-    backgroundColor: Colors.surfaceContainerHighest,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     overflow: 'hidden',
   },
   exChipHighlight: {
-    backgroundColor: Colors.primary + '22',
-    color: Colors.primary,
+    backgroundColor: C.primary + '22',
+    color: C.primary,
   },
   exEditBtn: {
     width: 30,
@@ -172,37 +178,37 @@ export const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: Radius.full,
-    backgroundColor: Colors.error + '18',
+    backgroundColor: C.error + '18',
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // inline edit
   exInlineEdit: {
-    backgroundColor: Colors.surfaceContainerHigh,
+    backgroundColor: C.surfaceContainerHigh,
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
     borderRadius: Radius.md,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: Colors.primary + '33',
+    borderColor: C.primary + '33',
   },
   inlineEditRow: { flexDirection: 'row', gap: Spacing.sm },
   inlineField: {
     flex: 1,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
   },
   inlineLabel: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
     marginBottom: 4,
   },
   inlineInput: {
-    ...Typography.titleMd,
-    color: Colors.onSurface,
+    ...T.titleMd,
+    color: C.onSurface,
     padding: 0,
   },
 
@@ -217,10 +223,10 @@ export const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: Colors.primary + '55',
+    borderColor: C.primary + '55',
     gap: Spacing.xs,
   },
-  addExerciseInDayText: { ...Typography.labelLg, color: Colors.primary },
+  addExerciseInDayText: { ...T.labelLg, color: C.primary },
 
   // ── Add day button ───────────────────────────────────────────────────────────
   addDayBtn: {
@@ -233,15 +239,15 @@ export const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: Colors.primary + '55',
+    borderColor: C.primary + '55',
     gap: Spacing.sm,
   },
-  addDayBtnText: { ...Typography.titleMd, color: Colors.primary },
+  addDayBtnText: { ...T.titleMd, color: C.primary },
 
   // ── Error text ───────────────────────────────────────────────────────────────
   saveErrorText: {
-    ...Typography.labelLg,
-    color: Colors.error,
+    ...T.labelLg,
+    color: C.error,
     textAlign: 'center',
     marginTop: Spacing.md,
     marginHorizontal: Spacing.lg,
@@ -254,7 +260,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: Colors.surfaceContainerLow,
+    backgroundColor: C.surfaceContainerLow,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     paddingTop: Spacing.md,
@@ -266,13 +272,13 @@ export const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: Radius.full,
-    backgroundColor: Colors.outlineVariant,
+    backgroundColor: C.outlineVariant,
     alignSelf: 'center',
     marginBottom: Spacing.lg,
   },
   modalTitle: {
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
+    ...T.headlineMd,
+    color: C.onSurface,
     marginBottom: Spacing.md,
     paddingHorizontal: Spacing.lg,
   },
@@ -287,17 +293,17 @@ export const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalTitleInRow: { ...Typography.headlineMd, color: Colors.onSurface, flex: 1 },
+  modalTitleInRow: { ...T.headlineMd, color: C.onSurface, flex: 1 },
 
   // search bar
   searchBarWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     gap: Spacing.sm,
@@ -307,8 +313,8 @@ export const styles = StyleSheet.create({
   searchBarInput: {
     flex: 1,
     paddingVertical: Spacing.sm,
-    ...Typography.titleMd,
-    color: Colors.onSurface,
+    ...T.titleMd,
+    color: C.onSurface,
   },
 
   // exercise list
@@ -320,13 +326,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
   },
-  exerciseListName:   { ...Typography.titleMd, color: Colors.onSurface, flex: 1 },
+  exerciseListName:   { ...T.titleMd, color: C.onSurface, flex: 1 },
   exerciseListMuscle: {
-    ...Typography.labelMd,
-    color: Colors.primary,
-    backgroundColor: Colors.primary + '18',
+    ...T.labelMd,
+    color: C.primary,
+    backgroundColor: C.primary + '18',
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
     borderRadius: Radius.full,
@@ -339,10 +345,10 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
   },
-  createCustomText: { ...Typography.titleMd, color: Colors.primary, flex: 1 },
+  createCustomText: { ...T.titleMd, color: C.primary, flex: 1 },
   listEmptyText: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    ...T.bodyMd,
+    color: C.onSurfaceVariant,
     textAlign: 'center',
     paddingVertical: Spacing.xl,
     paddingHorizontal: Spacing.lg,
@@ -350,18 +356,18 @@ export const styles = StyleSheet.create({
 
   // configure phase fields
   fieldLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     marginBottom: Spacing.xs,
     marginTop: Spacing.md,
   },
   fieldInput: {
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    ...Typography.titleMd,
-    color: Colors.onSurface,
+    ...T.titleMd,
+    color: C.onSurface,
   },
   fieldRow:  { flexDirection: 'row', gap: Spacing.sm },
   fieldHalf: { flex: 1 },
@@ -374,18 +380,19 @@ export const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalCancelText: { ...Typography.titleMd, color: Colors.onSurfaceVariant },
+  modalCancelText: { ...T.titleMd, color: C.onSurfaceVariant },
   modalAddBtn: {
     flex: 2,
     height: 50,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalAddText: { ...Typography.titleLg, color: Colors.background },
-});
+  modalAddText: { ...T.titleLg, color: C.background },
+}), [C, T]);
+}

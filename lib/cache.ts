@@ -55,6 +55,16 @@ export async function getCached<T>(key: string): Promise<T | null> {
 }
 
 /**
+ * Remove all cache:* keys from AsyncStorage.
+ */
+export async function clearCache(): Promise<void> {
+  try {
+    const keys = Object.values(CACHE_KEYS);
+    await AsyncStorage.multiRemove(keys);
+  } catch {}
+}
+
+/**
  * Return cached data regardless of whether it has expired.
  * Use this as an offline fallback when a Supabase call fails.
  */

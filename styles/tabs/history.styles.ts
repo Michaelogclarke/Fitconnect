@@ -1,8 +1,14 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
-export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+export function useStyles() {
+  const C = useColors();
+  const T = useTypography();
+  return useMemo(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
 
   header: {
@@ -10,7 +16,7 @@ export const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  title: { ...Typography.headlineLg, color: Colors.onSurface },
+  title: { ...T.headlineLg, color: C.onSurface },
 
   // ── Summary strip ──────────────────────────────────────────────────────────
   summaryRow: {
@@ -21,30 +27,30 @@ export const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1, alignItems: 'center',
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     paddingVertical: Spacing.md,
   },
-  summaryValue: { ...Typography.headlineMd, color: Colors.primary },
-  summaryLabel: { ...Typography.labelMd, color: Colors.onSurfaceVariant, marginTop: 2 },
+  summaryValue: { ...T.headlineMd, color: C.primary },
+  summaryLabel: { ...T.labelMd, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Empty state ────────────────────────────────────────────────────────────
   emptyState: {
     marginHorizontal: Spacing.lg,
     marginTop: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.xl,
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  emptyText:    { ...Typography.titleMd, color: Colors.onSurface },
-  emptySubtext: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' as const },
+  emptyText:    { ...T.titleMd, color: C.onSurface },
+  emptySubtext: { ...T.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' as const },
 
   // ── Week group ─────────────────────────────────────────────────────────────
   weekLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginHorizontal: Spacing.lg,
@@ -56,7 +62,7 @@ export const styles = StyleSheet.create({
   sessionCard: {
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.sm,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.md,
   },
@@ -66,21 +72,21 @@ export const styles = StyleSheet.create({
   },
   sessionIconBox: {
     width: 40, height: 40, borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center', alignItems: 'center',
   },
   sessionInfo:   { flex: 1 },
-  sessionName:   { ...Typography.titleMd, color: Colors.onSurface },
-  sessionMeta:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  sessionName:   { ...T.titleMd, color: C.onSurface },
+  sessionMeta:   { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
   sessionRight:  { alignItems: 'flex-end' },
-  sessionVolume: { ...Typography.titleMd, color: Colors.primary },
-  sessionSets:   { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  sessionVolume: { ...T.titleMd, color: C.primary },
+  sessionSets:   { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Expanded detail ────────────────────────────────────────────────────────
   sessionDetail: { marginTop: Spacing.sm },
   sessionDivider: {
     height: 1,
-    backgroundColor: Colors.outlineVariant,
+    backgroundColor: C.outlineVariant,
     marginBottom: Spacing.sm,
   },
   exerciseRow: {
@@ -89,7 +95,8 @@ export const styles = StyleSheet.create({
   },
   exerciseDot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: Colors.primary + '88',
+    backgroundColor: C.primary + '88',
   },
-  exerciseText: { ...Typography.bodyMd, color: Colors.onSurfaceVariant },
-});
+  exerciseText: { ...T.bodyMd, color: C.onSurfaceVariant },
+}), [C, T]);
+}

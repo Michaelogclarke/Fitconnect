@@ -1,8 +1,14 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
-export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+export function useStyles() {
+  const C = useColors();
+  const T = useTypography();
+  return useMemo(() => StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.background },
   scrollContent: { paddingBottom: Spacing.xxxl },
 
   // ── Header ─────────────────────────────────────────────────────────────────
@@ -14,21 +20,21 @@ export const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
   },
-  title: { ...Typography.headlineLg, color: Colors.onSurface },
+  title: { ...T.headlineLg, color: C.onSurface },
   addBtn: {
     flexDirection: 'row', alignItems: 'center',
     gap: Spacing.xs,
-    backgroundColor: Colors.primary + '18',
+    backgroundColor: C.primary + '18',
     borderRadius: Radius.full,
-    borderWidth: 1, borderColor: Colors.primary + '44',
+    borderWidth: 1, borderColor: C.primary + '44',
     paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs,
   },
-  addBtnText: { ...Typography.labelLg, color: Colors.primary },
+  addBtnText: { ...T.labelLg, color: C.primary },
 
   // ── Section label ──────────────────────────────────────────────────────────
   sectionLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginHorizontal: Spacing.lg,
@@ -39,19 +45,19 @@ export const styles = StyleSheet.create({
   // ── Empty state ────────────────────────────────────────────────────────────
   emptyState: {
     marginHorizontal: Spacing.lg,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     padding: Spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: Colors.outlineVariant,
+    borderColor: C.outlineVariant,
   },
-  emptyText:    { ...Typography.titleMd, color: Colors.onSurface, marginBottom: Spacing.xs },
-  emptySubtext: { ...Typography.bodyMd, color: Colors.onSurfaceVariant, textAlign: 'center' as const },
+  emptyText:    { ...T.titleMd, color: C.onSurface, marginBottom: Spacing.xs },
+  emptySubtext: { ...T.bodyMd, color: C.onSurfaceVariant, textAlign: 'center' as const },
   emptyCreateBtn: {
     marginTop: Spacing.lg,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     borderRadius: Radius.md,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
@@ -59,13 +65,13 @@ export const styles = StyleSheet.create({
     alignItems: 'center' as const,
     gap: Spacing.xs,
   },
-  emptyCreateText: { ...Typography.titleMd, color: Colors.background },
+  emptyCreateText: { ...T.titleMd, color: C.background },
 
   // ── Plan card ──────────────────────────────────────────────────────────────
   planCard: {
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.sm,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.lg,
     overflow: 'hidden',
   },
@@ -77,17 +83,17 @@ export const styles = StyleSheet.create({
   },
   planIconBox: {
     width: 44, height: 44, borderRadius: Radius.md,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center', alignItems: 'center',
   },
   planInfo: { flex: 1 },
-  planName:    { ...Typography.titleLg, color: Colors.onSurface },
-  planMeta:    { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  planName:    { ...T.titleLg, color: C.onSurface },
+  planMeta:    { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
 
   // ── Expanded days list ─────────────────────────────────────────────────────
   planDivider: {
     height: 1,
-    backgroundColor: Colors.outlineVariant,
+    backgroundColor: C.outlineVariant,
     marginHorizontal: Spacing.lg,
   },
   daysList: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
@@ -99,20 +105,20 @@ export const styles = StyleSheet.create({
   },
   dayNumber: {
     width: 26, height: 26, borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
-  dayNumberText: { ...Typography.labelLg, color: Colors.primary },
+  dayNumberText: { ...T.labelLg, color: C.primary },
   dayInfo: { flex: 1 },
-  dayName:  { ...Typography.titleMd, color: Colors.onSurface },
-  dayFocus: { ...Typography.labelLg, color: Colors.onSurfaceVariant, marginTop: 2 },
+  dayName:  { ...T.titleMd, color: C.onSurface },
+  dayFocus: { ...T.labelLg, color: C.onSurfaceVariant, marginTop: 2 },
   dayStartBtn: {
     width: 36, height: 36,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
     borderWidth: 1,
-    borderColor: Colors.primary + '55',
+    borderColor: C.primary + '55',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -127,5 +133,6 @@ export const styles = StyleSheet.create({
     paddingTop: Spacing.xs,
     gap: Spacing.xs,
   },
-  editPlanText: { ...Typography.labelLg, color: Colors.onSurfaceVariant },
-});
+  editPlanText: { ...T.labelLg, color: C.onSurfaceVariant },
+}), [C, T]);
+}

@@ -1,27 +1,20 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { styles } from '@/styles/tabs/index.styles';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { usePrefs } from '@/contexts/PrefsContext';
+import { useStyles } from '@/styles/tabs/index.styles';
 import { supabase } from '@/lib/supabase';
-import { formatSessionDate, formatDuration, formatVolume } from '@/lib/format';
+import { formatSessionDate, formatDuration, formatVolume, initials } from '@/lib/format';
 import { getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
-import {
-  initializeHealth,
-  healthConnectNeedsInstall,
-  requestHealthPermissions,
-  fetchTodayHealth,
-  type HealthSnapshot,
-} from '@/lib/health';
-
 const WEEKLY_GOAL_KEY    = 'pref:weekly_goal';
-const HEALTH_CONNECTED_KEY = 'pref:health_connected';
 const WEEKLY_GOAL_OPTIONS = [2, 3, 4, 5, 6];
 
 // ─── Streak helpers ───────────────────────────────────────────────────────────
@@ -96,6 +89,25 @@ type HomeData = {
   longestStreak:  number;
 };
 
+type FlaggedClient = {
+  clientId:  string;
+  name:      string;
+  daysSince: number;
+};
+
+type RecentClientActivity = {
+  clientName:   string;
+  sessionName:  string;
+  startedAt:    string;
+};
+
+type TrainerDashData = {
+  activeClients:  number;
+  weekSessions:   number;
+  flagged:        FlaggedClient[];
+  recentActivity: RecentClientActivity[];
+};
+
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -105,10 +117,117 @@ function getGreeting(): string {
 }
 
 export default function HomeScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const { isActive, startWorkoutFromPlan } = useWorkout();
+  const { homeCards } = usePrefs();
+
+  const trainerStyles = useMemo(() => StyleSheet.create({
+    actionRow: {
+      flexDirection: 'row',
+      marginHorizontal: Spacing.lg,
+      marginTop: Spacing.lg,
+      gap: Spacing.sm,
+    },
+    actionCard: {
+      flex: 1,
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      alignItems: 'center',
+      gap: Spacing.xs,
+    },
+    actionIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: Radius.md,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    actionLabel: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+      textAlign: 'center',
+    },
+    flagCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: Spacing.lg,
+      marginBottom: Spacing.sm,
+      backgroundColor: C.surfaceContainer,
+      borderRadius: Radius.lg,
+      padding: Spacing.md,
+      gap: Spacing.md,
+      borderLeftWidth: 3,
+      borderLeftColor: C.error,
+    },
+    flagAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: Radius.full,
+      backgroundColor: C.error + '22',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    flagAvatarText: {
+      ...Typography.titleMd,
+      color: C.error,
+    },
+    flagName: {
+      ...Typography.titleMd,
+      color: C.onSurface,
+    },
+    flagSub: {
+      ...Typography.bodyMd,
+      color: C.onSurfaceVariant,
+      marginTop: 2,
+    },
+    flagBadge: {
+      backgroundColor: C.error + '22',
+      borderRadius: Radius.full,
+      paddingHorizontal: Spacing.sm,
+      paddingVertical: 3,
+    },
+    flagBadgeText: {
+      ...Typography.labelLg,
+      color: C.error,
+      fontWeight: '700',
+    },
+    modeBar: {
+      flexDirection: 'row',
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: Spacing.sm,
+      gap: Spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: C.outlineVariant,
+      backgroundColor: C.surfaceContainer,
+    },
+    modePill: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: Spacing.xs,
+      paddingVertical: 10,
+      borderRadius: Radius.full,
+      backgroundColor: C.surfaceContainerHigh,
+    },
+    modePillActive: {
+      backgroundColor: C.primary,
+    },
+    modePillText: {
+      ...Typography.labelLg,
+      color: C.onSurfaceVariant,
+    },
+    modePillTextActive: {
+      color: C.background,
+      fontWeight: '600',
+    },
+  }), [C]);
 
   const [loading,        setLoading]        = useState(true);
+  const [role,           setRole]           = useState<'client' | 'trainer' | null>(null);
   const [userName,       setUserName]       = useState('');
   const [recentSessions, setRecentSessions] = useState<RecentSession[]>([]);
   const [weekSessions,   setWeekSessions]   = useState(0);
@@ -118,8 +237,13 @@ export default function HomeScreen() {
   const [longestStreak,  setLongestStreak]  = useState(0);
   const [weeklyGoal,     setWeeklyGoal]     = useState(4);
   const [showGoalPicker, setShowGoalPicker] = useState(false);
-  const [healthSnap,     setHealthSnap]     = useState<HealthSnapshot | null>(null);
-  const [healthConnected, setHealthConnected] = useState(false);  // persisted via AsyncStorage
+  const [hasActiveTrainer, setHasActiveTrainer] = useState(false);
+  const [trainerData,    setTrainerData]    = useState<TrainerDashData | null>(null);
+  const [trainerMode,    setTrainerMode]    = useState<'clients' | 'own'>('clients');
+  const [ownLoading,     setOwnLoading]     = useState(false);
+  const [ownDataLoaded,  setOwnDataLoaded]  = useState(false);
+  const [refreshing,     setRefreshing]     = useState(false);
+  const [unreadCount,    setUnreadCount]    = useState(0);
 
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -135,21 +259,18 @@ export default function HomeScreen() {
     setLongestStreak(d.longestStreak);
   }
 
-  // Load weekly goal + health connected state from storage once on mount
+  // Load weekly goal from storage once on mount
   useEffect(() => {
     AsyncStorage.getItem(WEEKLY_GOAL_KEY).then((val) => {
       if (val) setWeeklyGoal(Number(val));
     });
-    AsyncStorage.getItem(HEALTH_CONNECTED_KEY).then(async (val) => {
-      if (val === 'true') {
-        setHealthConnected(true);
-        try {
-          const snap = await fetchTodayHealth();
-          if (snap) setHealthSnap(snap);
-        } catch {}
-      }
-    });
   }, []);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }
 
   async function openGoalPicker() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -162,39 +283,6 @@ export default function HomeScreen() {
     await AsyncStorage.setItem(WEEKLY_GOAL_KEY, String(val));
   }
 
-  async function connectHealth() {
-    try {
-      const needsInstall = await healthConnectNeedsInstall();
-      if (needsInstall) {
-        Alert.alert(
-          'Health Connect Required',
-          'Install the Health Connect app from the Play Store to sync your steps and activity.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const available = await initializeHealth();
-      if (!available) {
-        Alert.alert(
-          'Health Not Available',
-          'Health Connect is not available on this device.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      const granted = await requestHealthPermissions();
-      if (granted) {
-        await AsyncStorage.setItem(HEALTH_CONNECTED_KEY, 'true');
-        setHealthConnected(true);
-        const snap = await fetchTodayHealth();
-        if (snap) setHealthSnap(snap);
-      }
-    } catch {
-      Alert.alert('Error', 'Could not connect to Health. Please try again.');
-    }
-  }
 
   // Reload whenever the tab comes into focus
   useFocusEffect(
@@ -202,6 +290,13 @@ export default function HomeScreen() {
       loadData();
     }, [])
   );
+
+  // Lazy-load personal workout data when trainer switches to 'own' mode
+  useEffect(() => {
+    if (trainerMode === 'own' && !ownDataLoaded) {
+      loadOwnWorkoutData();
+    }
+  }, [trainerMode]);
 
   async function loadData() {
     // Show cached data immediately — no loading flash
@@ -218,13 +313,22 @@ export default function HomeScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Profile name
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-      const userName = profile?.full_name?.split(' ')[0] ?? '';
+      // Profile name + role + unread notification count
+      const [{ data: profile }, { count: unread }] = await Promise.all([
+        supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
+        supabase.from('notifications').select('*', { count: 'exact', head: true }).eq('user_id', user.id).is('read_at', null),
+      ]);
+      setUnreadCount(unread ?? 0);
+      const userName   = profile?.full_name?.split(' ')[0] ?? '';
+      const userRole   = (profile?.role ?? 'client') as 'client' | 'trainer';
+      setRole(userRole);
+      setUserName(userName);
+
+      if (userRole === 'trainer') {
+        await loadTrainerData(user.id);
+        setLoading(false);
+        return;
+      }
 
       // Recent sessions with exercises + sets for volume
       const { data: sessions } = await supabase
@@ -283,6 +387,16 @@ export default function HomeScreen() {
         (allDateRows ?? []).map((r: any) => r.started_at)
       );
 
+      // Check if client has an active trainer (controls Book Session visibility)
+      const { data: trainerLink } = await supabase
+        .from('trainer_clients')
+        .select('id')
+        .eq('client_id', user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+      setHasActiveTrainer(!!trainerLink);
+
       const fresh: HomeData = {
         userName, recentSessions, weekSessions, weekVolume,
         totalSessions, currentStreak, longestStreak,
@@ -294,6 +408,152 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadTrainerData(userId: string) {
+    // 1. Active client links
+    const { data: links } = await supabase
+      .from('trainer_clients')
+      .select('id, client_id')
+      .eq('trainer_id', userId)
+      .eq('status', 'active');
+
+    const activeClients = links?.length ?? 0;
+
+    if (activeClients === 0) {
+      setTrainerData({ activeClients: 0, weekSessions: 0, flagged: [], recentActivity: [] });
+      return;
+    }
+
+    const clientIds = (links ?? []).map((l) => l.client_id);
+
+    // 2. Profile names
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', clientIds);
+    const nameMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.full_name ?? 'Unknown']));
+
+    // 3. Sessions this week across all clients
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+
+    const { count: weekSessions } = await supabase
+      .from('workout_sessions')
+      .select('*', { count: 'exact', head: true })
+      .in('user_id', clientIds)
+      .gte('started_at', weekStart.toISOString())
+      .not('finished_at', 'is', null);
+
+    // 4. Last session per client (to find flagged)
+    const { data: lastSessions } = await supabase
+      .from('workout_sessions')
+      .select('user_id, started_at')
+      .in('user_id', clientIds)
+      .not('finished_at', 'is', null)
+      .order('started_at', { ascending: false });
+
+    const lastByClient: Record<string, string> = {};
+    (lastSessions ?? []).forEach((s) => {
+      if (!lastByClient[s.user_id]) lastByClient[s.user_id] = s.started_at;
+    });
+
+    const now = Date.now();
+    const flagged: FlaggedClient[] = clientIds
+      .map((id) => {
+        const last = lastByClient[id];
+        const days = last
+          ? Math.floor((now - new Date(last).getTime()) / 86_400_000)
+          : 999;
+        return { clientId: id, name: nameMap[id] ?? 'Unknown', daysSince: days };
+      })
+      .filter((c) => c.daysSince >= 7)
+      .sort((a, b) => b.daysSince - a.daysSince)
+      .slice(0, 3);
+
+    // 5. Recent activity across all clients (last 5 completed sessions)
+    const { data: recent } = await supabase
+      .from('workout_sessions')
+      .select('user_id, name, started_at')
+      .in('user_id', clientIds)
+      .not('finished_at', 'is', null)
+      .order('started_at', { ascending: false })
+      .limit(5);
+
+    const recentActivity: RecentClientActivity[] = (recent ?? []).map((s) => ({
+      clientName:  nameMap[s.user_id] ?? 'Unknown',
+      sessionName: s.name,
+      startedAt:   s.started_at,
+    }));
+
+    setTrainerData({ activeClients, weekSessions: weekSessions ?? 0, flagged, recentActivity });
+  }
+
+  async function loadOwnWorkoutData() {
+    setOwnLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: sessions } = await supabase
+        .from('workout_sessions')
+        .select(`
+          id, name, started_at, duration_seconds,
+          session_exercises(
+            session_sets(weight, reps, is_completed)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false })
+        .limit(3);
+
+      const recentSessions: RecentSession[] = (sessions ?? []).map((s: any) => {
+        const allSets = s.session_exercises.flatMap((e: any) => e.session_sets);
+        const completedSets = allSets.filter((st: any) => st.is_completed);
+        const volume = completedSets.reduce(
+          (sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0
+        );
+        return {
+          id: s.id, name: s.name, started_at: s.started_at,
+          duration_seconds: s.duration_seconds, set_count: completedSets.length, volume,
+        };
+      });
+
+      const weekStart = new Date();
+      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+
+      const { data: weekData } = await supabase
+        .from('workout_sessions')
+        .select(`session_exercises(session_sets(weight, reps, is_completed))`)
+        .eq('user_id', user.id)
+        .gte('started_at', weekStart.toISOString());
+
+      const weekSessions = weekData?.length ?? 0;
+      const weekVolume = (weekData ?? [])
+        .flatMap((s: any) => s.session_exercises.flatMap((e: any) => e.session_sets))
+        .filter((st: any) => st.is_completed)
+        .reduce((sum: number, st: any) => sum + ((st.weight ?? 0) * (st.reps ?? 0)), 0);
+
+      const { data: allDateRows, count } = await supabase
+        .from('workout_sessions')
+        .select('started_at', { count: 'exact' })
+        .eq('user_id', user.id);
+
+      const { currentStreak, longestStreak } = computeStreaks(
+        (allDateRows ?? []).map((r: any) => r.started_at)
+      );
+
+      setRecentSessions(recentSessions);
+      setWeekSessions(weekSessions);
+      setWeekVolume(weekVolume);
+      setTotalSessions(count ?? 0);
+      setCurrentStreak(currentStreak);
+      setLongestStreak(longestStreak);
+      setOwnDataLoaded(true);
+    } catch {}
+    finally { setOwnLoading(false); }
   }
 
   async function doAgain(sessionId: string) {
@@ -354,7 +614,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}>
 
         {/* Header */}
         <View style={styles.header}>
@@ -364,20 +627,157 @@ export default function HomeScreen() {
             </Text>
             <Text style={styles.date}>{today}</Text>
           </View>
-          <TouchableOpacity style={styles.iconBtn}>
-            <IconSymbol name="bell.fill" size={20} color={Colors.onSurface} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => router.push('/notifications' as any)}>
+              <IconSymbol name="bell.fill" size={20} color={C.onSurface} />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute', top: -3, right: -3,
+                  minWidth: 16, height: 16, borderRadius: 8,
+                  backgroundColor: C.error,
+                  justifyContent: 'center', alignItems: 'center',
+                  paddingHorizontal: 3,
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700', lineHeight: 11 }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: C.primary }]}
+              onPress={() => router.push('/(tabs)/profile' as any)}>
+              <Text style={{ ...Typography.labelLg, color: C.background }}>
+                {initials(userName)}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
+          <ActivityIndicator color={C.primary} style={{ marginTop: 60 }} />
+        ) : role === 'trainer' && trainerMode === 'clients' ? (
+          /* ── Trainer Dashboard ──────────────────────────────────────── */
+          <>
+            {/* Stats row */}
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{trainerData?.activeClients ?? 0}</Text>
+                <Text style={styles.statLabel}>Clients</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{trainerData?.weekSessions ?? 0}</Text>
+                <Text style={styles.statLabel}>Sessions this week</Text>
+              </View>
+            </View>
+
+            {/* Quick actions — row 1 */}
+            <View style={trainerStyles.actionRow}>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/(tabs)/clients' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: C.primary + '22' }]}>
+                  <IconSymbol name="person.2.fill" size={20} color={C.primary} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>All Clients</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/(tabs)/chat' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: C.success + '22' }]}>
+                  <IconSymbol name="bubble.left.and.bubble.right.fill" size={20} color={C.success} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>Messages</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick actions — row 2 */}
+            <View style={trainerStyles.actionRow}>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/set-availability' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: C.primaryDim + '22' }]}>
+                  <IconSymbol name="calendar.badge.plus" size={20} color={C.primaryDim} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>Availability</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={trainerStyles.actionCard}
+                onPress={() => router.push('/bookings' as any)}>
+                <View style={[trainerStyles.actionIcon, { backgroundColor: C.secondary + '22' }]}>
+                  <IconSymbol name="calendar.badge.checkmark" size={20} color={C.secondary} />
+                </View>
+                <Text style={trainerStyles.actionLabel}>Bookings</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Needs attention */}
+            {(trainerData?.flagged ?? []).length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>Needs Attention</Text>
+                {(trainerData?.flagged ?? []).map((c) => (
+                  <TouchableOpacity
+                    key={c.clientId}
+                    style={trainerStyles.flagCard}
+                    onPress={() => router.push({
+                      pathname: '/client-detail' as any,
+                      params: { clientId: c.clientId, clientName: c.name },
+                    })}
+                    activeOpacity={0.8}>
+                    <View style={trainerStyles.flagAvatar}>
+                      <Text style={trainerStyles.flagAvatarText}>{initials(c.name)}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={trainerStyles.flagName}>{c.name}</Text>
+                      <Text style={trainerStyles.flagSub}>
+                        {c.daysSince >= 999 ? 'No sessions logged yet' : `Last session ${c.daysSince} days ago`}
+                      </Text>
+                    </View>
+                    <View style={trainerStyles.flagBadge}>
+                      <Text style={trainerStyles.flagBadgeText}>
+                        {c.daysSince >= 999 ? 'New' : `${c.daysSince}d`}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* Recent client activity */}
+            <Text style={styles.sectionLabel}>Recent Client Activity</Text>
+            {(trainerData?.recentActivity ?? []).length === 0 ? (
+              <View style={styles.emptyCard}>
+                <IconSymbol name="dumbbell.fill" size={28} color={C.outlineVariant} />
+                <Text style={styles.emptyText}>No activity yet</Text>
+                <Text style={styles.emptySub}>Client sessions will appear here once they start training</Text>
+              </View>
+            ) : (
+              (trainerData?.recentActivity ?? []).map((a, i) => (
+                <View key={i} style={styles.recentCard}>
+                  <View style={styles.recentIconBox}>
+                    <Text style={{ ...Typography.labelLg, color: C.primary }}>{initials(a.clientName)}</Text>
+                  </View>
+                  <View style={styles.recentInfo}>
+                    <Text style={styles.recentName}>{a.sessionName}</Text>
+                    <Text style={styles.recentMeta}>
+                      {a.clientName} · {formatSessionDate(a.startedAt)}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </>
+        ) : role === 'trainer' && trainerMode === 'own' && ownLoading ? (
+          <ActivityIndicator color={C.primary} style={{ marginTop: 60 }} />
         ) : (
           <>
             {/* Streak banner */}
-            {currentStreak > 0 && (
+            {homeCards.streak && currentStreak > 0 && (
               <View style={styles.streakCard}>
                 <View style={styles.streakLeft}>
-                  <IconSymbol name="flame.fill" size={28} color={Colors.primary} />
+                  <IconSymbol name="flame.fill" size={28} color={C.primary} />
                 </View>
                 <View style={styles.streakMid}>
                   <Text style={styles.streakTitle}>
@@ -397,17 +797,34 @@ export default function HomeScreen() {
             <Text style={styles.sectionLabel}>Quick Start</Text>
             <TouchableOpacity style={styles.quickStartCard} onPress={() => router.push('/start-workout')}>
               <View style={styles.quickStartLeft}>
-                <IconSymbol name="play.fill" size={20} color={Colors.background} />
+                <IconSymbol name="play.fill" size={20} color={C.background} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.quickStartTitle}>Start Empty Workout</Text>
                 <Text style={styles.quickStartSub}>Add exercises as you go</Text>
               </View>
-              <IconSymbol name="chevron.right" size={18} color={Colors.primary} />
+              <IconSymbol name="chevron.right" size={18} color={C.primary} />
             </TouchableOpacity>
 
+            {/* Book a session — only for clients with an active trainer */}
+            {role !== 'trainer' && hasActiveTrainer && (
+              <TouchableOpacity
+                style={styles.quickStartCard}
+                onPress={() => router.push('/book-session' as any)}
+                activeOpacity={0.8}>
+                <View style={[styles.quickStartLeft, { backgroundColor: C.tertiary }]}>
+                  <IconSymbol name="calendar.badge.plus" size={20} color={C.background} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.quickStartTitle}>Book a Session</Text>
+                  <Text style={styles.quickStartSub}>Schedule time with your trainer</Text>
+                </View>
+                <IconSymbol name="chevron.right" size={18} color={C.tertiary} />
+              </TouchableOpacity>
+            )}
+
             {/* Quick stats */}
-            <View style={styles.statsRow}>
+            {homeCards.quickStats && <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={styles.statValue}>{weekSessions}</Text>
                 <Text style={styles.statLabel}>This week</Text>
@@ -420,120 +837,115 @@ export default function HomeScreen() {
                 <Text style={styles.statValue}>{totalSessions}</Text>
                 <Text style={styles.statLabel}>All time</Text>
               </View>
-            </View>
+            </View>}
 
             {/* Weekly goal */}
-            <TouchableOpacity
-              style={styles.weeklyGoalCard}
-              onLongPress={openGoalPicker}
-              delayLongPress={400}
-              activeOpacity={0.8}>
-              <View style={styles.weeklyGoalHeader}>
-                <IconSymbol name="trophy.fill" size={16} color={Colors.primary} />
-                <Text style={styles.weeklyGoalTitle}>Weekly Goal</Text>
-                <Text style={styles.weeklyGoalTapHint}>Hold to change · {weeklyGoal}×/week</Text>
-              </View>
-              <View style={styles.weeklyGoalDots}>
-                {Array.from({ length: weeklyGoal }).map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.weeklyGoalDot,
-                      i < weekSessions ? styles.weeklyGoalDotFilled : styles.weeklyGoalDotEmpty,
-                    ]}
-                  />
-                ))}
-              </View>
-              <Text style={styles.weeklyGoalCount}>
-                {weekSessions >= weeklyGoal
-                  ? `Goal reached! ${weekSessions} / ${weeklyGoal} sessions`
-                  : `${weekSessions} / ${weeklyGoal} sessions this week`}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Steps / health card */}
-            {healthConnected && healthSnap ? (
-                <View style={styles.stepsCard}>
-                  <View style={styles.stepsHeader}>
-                    <View style={styles.stepsLeft}>
-                      <IconSymbol name="figure.walk" size={16} color={Colors.primary} />
-                      <Text style={styles.stepsTitle}>Steps Today</Text>
-                    </View>
-                    <Text style={styles.stepsCount}>{healthSnap.steps.toLocaleString()}</Text>
-                  </View>
-                  <View style={styles.stepsBarTrack}>
+            {homeCards.weeklyGoal && (
+              <TouchableOpacity
+                style={styles.weeklyGoalCard}
+                onLongPress={openGoalPicker}
+                delayLongPress={400}
+                activeOpacity={0.8}>
+                <View style={styles.weeklyGoalHeader}>
+                  <IconSymbol name="trophy.fill" size={16} color={C.primary} />
+                  <Text style={styles.weeklyGoalTitle}>Weekly Goal</Text>
+                  <Text style={styles.weeklyGoalTapHint}>Hold to change · {weeklyGoal}×/week</Text>
+                </View>
+                <View style={styles.weeklyGoalDots}>
+                  {Array.from({ length: weeklyGoal }).map((_, i) => (
                     <View
+                      key={i}
                       style={[
-                        styles.stepsBarFill,
-                        { width: `${Math.min(healthSnap.steps / 10000, 1) * 100}%` as any },
+                        styles.weeklyGoalDot,
+                        i < weekSessions ? styles.weeklyGoalDotFilled : styles.weeklyGoalDotEmpty,
                       ]}
                     />
-                  </View>
-                  <Text style={styles.stepsFooter}>
-                    {healthSnap.steps >= 10000
-                      ? 'Daily goal reached!'
-                      : `${(10000 - healthSnap.steps).toLocaleString()} steps to 10,000`}
-                    {healthSnap.activeCalories > 0
-                      ? `  ·  ${healthSnap.activeCalories} kcal burned`
-                      : ''}
-                  </Text>
+                  ))}
                 </View>
-            ) : (
-              <TouchableOpacity style={styles.stepsConnectCard} onPress={connectHealth} activeOpacity={0.8}>
-                <IconSymbol name="figure.walk" size={18} color={Colors.onSurfaceVariant} />
-                <Text style={styles.stepsConnectText}>Connect Health for step tracking</Text>
-                <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+                <Text style={styles.weeklyGoalCount}>
+                  {weekSessions >= weeklyGoal
+                    ? `Goal reached! ${weekSessions} / ${weeklyGoal} sessions`
+                    : `${weekSessions} / ${weeklyGoal} sessions this week`}
+                </Text>
               </TouchableOpacity>
             )}
 
             {/* Recent sessions */}
-            <Text style={styles.sectionLabel}>Recent Sessions</Text>
+            {homeCards.recentSessions && (
+              <>
+                <Text style={styles.sectionLabel}>Recent Sessions</Text>
 
-            {recentSessions.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <IconSymbol name="dumbbell.fill" size={28} color={Colors.outlineVariant} />
-                <Text style={styles.emptyText}>No sessions yet</Text>
-                <Text style={styles.emptySub}>Complete your first workout to see it here</Text>
-              </View>
-            ) : (
-              recentSessions.map((s) => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={styles.recentCard}
-                  onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: s.id } })}
-                  activeOpacity={0.8}>
-                  <View style={styles.recentIconBox}>
-                    <IconSymbol name="dumbbell.fill" size={18} color={Colors.primary} />
+                {recentSessions.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <IconSymbol name="dumbbell.fill" size={28} color={C.outlineVariant} />
+                    <Text style={styles.emptyText}>No sessions yet</Text>
+                    <Text style={styles.emptySub}>Complete your first workout to see it here</Text>
                   </View>
-                  <View style={styles.recentInfo}>
-                    <Text style={styles.recentName}>{s.name}</Text>
-                    <Text style={styles.recentMeta}>
-                      {formatSessionDate(s.started_at)}
-                      {s.duration_seconds ? ` · ${formatDuration(s.duration_seconds)}` : ''}
-                      {s.set_count > 0 ? ` · ${s.set_count} sets` : ''}
-                    </Text>
-                  </View>
-                  <View style={styles.recentRight}>
-                    {s.volume > 0 && (
-                      <Text style={styles.recentVolume}>{formatVolume(s.volume)}</Text>
-                    )}
+                ) : (
+                  recentSessions.map((s) => (
                     <TouchableOpacity
-                      style={styles.recentDoAgainBtn}
-                      onPress={() => doAgain(s.id)}>
-                      <IconSymbol name="play.fill" size={10} color={Colors.primary} />
-                      <Text style={styles.recentDoAgainText}>Do Again</Text>
+                      key={s.id}
+                      style={styles.recentCard}
+                      onPress={() => router.push({ pathname: '/session-detail' as any, params: { sessionId: s.id } })}
+                      activeOpacity={0.8}>
+                      <View style={styles.recentIconBox}>
+                        <IconSymbol name="dumbbell.fill" size={18} color={C.primary} />
+                      </View>
+                      <View style={styles.recentInfo}>
+                        <Text style={styles.recentName}>{s.name}</Text>
+                        <Text style={styles.recentMeta}>
+                          {formatSessionDate(s.started_at)}
+                          {s.duration_seconds ? ` · ${formatDuration(s.duration_seconds)}` : ''}
+                          {s.set_count > 0 ? ` · ${s.set_count} sets` : ''}
+                        </Text>
+                      </View>
+                      <View style={styles.recentRight}>
+                        {s.volume > 0 && (
+                          <Text style={styles.recentVolume}>{formatVolume(s.volume)}</Text>
+                        )}
+                        <TouchableOpacity
+                          style={styles.recentDoAgainBtn}
+                          onPress={() => doAgain(s.id)}>
+                          <IconSymbol name="play.fill" size={10} color={C.primary} />
+                          <Text style={styles.recentDoAgainText}>Do Again</Text>
+                        </TouchableOpacity>
+                      </View>
                     </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              ))
+                  ))
+                )}
+              </>
             )}
           </>
         )}
 
       </ScrollView>
 
-      {/* Weekly goal picker */}
-      <Modal visible={showGoalPicker} transparent animationType="fade">
+      {/* Mode toggle — trainer only, fixed at bottom */}
+      {role === 'trainer' && (
+        <View style={trainerStyles.modeBar}>
+          <TouchableOpacity
+            style={[trainerStyles.modePill, trainerMode === 'clients' && trainerStyles.modePillActive]}
+            onPress={() => setTrainerMode('clients')}
+            activeOpacity={0.8}>
+            <IconSymbol name="person.2.fill" size={13} color={trainerMode === 'clients' ? C.background : C.onSurfaceVariant} />
+            <Text style={[trainerStyles.modePillText, trainerMode === 'clients' && trainerStyles.modePillTextActive]}>
+              Client Work
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[trainerStyles.modePill, trainerMode === 'own' && trainerStyles.modePillActive]}
+            onPress={() => setTrainerMode('own')}
+            activeOpacity={0.8}>
+            <IconSymbol name="dumbbell.fill" size={13} color={trainerMode === 'own' ? C.background : C.onSurfaceVariant} />
+            <Text style={[trainerStyles.modePillText, trainerMode === 'own' && trainerStyles.modePillTextActive]}>
+              My Training
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Weekly goal picker — available in client view */}
+      <Modal visible={(role === 'client' || trainerMode === 'own') && showGoalPicker} transparent animationType="fade">
         <Pressable style={styles.goalPickerOverlay} onPress={() => setShowGoalPicker(false)}>
           <Pressable style={styles.goalPickerSheet} onPress={() => {}}>
             <Text style={styles.goalPickerTitle}>Weekly Workout Goal</Text>
@@ -560,3 +972,4 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
+

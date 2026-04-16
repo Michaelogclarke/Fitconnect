@@ -1,10 +1,16 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
-export const styles = StyleSheet.create({
+export function useStyles() {
+  const C = useColors();
+  const T = useTypography();
+  return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
 
   // Top bar
@@ -16,33 +22,33 @@ export const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
     gap: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineVariant,
+    borderBottomColor: C.outlineVariant,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     justifyContent: 'center',
     alignItems: 'center',
   },
   titleInput: {
     flex: 1,
-    ...Typography.headlineMd,
-    color: Colors.onSurface,
+    ...T.headlineMd,
+    color: C.onSurface,
     paddingVertical: 0,
   },
   saveBtn: {
     paddingHorizontal: Spacing.md,
     height: 36,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   saveBtnText: {
-    ...Typography.titleMd,
-    color: Colors.background,
+    ...T.titleMd,
+    color: C.background,
   },
 
   // Meta row
@@ -56,20 +62,20 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
   },
   metaChipText: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
   },
 
   // Section label
   sectionLabel: {
-    ...Typography.labelLg,
-    color: Colors.onSurfaceVariant,
+    ...T.labelLg,
+    color: C.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     paddingHorizontal: Spacing.lg,
@@ -87,7 +93,7 @@ export const styles = StyleSheet.create({
 
   // Exercise card
   exerciseCard: {
-    backgroundColor: Colors.surfaceContainer,
+    backgroundColor: C.surfaceContainer,
     marginHorizontal: Spacing.lg,
     marginBottom: Spacing.sm,
     borderRadius: Radius.lg,
@@ -95,7 +101,7 @@ export const styles = StyleSheet.create({
   },
   exerciseCardExpanded: {
     borderWidth: 1,
-    borderColor: Colors.primary + '44',
+    borderColor: C.primary + '44',
   },
   exerciseRow: {
     flexDirection: 'row',
@@ -111,8 +117,8 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   exerciseName: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
+    ...T.titleLg,
+    color: C.onSurface,
   },
   exerciseChips: {
     flexDirection: 'row',
@@ -121,26 +127,26 @@ export const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   chip: {
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
   chipText: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
   },
   chipHighlight: {
-    backgroundColor: Colors.primary + '22',
+    backgroundColor: C.primary + '22',
   },
   chipTextHighlight: {
-    color: Colors.primary,
+    color: C.primary,
   },
   deleteBtn: {
     width: 36,
     height: 36,
     borderRadius: Radius.full,
-    backgroundColor: Colors.error + '22',
+    backgroundColor: C.error + '22',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -157,7 +163,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: Colors.outlineVariant,
+    borderTopColor: C.outlineVariant,
   },
   editRow: {
     flexDirection: 'row',
@@ -166,31 +172,31 @@ export const styles = StyleSheet.create({
   },
   editField: {
     flex: 1,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
   editFieldLabel: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
     marginBottom: 4,
   },
   editFieldInput: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
+    ...T.titleLg,
+    color: C.onSurface,
     padding: 0,
   },
   editNotes: {
     marginTop: Spacing.sm,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
   editNotesInput: {
-    ...Typography.bodyMd,
-    color: Colors.onSurface,
+    ...T.bodyMd,
+    color: C.onSurface,
     padding: 0,
   },
 
@@ -205,12 +211,12 @@ export const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: Colors.primary + '66',
+    borderColor: C.primary + '66',
     gap: Spacing.sm,
   },
   addExerciseBtnText: {
-    ...Typography.titleMd,
-    color: Colors.primary,
+    ...T.titleMd,
+    color: C.primary,
   },
 
   // Bottom save bar
@@ -222,31 +228,32 @@ export const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.xl,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
     borderTopWidth: 1,
-    borderTopColor: Colors.outlineVariant,
+    borderTopColor: C.outlineVariant,
     gap: Spacing.sm,
   },
   discardBtn: {
     height: 48,
     borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceContainerHighest,
+    backgroundColor: C.surfaceContainerHighest,
     justifyContent: 'center',
     alignItems: 'center',
   },
   discardBtnText: {
-    ...Typography.titleMd,
-    color: Colors.onSurfaceVariant,
+    ...T.titleMd,
+    color: C.onSurfaceVariant,
   },
   saveLargeBtn: {
     height: 52,
     borderRadius: Radius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   saveLargeBtnText: {
-    ...Typography.titleLg,
-    color: Colors.background,
+    ...T.titleLg,
+    color: C.background,
   },
-});
+}), [C, T]);
+}

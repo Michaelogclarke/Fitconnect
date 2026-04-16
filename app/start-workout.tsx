@@ -4,6 +4,7 @@ import {
   Alert,
   Animated,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   PanResponder,
@@ -16,15 +17,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NumericInput } from '@/components/ui/numeric-input';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
+import { useKeepAwake } from 'expo-keep-awake';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { DELETE_WIDTH, styles } from '@/styles/start-workout.styles';
+import { useColors } from '@/contexts/ThemeContext';
+import { usePrefs } from '@/contexts/PrefsContext';
+import { DELETE_WIDTH, useStyles } from '@/styles/start-workout.styles';
 import { supabase } from '@/lib/supabase';
 import { useWorkout, Exercise, SetRow, ActiveRest } from '@/contexts/WorkoutContext';
+import { useSpotify } from '@/contexts/SpotifyContext';
+import { SpotifyFullPlayer } from '@/components/SpotifyFullPlayer';
 import { getCached, getCachedAny, setCached, CACHE_KEYS } from '@/lib/cache';
 import { enqueueWorkout, isNetworkError, WorkoutSavePayload } from '@/lib/offlineQueue';
 
@@ -56,7 +62,7 @@ function formatTime(s: number) {
 }
 
 
-const REST_SECONDS = 120;
+// REST_SECONDS is now read from PrefsContext at runtime
 
 // ─── SwipeableRow ─────────────────────────────────────────────────────────────
 
@@ -67,6 +73,7 @@ function SwipeableRow({
   children: React.ReactNode;
   onDelete: () => void;
 }) {
+  const styles  = useStyles();
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen     = useRef(false);
   const [rowWidth, setRowWidth] = useState(0);
@@ -136,6 +143,7 @@ function NumPad({
   onDone:       () => void;
   onClose:      () => void;
 }) {
+  const styles = useStyles();
   function press(key: string) {
     if (key === '⌫') {
       const next = value.slice(0, -1);
@@ -206,6 +214,8 @@ function AddExerciseModal({
   onClose: () => void;
   onAdd: (exercise: Exercise, sets: SetRow[]) => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
   const [phase, setPhase]       = useState<'search' | 'configure'>('search');
   const [search, setSearch]     = useState('');
   const [dbList, setDbList]     = useState<DbExercise[]>([]);
@@ -295,7 +305,9 @@ function AddExerciseModal({
   if (phase === 'search') {
     return (
       <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} />
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
@@ -303,11 +315,11 @@ function AddExerciseModal({
 
             {/* Search bar */}
             <View style={styles.searchBarWrap}>
-              <IconSymbol name="magnifyingglass" size={16} color={Colors.onSurfaceVariant} />
+              <IconSymbol name="magnifyingglass" size={16} color={C.onSurfaceVariant} />
               <TextInput
                 style={styles.searchBarInput}
                 placeholder="Search exercises…"
-                placeholderTextColor={Colors.onSurfaceVariant}
+                placeholderTextColor={C.onSurfaceVariant}
                 value={search}
                 onChangeText={setSearch}
                 autoFocus
@@ -317,7 +329,7 @@ function AddExerciseModal({
             </View>
 
             {loading ? (
-              <ActivityIndicator color={Colors.primary} style={{ paddingVertical: 32 }} />
+              <ActivityIndicator color={C.primary} style={{ paddingVertical: 32 }} />
             ) : (
               <FlatList
                 style={styles.exerciseList}
@@ -332,7 +344,7 @@ function AddExerciseModal({
                     {item.muscle_group ? (
                       <Text style={styles.exerciseListMuscle}>{item.muscle_group}</Text>
                     ) : null}
-                    <IconSymbol name="plus" size={16} color={Colors.primary} />
+                    <IconSymbol name="plus" size={16} color={C.primary} />
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={
@@ -343,18 +355,18 @@ function AddExerciseModal({
                 ListFooterComponent={
                   trimmedSearch.length > 0 && !exactMatch ? (
                     <TouchableOpacity style={styles.createCustomRow} onPress={createCustom}>
-                      <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
+                      <IconSymbol name="plus.circle.fill" size={20} color={C.primary} />
                       <Text style={styles.createCustomText}>
                         Create "{trimmedSearch}"
                       </Text>
-                      <IconSymbol name="chevron.right" size={14} color={Colors.onSurfaceVariant} />
+                      <IconSymbol name="chevron.right" size={14} color={C.onSurfaceVariant} />
                     </TouchableOpacity>
                   ) : null
                 }
               />
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     );
   }
@@ -372,7 +384,7 @@ function AddExerciseModal({
           {/* Title row with back button */}
           <View style={[styles.modalTitleRow, { paddingHorizontal: 16 }]}>
             <TouchableOpacity style={styles.modalBackBtn} onPress={() => setPhase('search')}>
-              <IconSymbol name="chevron.left" size={14} color={Colors.onSurface} />
+              <IconSymbol name="chevron.left" size={14} color={C.onSurface} />
             </TouchableOpacity>
             <Text style={styles.modalTitleInRow}>{selected?.name}</Text>
             {form.muscle ? (
@@ -388,7 +400,7 @@ function AddExerciseModal({
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="e.g. Legs"
-                  placeholderTextColor={Colors.onSurfaceVariant}
+                  placeholderTextColor={C.onSurfaceVariant}
                   value={form.muscle}
                   onChangeText={(v) => fieldC('muscle', v)}
                   returnKeyType="next"
@@ -419,7 +431,7 @@ function AddExerciseModal({
                 <NumericInput
                   style={styles.fieldInput}
                   placeholder="0"
-                  placeholderTextColor={Colors.onSurfaceVariant}
+                  placeholderTextColor={C.onSurfaceVariant}
                   value={form.weight}
                   onChangeText={(v) => fieldC('weight', v)}
                   keyboardType="decimal-pad"
@@ -450,6 +462,7 @@ function ExerciseSection({
   exercise, sets, activeRest,
   onUpdateSet, onToggleSet, onAddSet, onDeleteSet, onDeleteExercise,
   onSkipRest, onAdjustRest, onOpenNumPad, isLast,
+  note, onNoteChange, restSeconds, onCycleRest,
 }: {
   exercise:          Exercise;
   sets:              SetRow[];
@@ -463,7 +476,16 @@ function ExerciseSection({
   onAdjustRest:      (delta: number) => void;
   onOpenNumPad:      (setIdx: number, field: 'weight' | 'reps', currentValue: string) => void;
   isLast:            boolean;
+  note:              string;
+  onNoteChange:      (text: string) => void;
+  restSeconds:       number;
+  onCycleRest:       (seconds: number) => void;
 }) {
+  const C = useColors();
+  const styles = useStyles();
+  const { weightIncrement } = usePrefs();
+  const [editingRest, setEditingRest] = useState(false);
+  const [restInput,   setRestInput]   = useState('');
   const doneCount  = sets.filter((s) => s.done).length;
   const allDone    = doneCount === sets.length && sets.length > 0;
   const nextSetIdx = sets.findIndex((s) => !s.done);
@@ -561,25 +583,87 @@ function ExerciseSection({
           <Text style={styles.muscleChipText}>{exercise.muscle}</Text>
         </View>
         <View style={[styles.sectionProgressBadge, allDone && styles.sectionProgressBadgeDone]}>
-          {allDone && (
-            <IconSymbol name="checkmark.circle.fill" size={12} color={Colors.primary} />
-          )}
+          {allDone && <IconSymbol name="checkmark.circle.fill" size={12} color={C.primary} />}
           <Text style={[styles.sectionProgressText, allDone && styles.sectionProgressTextDone]}>
             {doneCount}/{sets.length}
           </Text>
         </View>
+
+        {/* Per-exercise rest — tap to edit */}
+        {editingRest ? (
+          <TextInput
+            autoFocus
+            keyboardType="number-pad"
+            value={restInput}
+            onChangeText={setRestInput}
+            onBlur={() => {
+              const v = parseInt(restInput);
+              if (v > 0) onCycleRest(v);
+              setEditingRest(false);
+            }}
+            style={{
+              width: 52,
+              fontSize: 11,
+              fontWeight: '600',
+              color: C.primary,
+              paddingHorizontal: 7,
+              paddingVertical: 4,
+              borderRadius: 8,
+              backgroundColor: C.surfaceContainerHigh,
+              borderWidth: 1,
+              borderColor: C.primary,
+              textAlign: 'center',
+            }}
+          />
+        ) : (
+          <TouchableOpacity
+            onPress={() => { setRestInput(String(restSeconds)); setEditingRest(true); }}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 3,
+              paddingHorizontal: 7, paddingVertical: 4,
+              borderRadius: 8, backgroundColor: C.surfaceContainerHigh,
+              borderWidth: 1, borderColor: C.outlineVariant,
+            }}>
+            <IconSymbol name="timer" size={11} color={C.primary} />
+            <Text style={{ fontSize: 11, fontWeight: '600', color: C.primary }}>{restSeconds}s</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           onPress={onDeleteExercise}
           style={{ padding: 8 }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <IconSymbol name="trash.fill" size={16} color={Colors.error} />
+          <IconSymbol name="trash.fill" size={16} color={C.error} />
         </TouchableOpacity>
+      </View>
+
+      {/* Exercise note — below header, above prev performance */}
+      <View style={{ marginHorizontal: 12, marginBottom: 6 }}>
+        <TextInput
+          style={{
+            color: C.onSurface,
+            fontSize: 13,
+            paddingVertical: 6,
+            paddingHorizontal: 10,
+            backgroundColor: note ? C.surfaceContainerHigh : 'transparent',
+            borderRadius: 8,
+            borderWidth: note ? 1 : 0,
+            borderColor: C.outlineVariant,
+            minHeight: 32,
+          }}
+          placeholder="Add a note…"
+          placeholderTextColor={C.onSurfaceVariant + '66'}
+          value={note}
+          onChangeText={onNoteChange}
+          multiline
+          blurOnSubmit
+        />
       </View>
 
       {/* Previous performance strip */}
       {prevSets && (
         <View style={styles.prevRow}>
-          <IconSymbol name="clock" size={11} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="clock" size={11} color={C.onSurfaceVariant} />
           <Text style={styles.prevText} numberOfLines={1}>
             {prevSets.map((s) => `${s.weight ?? '—'}×${s.reps ?? '—'}`).join('  ·  ')}
           </Text>
@@ -589,7 +673,7 @@ function ExerciseSection({
       {/* PR celebration banner */}
       {prVisible && (
         <View style={styles.prBanner}>
-          <IconSymbol name="trophy.fill" size={14} color={Colors.primary} />
+          <IconSymbol name="trophy.fill" size={14} color={C.primary} />
           <Text style={styles.prBannerText}>New Personal Record!</Text>
         </View>
       )}
@@ -619,28 +703,42 @@ function ExerciseSection({
                   ]}>
                   <Text style={styles.setNumber}>{i + 1}</Text>
 
-                  {/* Weight — tapping opens the numpad */}
+                  {/* Weight — minus · value · plus */}
                   <TouchableOpacity
-                    style={[
-                      styles.inputBox,
-                      s.done && styles.inputReadOnly,
-                      isNext && !s.done && styles.inputBoxActive,
-                    ]}
+                    disabled={s.done}
+                    onPress={() => {
+                      const cur  = parseFloat(s.weight) || 0;
+                      const next = Math.max(0, cur - weightIncrement);
+                      onUpdateSet(i, 'weight', String(next % 1 === 0 ? next : next.toFixed(1)));
+                    }}
+                    style={{ padding: 4, opacity: s.done ? 0.3 : 1 }}>
+                    <IconSymbol name="minus" size={14} color={C.onSurfaceVariant} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.inputBox, s.done && styles.inputReadOnly, isNext && !s.done && styles.inputBoxActive]}
                     onPress={() => !s.done && onOpenNumPad(i, 'weight', s.weight)}
                     disabled={s.done}
                     activeOpacity={0.7}>
                     <Text style={styles.weightInput}>{s.weight || '0'}</Text>
                   </TouchableOpacity>
 
+                  <TouchableOpacity
+                    disabled={s.done}
+                    onPress={() => {
+                      const cur  = parseFloat(s.weight) || 0;
+                      const next = cur + weightIncrement;
+                      onUpdateSet(i, 'weight', String(next % 1 === 0 ? next : next.toFixed(1)));
+                    }}
+                    style={{ padding: 4, opacity: s.done ? 0.3 : 1 }}>
+                    <IconSymbol name="plus" size={14} color={C.onSurfaceVariant} />
+                  </TouchableOpacity>
+
                   <Text style={styles.weightUnit}>kg</Text>
 
-                  {/* Reps — tapping opens the numpad */}
+                  {/* Reps — tap to open numpad only */}
                   <TouchableOpacity
-                    style={[
-                      styles.inputBox,
-                      s.done && styles.inputReadOnly,
-                      isNext && !s.done && styles.inputBoxActive,
-                    ]}
+                    style={[styles.inputBox, s.done && styles.inputReadOnly, isNext && !s.done && styles.inputBoxActive]}
                     onPress={() => !s.done && onOpenNumPad(i, 'reps', s.reps)}
                     disabled={s.done}
                     activeOpacity={0.7}>
@@ -649,15 +747,9 @@ function ExerciseSection({
 
                   {/* Checkmark */}
                   <TouchableOpacity
-                    style={[
-                      styles.checkCircle,
-                      s.done    && styles.checkCircleDone,
-                      isNext && !s.done && styles.checkCircleNext,
-                    ]}
+                    style={[styles.checkCircle, s.done && styles.checkCircleDone, isNext && !s.done && styles.checkCircleNext]}
                     onPress={() => handleSetToggle(i)}>
-                    {s.done && (
-                      <IconSymbol name="checkmark" size={14} color={Colors.background} />
-                    )}
+                    {s.done && <IconSymbol name="checkmark" size={14} color={C.background} />}
                   </TouchableOpacity>
                 </View>
               </SwipeableRow>
@@ -668,8 +760,7 @@ function ExerciseSection({
                   style={styles.restChip}
                   onPress={() => setRestExpanded((e) => !e)}
                   activeOpacity={0.8}>
-                  <IconSymbol name="timer" size={13} color={Colors.primary} />
-
+                  <IconSymbol name="timer" size={13} color={C.primary} />
                   {restExpanded ? (
                     <>
                       <TouchableOpacity
@@ -677,9 +768,7 @@ function ExerciseSection({
                         onPress={(e) => { e.stopPropagation(); onAdjustRest(-15); }}>
                         <Text style={styles.restAdjustBtnText}>−15</Text>
                       </TouchableOpacity>
-                      <Text style={styles.restChipText}>
-                        {formatTime(activeRest!.remaining)}
-                      </Text>
+                      <Text style={styles.restChipText}>{formatTime(activeRest!.remaining)}</Text>
                       <TouchableOpacity
                         style={styles.restAdjustBtn}
                         onPress={(e) => { e.stopPropagation(); onAdjustRest(+15); }}>
@@ -687,11 +776,8 @@ function ExerciseSection({
                       </TouchableOpacity>
                     </>
                   ) : (
-                    <Text style={styles.restChipText}>
-                      {formatTime(activeRest!.remaining)}
-                    </Text>
+                    <Text style={styles.restChipText}>{formatTime(activeRest!.remaining)}</Text>
                   )}
-
                   <TouchableOpacity
                     style={styles.restChipSkip}
                     onPress={(e) => { e.stopPropagation(); onSkipRest(); }}>
@@ -707,7 +793,7 @@ function ExerciseSection({
       {/* Add set */}
       <View style={styles.setActionsRow}>
         <TouchableOpacity style={styles.addSetBtn} onPress={onAddSet}>
-          <IconSymbol name="plus.circle.fill" size={15} color={Colors.primary} />
+          <IconSymbol name="plus.circle.fill" size={15} color={C.primary} />
           <Text style={styles.addSetBtnText}>Add Set</Text>
         </TouchableOpacity>
       </View>
@@ -720,7 +806,10 @@ function ExerciseSection({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function StartWorkoutScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
+  const { restTimer: REST_SECONDS, weightIncrement } = usePrefs();
 
   // ── Persistent workout state from context ──────────────────────────────────
   const {
@@ -734,15 +823,47 @@ export default function StartWorkoutScreen() {
     if (!isActive) startWorkout();
   }, [hydrated]);
 
+  const { isConnected, playerState, play, pause, skipNext, skipPrevious, connect: connectSpotify } = useSpotify();
+  const [spotifyFullOpen, setSpotifyFullOpen] = useState(false);
+
+  useKeepAwake();
+
   // ── Local UI state (resets on unmount — that's fine) ──────────────────────
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal,    setShowAddModal]    = useState(false);
+  const [exRestOverrides, setExRestOverrides] = useState<Record<string, number>>({});
+  const [notesState,      setNotesState]      = useState<Record<string, string>>({});
+  const notesSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load saved exercise notes on mount
+  useEffect(() => {
+    AsyncStorage.getItem('@fitconnect:exercise_notes')
+      .then((raw) => { if (raw) try { setNotesState(JSON.parse(raw)); } catch {} })
+      .catch(() => {});
+  }, []);
+
+  function updateNote(exerciseName: string, text: string) {
+    setNotesState((prev) => {
+      const next = { ...prev, [exerciseName]: text };
+      if (notesSaveTimer.current) clearTimeout(notesSaveTimer.current);
+      notesSaveTimer.current = setTimeout(() => {
+        AsyncStorage.setItem('@fitconnect:exercise_notes', JSON.stringify(next)).catch(() => {});
+      }, 600);
+      return next;
+    });
+  }
+
+  function setRestOverride(exId: string, seconds: number) {
+    setExRestOverrides((prev) => ({ ...prev, [exId]: seconds }));
+  }
 
   // Numpad state
   const [numPadTarget, setNumPadTarget] = useState<NumPadTarget | null>(null);
   const [numPadValue,  setNumPadValue]  = useState('0');
 
-  const notifIdRef       = useRef<string | null>(null);
-  const restExerciseRef  = useRef<string>('');
+  const notifIdRef        = useRef<string | null>(null);
+  const restExerciseRef   = useRef<string>('');
+  const scrollViewRef     = useRef<ScrollView>(null);
+  const exerciseYOffsets  = useRef<Record<string, number>>({});
 
   const [finishing,   setFinishing]   = useState(false);
   const [saveError,   setSaveError]   = useState('');
@@ -762,12 +883,16 @@ export default function StartWorkoutScreen() {
     : 0;
 
   // Auto-clear when rest expires + double-pulse to signal it's time
+  // Also tick-haptic on 3, 2, 1 countdown
   useEffect(() => {
-    if (activeRest && restRemaining <= 0) {
+    if (!activeRest) return;
+    if (restRemaining <= 0) {
       setActiveRest(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 180);
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 360);
+    } else if (restRemaining <= 3) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   }, [restRemaining]);
 
@@ -885,16 +1010,31 @@ export default function StartWorkoutScreen() {
 
   function toggleSet(exId: string, idx: number, exerciseName: string) {
     const wasDone = setsState[exId][idx].done;
+    const newSets = setsState[exId].map((s, i) => (i === idx ? { ...s, done: !s.done } : s));
 
-    setSetsState((prev) => ({
-      ...prev,
-      [exId]: prev[exId].map((s, i) => (i === idx ? { ...s, done: !s.done } : s)),
-    }));
+    setSetsState((prev) => ({ ...prev, [exId]: newSets }));
 
     if (!wasDone) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const allExDone = newSets.every((s) => s.done);
+      if (allExDone) {
+        // Stronger haptic when the whole exercise is finished
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
+        // Auto-scroll to next exercise
+        const exIdx = exercises.findIndex((e) => e.id === exId);
+        if (exIdx !== -1 && exIdx < exercises.length - 1) {
+          const nextId = exercises[exIdx + 1].id;
+          setTimeout(() => {
+            const y = exerciseYOffsets.current[nextId];
+            if (y !== undefined) scrollViewRef.current?.scrollTo({ y, animated: true });
+          }, 400);
+        }
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       restExerciseRef.current = exerciseName;
-      setActiveRest({ exId, setIdx: idx, endsAt: Date.now() + REST_SECONDS * 1000 });
+      const restSecs = exRestOverrides[exId] ?? REST_SECONDS;
+      setActiveRest({ exId, setIdx: idx, endsAt: Date.now() + restSecs * 1000 });
       scheduleRestNotification(exerciseName);
     } else if (activeRest?.exId === exId && activeRest.setIdx === idx) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1075,6 +1215,21 @@ export default function StartWorkoutScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSavedStats({ sets: doneSets.length, volume, duration: elapsed });
       setFinishing(false);
+
+      // Rate-app prompt after every 5th completed workout
+      try {
+        const COUNT_KEY = '@fitconnect:workout_count';
+        const raw = await AsyncStorage.getItem(COUNT_KEY);
+        const count = (parseInt(raw ?? '0') || 0) + 1;
+        await AsyncStorage.setItem(COUNT_KEY, String(count));
+        if (count % 5 === 0) {
+          const StoreReview = await import('expo-store-review');
+          if (await StoreReview.isAvailableAsync()) {
+            await StoreReview.requestReview();
+          }
+        }
+      } catch {}
+
       setTimeout(() => {
         clearWorkout();
         setSavedStats(null);
@@ -1093,7 +1248,7 @@ export default function StartWorkoutScreen() {
       {/* Top bar */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backBtn} onPress={confirmCancelWorkout}>
-          <IconSymbol name="chevron.left" size={20} color={Colors.onSurface} />
+          <IconSymbol name="chevron.left" size={20} color={C.onSurface} />
         </TouchableOpacity>
         <View style={styles.topBarCenter}>
           <Text style={styles.topBarTitle}>Today's Workout</Text>
@@ -1115,27 +1270,106 @@ export default function StartWorkoutScreen() {
         </View>
       </View>
 
+      {/* Spotify player / connect nudge */}
+      {!isConnected && (
+        <TouchableOpacity
+          onPress={connectSpotify}
+          style={{
+            marginHorizontal: 16, marginBottom: 8,
+            flexDirection: 'row', alignItems: 'center', gap: 10,
+            paddingHorizontal: 14, paddingVertical: 10,
+            backgroundColor: C.surfaceContainerHigh,
+            borderRadius: 12, borderWidth: 1, borderColor: C.outlineVariant,
+          }}>
+          <View style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, backgroundColor: '#1DB954', borderRadius: 99 }} />
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1DB954', alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
+            <IconSymbol name="music.note" size={16} color="#000" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: C.onSurface }}>Connect Spotify</Text>
+            <Text style={{ fontSize: 12, color: C.onSurfaceVariant }}>Listen while you train</Text>
+          </View>
+          <IconSymbol name="chevron.right" size={14} color={C.onSurfaceVariant} />
+        </TouchableOpacity>
+      )}
+      {isConnected && playerState?.track && (() => {
+        const { track, isPlaying, progressMs, durationMs } = playerState;
+        const progress = durationMs > 0 ? Math.min(progressMs / durationMs, 1) : 0;
+        return (
+          <View style={{
+            marginHorizontal: 16,
+            marginBottom: 8,
+            borderRadius: 12,
+            backgroundColor: C.surfaceContainerHigh,
+            borderWidth: 1,
+            borderColor: C.outlineVariant,
+            overflow: 'hidden',
+          }}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setSpotifyFullOpen(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, gap: 10 }}>
+              {/* Spotify green accent */}
+              <View style={{ position: 'absolute', left: 0, top: 6, bottom: 6, width: 3, backgroundColor: '#1DB954', borderRadius: 99 }} />
+              {/* Album art */}
+              {track.albumArt ? (
+                <Image source={{ uri: track.albumArt }} style={{ width: 36, height: 36, borderRadius: 6, marginLeft: 8 }} />
+              ) : (
+                <View style={{ width: 36, height: 36, borderRadius: 6, marginLeft: 8, backgroundColor: C.surfaceContainerHighest, alignItems: 'center', justifyContent: 'center' }}>
+                  <IconSymbol name="music.note" size={16} color={C.onSurfaceVariant} />
+                </View>
+              )}
+              {/* Track info */}
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '600', color: C.onSurface }}>{track.name}</Text>
+                <Text numberOfLines={1} style={{ fontSize: 12, color: C.onSurfaceVariant }}>{track.artist}</Text>
+              </View>
+              {/* Controls */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TouchableOpacity onPress={skipPrevious} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <IconSymbol name="backward.fill" size={18} color={C.onSurface} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={isPlaying ? pause : play}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#1DB954', alignItems: 'center', justifyContent: 'center' }}>
+                  <IconSymbol name={isPlaying ? 'pause.fill' : 'play.fill'} size={12} color="#000" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={skipNext} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <IconSymbol name="forward.fill" size={18} color={C.onSurface} />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+            {/* Progress bar */}
+            <View style={{ height: 2, backgroundColor: C.surfaceContainerHighest }}>
+              <View style={{ height: 2, width: `${progress * 100}%`, backgroundColor: '#1DB954' }} />
+            </View>
+          </View>
+        );
+      })()}
+
       {/* Scrollable exercise list */}
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scrollContent}>
 
         {exercises.length === 0 && (
           <View style={{ alignItems: 'center', paddingTop: 60, paddingHorizontal: 32, gap: 8 }}>
-            <IconSymbol name="dumbbell.fill" size={40} color={Colors.outlineVariant} />
-            <Text style={{ fontSize: 16, fontWeight: '600', color: Colors.onSurface, marginTop: 8 }}>
+            <IconSymbol name="dumbbell.fill" size={40} color={C.outlineVariant} />
+            <Text style={{ fontSize: 16, fontWeight: '600', color: C.onSurface, marginTop: 8 }}>
               No exercises yet
             </Text>
-            <Text style={{ fontSize: 14, color: Colors.onSurfaceVariant, textAlign: 'center' }}>
+            <Text style={{ fontSize: 14, color: C.onSurfaceVariant, textAlign: 'center' }}>
               Tap "Add Exercise" below to get started
             </Text>
           </View>
         )}
 
         {exercises.map((ex, idx) => (
+          <View key={ex.id} onLayout={(e) => { exerciseYOffsets.current[ex.id] = e.nativeEvent.layout.y; }}>
           <ExerciseSection
-            key={ex.id}
             exercise={ex}
             sets={setsState[ex.id] ?? []}
             activeRest={activeRestDisplay}
@@ -1148,12 +1382,17 @@ export default function StartWorkoutScreen() {
             onAdjustRest={adjustRest}
             onOpenNumPad={(setIdx, field, val) => openNumPad(ex.id, setIdx, field, val)}
             isLast={idx === exercises.length - 1}
+            note={notesState[ex.name] ?? ''}
+            onNoteChange={(text) => updateNote(ex.name, text)}
+            restSeconds={exRestOverrides[ex.id] ?? REST_SECONDS}
+            onCycleRest={(secs) => setRestOverride(ex.id, secs)}
           />
+          </View>
         ))}
 
         <View style={styles.addExerciseSection}>
           <TouchableOpacity style={styles.addExerciseBtn} onPress={() => setShowAddModal(true)}>
-            <IconSymbol name="plus.circle.fill" size={20} color={Colors.primary} />
+            <IconSymbol name="plus.circle.fill" size={20} color={C.primary} />
             <Text style={styles.addExerciseBtnText}>Add Exercise to Session</Text>
           </TouchableOpacity>
         </View>
@@ -1179,7 +1418,7 @@ export default function StartWorkoutScreen() {
           onPress={finishWorkout}
           disabled={finishing}>
           {finishing ? (
-            <ActivityIndicator color={allDone ? Colors.background : Colors.onSurfaceVariant} />
+            <ActivityIndicator color={allDone ? C.background : C.onSurfaceVariant} />
           ) : (
             <Text style={allDone ? styles.btnFinishText : styles.btnFinishDimmedText}>
               {allDone ? 'Finish Workout' : 'Finish Early'}
@@ -1198,12 +1437,17 @@ export default function StartWorkoutScreen() {
         onAdd={addCustomExercise}
       />
 
+      <SpotifyFullPlayer
+        visible={spotifyFullOpen}
+        onClose={() => setSpotifyFullOpen(false)}
+      />
+
       {/* Workout saved overlay */}
       {savedStats && (
         <View style={styles.savedOverlay}>
           <View style={styles.savedCard}>
             <View style={styles.savedIconBox}>
-              <IconSymbol name="checkmark.circle.fill" size={40} color={Colors.primary} />
+              <IconSymbol name="checkmark.circle.fill" size={40} color={C.primary} />
             </View>
             <Text style={styles.savedTitle}>Workout Complete!</Text>
             <View style={styles.savedStatsRow}>

@@ -12,10 +12,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { supabase } from '@/lib/supabase';
-import { styles } from '@/styles/auth.styles';
-import { Colors } from '@/constants/theme';
+import { useStyles } from '@/styles/auth.styles';
+import { useColors } from '@/contexts/ThemeContext';
 
 export default function SignInScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const router = useRouter();
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -61,7 +63,7 @@ export default function SignInScreen() {
               value={email}
               onChangeText={setEmail}
               placeholder="you@example.com"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               autoCapitalize="none"
               keyboardType="email-address"
               returnKeyType="next"
@@ -76,7 +78,7 @@ export default function SignInScreen() {
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
-              placeholderTextColor={Colors.onSurfaceVariant}
+              placeholderTextColor={C.onSurfaceVariant}
               secureTextEntry
               returnKeyType="done"
               onSubmitEditing={handleSignIn}
@@ -88,7 +90,7 @@ export default function SignInScreen() {
             onPress={handleSignIn}
             disabled={!email || !password || loading}>
             {loading
-              ? <ActivityIndicator color={Colors.background} />
+              ? <ActivityIndicator color={C.background} />
               : <Text style={styles.primaryBtnText}>Sign In</Text>}
           </TouchableOpacity>
         </View>

@@ -3,6 +3,7 @@
     "name": "fitconnect",
     "slug": "fitconnect",
     "version": "1.0.0",
+    "description": "FitConnect — workout tracking, nutrition logging, and trainer-client management for athletes and personal trainers.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "fitconnect",
@@ -11,12 +12,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.michaelog.fitconnect",
+      "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSHealthShareUsageDescription": "FitConnect reads your step count and active calories to show your daily activity progress."
-      },
-      "entitlements": {
-        "com.apple.developer.healthkit": true
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,8 +25,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
+      "softInputMode": "softInputAdjustResize",
       "predictiveBackGestureEnabled": false,
-      "package": "com.michaelog.fitconnect"
+      "package": "com.michaelog.fitconnect",
+      "versionCode": 1
     },
     "web": {
       "output": "static",
@@ -36,7 +36,6 @@
     },
     "plugins": [
       "expo-router",
-      "react-native-health-connect",
       [
         "expo-notifications",
         {
@@ -74,8 +73,7 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},

@@ -1,10 +1,16 @@
+import { useMemo } from 'react';
 import { StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '@/constants/theme';
+import { Spacing, Radius, ColorSet } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
+import { useTypography } from '@/contexts/PrefsContext';
 
-export const styles = StyleSheet.create({
+export function useStyles() {
+  const C = useColors();
+  const T = useTypography();
+  return useMemo(() => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: C.background,
   },
   header: {
     paddingHorizontal: Spacing.lg,
@@ -12,8 +18,8 @@ export const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   title: {
-    ...Typography.displayMd,
-    color: Colors.onSurface,
+    ...T.displayMd,
+    color: C.onSurface,
   },
   lockRow: {
     flexDirection: 'row',
@@ -22,8 +28,8 @@ export const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   lockText: {
-    ...Typography.labelLg,
-    color: Colors.success,
+    ...T.labelLg,
+    color: C.success,
   },
   scroll: {
     flex: 1,
@@ -46,13 +52,13 @@ export const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary + '33',
+    backgroundColor: C.primary + '33',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    ...Typography.titleLg,
-    color: Colors.primary,
+    ...T.titleLg,
+    color: C.primary,
   },
   onlineDot: {
     position: 'absolute',
@@ -61,9 +67,9 @@ export const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: Radius.full,
-    backgroundColor: Colors.success,
+    backgroundColor: C.success,
     borderWidth: 2,
-    borderColor: Colors.background,
+    borderColor: C.background,
   },
   threadInfo: {
     flex: 1,
@@ -74,35 +80,36 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   threadName: {
-    ...Typography.titleLg,
-    color: Colors.onSurface,
+    ...T.titleLg,
+    color: C.onSurface,
   },
   threadTime: {
-    ...Typography.labelMd,
-    color: Colors.onSurfaceVariant,
+    ...T.labelMd,
+    color: C.onSurfaceVariant,
   },
   threadPreview: {
-    ...Typography.bodyMd,
-    color: Colors.onSurfaceVariant,
+    ...T.bodyMd,
+    color: C.onSurfaceVariant,
     marginTop: 2,
   },
   unreadBadge: {
     width: 20,
     height: 20,
     borderRadius: Radius.full,
-    backgroundColor: Colors.primary,
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
   },
   unreadText: {
-    ...Typography.labelMd,
-    color: Colors.background,
+    ...T.labelMd,
+    color: C.background,
     fontSize: 10,
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.outlineVariant,
+    backgroundColor: C.outlineVariant,
     marginLeft: 68,
   },
-});
+}), [C, T]);
+}

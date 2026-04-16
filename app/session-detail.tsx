@@ -11,10 +11,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { useColors } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
 import { formatShortDate, formatDuration } from '@/lib/format';
-import { styles } from '@/styles/session-detail.styles';
+import { useStyles } from '@/styles/session-detail.styles';
 import { useWorkout, type Exercise, type SetRow } from '@/contexts/WorkoutContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -54,6 +54,8 @@ function formatVolume(vol: number): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SessionDetailScreen() {
+  const C = useColors();
+  const styles = useStyles();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const router = useRouter();
   const { isActive, startWorkoutFromPlan } = useWorkout();
@@ -102,6 +104,33 @@ export default function SessionDetailScreen() {
 
     fetchSession();
   }, [sessionId]);
+
+  // ── Delete session ────────────────────────────────────────────────────────
+
+  function handleDelete() {
+    Alert.alert(
+      'Delete Session',
+      'This workout will be permanently removed from your history. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('workout_sessions')
+              .delete()
+              .eq('id', sessionId);
+            if (error) {
+              Alert.alert('Error', error.message);
+            } else {
+              router.back();
+            }
+          },
+        },
+      ]
+    );
+  }
 
   // ── Repeat workout ────────────────────────────────────────────────────────
 
@@ -166,7 +195,7 @@ export default function SessionDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={C.primary} />
         </View>
       </SafeAreaView>
     );
@@ -177,7 +206,7 @@ export default function SessionDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <IconSymbol name="chevron.left" size={20} color={Colors.onSurfaceVariant} />
+            <IconSymbol name="chevron.left" size={20} color={C.onSurfaceVariant} />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
         </View>
@@ -193,10 +222,16 @@ export default function SessionDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { justifyContent: 'space-between' }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <IconSymbol name="chevron.left" size={20} color={Colors.onSurfaceVariant} />
+          <IconSymbol name="chevron.left" size={20} color={C.onSurfaceVariant} />
           <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleDelete}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ padding: 4 }}>
+          <IconSymbol name="trash" size={20} color={C.error} />
         </TouchableOpacity>
       </View>
 
@@ -228,7 +263,7 @@ export default function SessionDetailScreen() {
           </View>
 
           <TouchableOpacity style={styles.doAgainBtn} onPress={handleDoAgain}>
-            <IconSymbol name="play.fill" size={14} color={Colors.background} />
+            <IconSymbol name="play.fill" size={14} color={C.background} />
             <Text style={styles.doAgainText}>Do Again</Text>
           </TouchableOpacity>
         </View>
@@ -274,7 +309,7 @@ export default function SessionDetailScreen() {
                         <IconSymbol
                           name="checkmark"
                           size={12}
-                          color={Colors.primary}
+                          color={C.primary}
                         />
                       </View>
                     ) : (
